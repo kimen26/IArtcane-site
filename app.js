@@ -91,7 +91,30 @@ async function enterApp() {
   $('#avatar').classList.remove('hidden');
   await resolveTenant();
   await Promise.all([loadHeader(), loadProfile()]);
+  watchLive();
   route();
+}
+
+// ─── Realtime (G-3, D-019) : la passe 0 et les fiches arrivent en direct ────
+// Un UPDATE objets du locataire → toast + rafraîchissement de la vue courante.
+// replica identity full (migration 0005) → payload.old permet de ne notifier
+// que les vraies nouveautés (identification qui apparaît, fiche qui devient prête).
+let liveOn = false;
+function watchLive() {
+  if (liveOn || !tenantId) return;
+  liveOn = true;
+  sb.channel('objets-live')
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'objets', filter: `owner_id=eq.${tenantId}` }, p => {
+      const n = p.new, old = p.old ?? {};
+      if (!old.categorie && n.categorie) {
+        toast(`🔎 #${n.id} identifié en direct : « ${n.titre ?? n.categorie} » (passe 0 — à confirmer)`);
+      } else if (old.statut !== 'fiche_prete' && n.statut === 'fiche_prete') {
+        toast(`✨ #${n.id} : fiche IA prête — comparables et fourchette disponibles`);
+      }
+      if ($('#view-objet').classList.contains('active') && currentObjet?.id === n.id) loadObjet(n.id);
+      else if ($('#view-collection').classList.contains('active')) loadCollection();
+    })
+    .subscribe();
 }
 
 // Locataire courant : si l'utilisateur est membre d'une collection (magasin),
@@ -414,7 +437,8 @@ function renderObjet() {
       <button class="btn primary" data-action="valider" ${o.statut === 'validee' ? 'disabled' : ''}>✓ Valider la fiche</button>
       <button class="btn" data-action="corriger">✏️ Corriger</button>
       <button class="btn" data-action="relancer">↻ Relancer l'analyse IA</button>
-      <button class="btn" data-action="add-photo">📷 Ajouter une photo</button>
+      <button class="btn" data-action="take-photo">📸 Prendre une photo</button>
+      <button class="btn" data-action="add-photo">🖼️ Ajouter depuis la galerie</button>
     </div>`;
 
   const fichePanel = currentFiche ? `
@@ -540,6 +564,7 @@ $('#objet-body').addEventListener('click', async e => {
     if (sel?.url) openLightbox(sel);
   }
   else if (act === 'add-photo') { $('#file-add-photo').click(); }
+  else if (act === 'take-photo') { openCamera('objet'); }
   else if (act === 'rebound') {
     filters.q = norm(el.dataset.val); filters.chip = ''; filters.list = '';
     $('#search').value = el.dataset.val;
@@ -726,15 +751,25 @@ function addCapFiles(fileList) {
   for (const f of fileList) capFiles.push(f);
   renderPreviews();
 }
+// Les clichés attendent dans capFiles tant que « Enregistrer l'objet » n'est pas cliqué :
+// on prévient avant tout rechargement/fermeture qui les perdrait silencieusement.
+window.addEventListener('beforeunload', e => {
+  if (capFiles.length) { e.preventDefault(); e.returnValue = ''; }
+});
+let pvUrls = [];
 function renderPreviews() {
   const box = $('#previews');
+  pvUrls.forEach(u => URL.revokeObjectURL(u));
+  pvUrls = [];
   box.innerHTML = '';
   capFiles.forEach((f, i) => {
     const d = document.createElement('div');
     d.className = 'pv';
     if (/^image\//.test(f.type)) {
       const img = document.createElement('img');
-      img.src = URL.createObjectURL(f);
+      const u = URL.createObjectURL(f);
+      pvUrls.push(u);
+      img.src = u;
       d.append(img);
     } else {
       d.style.display = 'grid';
@@ -767,16 +802,22 @@ dz.addEventListener('drop', e => {
 // garde la page au premier plan : plus de handoff, et ça marche aussi sur PC
 // (webcam). Fallback : l'input fichier si la caméra est indisponible/refusée.
 let camStream = null;
-async function openCamera() {
-  if (!navigator.mediaDevices?.getUserMedia) { $('#file-camera').click(); return; }
+let camTarget = 'capture'; // 'capture' → capFiles (nouvel objet) · 'objet' → upload direct sur currentObjet
+let camUploaded = 0;       // nb de clichés uploadés en mode 'objet' (pour recharger la fiche à la fermeture)
+async function openCamera(target = 'capture') {
+  camTarget = target;
+  const fallback = () => (target === 'objet' ? $('#file-add-photo') : $('#file-camera')).click();
+  if (!navigator.mediaDevices?.getUserMedia) { fallback(); return; }
   try {
+    // Résolution raisonnable : un flux pleine résolution (3000×3000) gonfle la mémoire
+    // (canvas ≈ 36 Mo par cliché) → l'onglet peut être tué sur mobile = photos perdues.
     camStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 3000 }, height: { ideal: 3000 } },
+      video: { facingMode: 'environment', width: { ideal: 2048 }, height: { ideal: 2048 } },
       audio: false,
     });
   } catch (err) {
     toast(`Caméra indisponible (${err.name}) — sélecteur de fichiers à la place`);
-    $('#file-camera').click();
+    fallback();
     return;
   }
   $('#camera-video').srcObject = camStream;
@@ -787,21 +828,43 @@ function closeCamera() {
   camStream = null;
   $('#camera-video').srcObject = null;
   $('#camera-modal').classList.add('hidden');
+  // Mode fiche objet : les clichés ont été uploadés au fil de l'eau → on relance
+  // l'analyse si besoin (même règle que l'ajout par fichier) et on recharge la fiche.
+  if (camTarget === 'objet' && currentObjet && camUploaded > 0) {
+    const oid = currentObjet.id;
+    if (['capture', 'a_completer'].includes(currentObjet.statut)) {
+      sb.from('objets').update({ statut: 'en_file' }).eq('id', oid)
+        .then(() => sb.from('jobs').insert({ owner_id: tenantId, objet_id: oid, type: 'analyse' }));
+    }
+    loadObjet(oid);
+  }
+  camTarget = 'capture';
+  camUploaded = 0;
 }
-$('#btn-camera').addEventListener('click', openCamera);
+$('#btn-camera').addEventListener('click', () => openCamera('capture'));
 $('#camera-close').addEventListener('click', closeCamera);
 $('#camera-shot').addEventListener('click', () => {
   const v = $('#camera-video');
   if (!v.videoWidth) { toast('Flux caméra pas encore prêt — réessaie', true); return; }
+  // Plafond 2048 px : largement assez pour l'identification IA, et évite les crashs
+  // mémoire mobile (chaque cliché reste en RAM jusqu'à l'enregistrement).
+  const MAX = 2048;
+  const scale = Math.min(1, MAX / Math.max(v.videoWidth, v.videoHeight));
   const c = document.createElement('canvas');
-  c.width = v.videoWidth;
-  c.height = v.videoHeight;
-  c.getContext('2d').drawImage(v, 0, 0);
-  c.toBlob(b => {
+  c.width = Math.round(v.videoWidth * scale);
+  c.height = Math.round(v.videoHeight * scale);
+  c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+  c.toBlob(async b => {
     if (!b) { toast('Capture impossible', true); return; }
-    addCapFiles([new File([b], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' })]);
-    toast('Photo ajoutée — tu peux enchaîner (revers, signature…) ou Terminer');
-  }, 'image/jpeg', 0.92);
+    const file = new File([b], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
+    if (camTarget === 'objet' && currentObjet) {
+      const n = await uploadPhotosFor(currentObjet.id, [file]);
+      if (n > 0) { camUploaded += n; toast('Photo ajoutée à la fiche — tu peux enchaîner ou Terminer'); }
+    } else {
+      addCapFiles([file]);
+      toast('Photo ajoutée — tu peux enchaîner (revers, signature…) puis « Enregistrer l\'objet »');
+    }
+  }, 'image/jpeg', 0.85);
 });
 $('#btn-gallery').addEventListener('click', () => $('#file-gallery').click());
 $('#file-camera').addEventListener('change', e => { addCapFiles(e.target.files); e.target.value = ''; });
