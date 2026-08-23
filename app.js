@@ -84,7 +84,6 @@ let photoMap = {};             // objet_id → URL signée de la 1re photo
 const filters = { q: '', chip: '', group: 'categorie', list: '' };
 let currentObjet = null, currentComps = [], currentFiche = null, currentPhotos = [];
 let editing = false;
-let cropMode = false; // mode « cadrer » : le prochain clic sur la photo = point focal
 let capFiles = [];
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -126,13 +125,13 @@ function watchLive() {
   sb.channel('objets-live')
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'objets', filter: `owner_id=eq.${tenantId}` }, p => {
       const n = p.new, old = p.old ?? {};
+      // JAMAIS de rechargement automatique de la vue (règle Yann 2026-08-23 :
+      // refresh sur action ou manuel uniquement) — on notifie, point.
       if (!old.categorie && n.categorie) {
-        toast(`🔎 #${n.id} identifié en direct : « ${n.titre ?? n.categorie} » (passe 0 — à confirmer)`);
+        toast(`🔎 #${n.id} identifié par l'IA : « ${n.titre ?? n.categorie} » (passe 0 — recharge pour voir)`);
       } else if (old.statut !== 'fiche_prete' && n.statut === 'fiche_prete') {
-        toast(`✨ #${n.id} : fiche IA prête — comparables et fourchette disponibles`);
+        toast(`✨ #${n.id} : fiche IA prête — recharge la page pour la voir`);
       }
-      if ($('#view-objet').classList.contains('active') && currentObjet?.id === n.id) loadObjet(n.id);
-      else if ($('#view-collection').classList.contains('active')) loadCollection();
     })
     .subscribe();
 }
@@ -361,7 +360,6 @@ async function loadObjet(id) {
   }
   currentObjet = o;
   editing = false;
-  cropMode = false;
   const [{ data: photos }, { data: comps }, { data: fiches }] = await Promise.all([
     sb.from('photos').select('*').eq('objet_id', id).order('created_at'),
     sb.from('comparables').select('*').eq('objet_id', id).order('date_vente', { ascending: false, nullsFirst: false }),
@@ -417,9 +415,9 @@ function renderObjet() {
 
   const gallery = currentPhotos.length ? `
     <div class="panel">
-      <div class="gallery-main ${cropMode ? 'crop' : ''}" data-action="zoom" title="${cropMode ? 'Cliquer au centre de l’objet' : 'Agrandir'}">
+      <div class="gallery-main" data-action="zoom" title="Agrandir">
         ${sel && sel.url ? (isVideo(sel) ? `<video src="${esc(sel.url)}" controls></video>` : `<img src="${esc(sel.url)}" alt="photo de l'objet">`) : catEmoji(o.categorie)}
-        ${sel && sel.url && !isVideo(sel) ? `<button class="crop-btn" data-action="crop-toggle">${cropMode ? '✕ annuler' : '🎯 Cadrer'}</button>` : ''}
+        ${sel && sel.url && !isVideo(sel) ? `<button class="crop-btn" data-action="crop-toggle" title="Cadrer cette photo (elle s'ouvre en grand)">🎯 Cadrer</button>` : ''}
         ${sel && sel.url ? `<button class="crop-btn del-photo" data-action="del-photo" title="Supprimer cette photo">🗑</button>` : ''}
       </div>
       <div class="thumbs">
@@ -615,28 +613,16 @@ $('#objet-body').addEventListener('click', async e => {
   else if (act === 'zoom') {
     const sel = currentPhotos.find(p => p.sel) ?? currentPhotos[0];
     if (!sel?.url) return;
-    if (cropMode) {
-      // Cadrage : le clic définit le point focal (% de l'image, en tenant compte
-      // du letterboxing object-fit:contain de la zone d'affichage)
-      const img = el.querySelector('img');
-      if (!img?.naturalWidth) return;
-      const r = el.getBoundingClientRect();
-      const scale = Math.min(r.width / img.naturalWidth, r.height / img.naturalHeight);
-      const ox = (r.width - img.naturalWidth * scale) / 2;
-      const oy = (r.height - img.naturalHeight * scale) / 2;
-      const fx = Math.min(100, Math.max(0, Math.round((e.clientX - r.left - ox) / (img.naturalWidth * scale) * 100)));
-      const fy = Math.min(100, Math.max(0, Math.round((e.clientY - r.top - oy) / (img.naturalHeight * scale) * 100)));
-      const { error } = await sb.from('photos').update({ focal_x: fx, focal_y: fy }).eq('id', sel.id);
-      if (error) { toast(error.message, true); return; }
-      sel.focal_x = fx; sel.focal_y = fy;
-      cropMode = false;
-      renderObjet();
-      toast('✓ Cadrage enregistré — les vignettes de la collection suivront ce point');
-      return;
-    }
     openLightbox(sel);
   }
-  else if (act === 'crop-toggle') { cropMode = !cropMode; renderObjet(); }
+  // Cadrage : la photo s'ouvre en PLEIN ÉCRAN (entière, quitte à être petite —
+  // retour Yann : « pour la cadrer il faut la voir ») et le clic y définit le
+  // point focal de CETTE photo seulement (chaque photo a son cadrage).
+  else if (act === 'crop-toggle') {
+    const sel = currentPhotos.find(p => p.sel) ?? currentPhotos[0];
+    if (!sel?.url) return;
+    openLightbox(sel, true);
+  }
   else if (act === 'del-photo') { deletePhoto(); }
   else if (act === 'del-objet') { deleteObjet(); }
   else if (act === 'add-photo') { $('#file-add-photo').click(); }
@@ -749,11 +735,29 @@ $('#file-add-photo').addEventListener('change', async e => {
 });
 
 // ─── Lightbox ───────────────────────────────────────────────────────────────
-function openLightbox(photo) {
+// Lightbox plein écran. En mode `crop`, le clic sur l'image définit le point
+// focal de cette photo : la boîte de l'<img> EST l'image entière (max-width/
+// max-height), le calcul est donc exact — pas de géométrie letterbox à deviner.
+function openLightbox(photo, crop = false) {
   const lb = document.createElement('div');
-  lb.className = 'lightbox';
+  lb.className = 'lightbox' + (crop ? ' crop' : '');
   lb.innerHTML = isVideo(photo) ? `<video src="${esc(photo.url)}" controls autoplay></video>` : `<img src="${esc(photo.url)}" alt="">`;
-  lb.addEventListener('click', () => lb.remove());
+  if (crop) lb.insertAdjacentHTML('beforeend', '<div class="crop-hint">Cliquer au centre de l’objet — cadrage de <b>cette photo</b> uniquement · clic à côté = annuler</div>');
+  lb.addEventListener('click', async e => {
+    const img = e.target.closest('img');
+    if (!crop || !img) { lb.remove(); return; }
+    e.stopPropagation();
+    const r = img.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) { lb.remove(); return; }
+    const fx = Math.round((e.clientX - r.left) / r.width * 100);
+    const fy = Math.round((e.clientY - r.top) / r.height * 100);
+    const { error } = await sb.from('photos').update({ focal_x: fx, focal_y: fy }).eq('id', photo.id);
+    if (error) { toast(error.message, true); lb.remove(); return; }
+    photo.focal_x = fx; photo.focal_y = fy;
+    lb.remove();
+    renderObjet();
+    toast('✓ Cadrage enregistré pour cette photo — la carte de la collection le suivra');
+  });
   document.body.append(lb);
 }
 
