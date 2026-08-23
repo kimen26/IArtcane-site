@@ -65,6 +65,7 @@ let photoMap = {};             // objet_id → URL signée de la 1re photo
 const filters = { q: '', chip: '', group: 'categorie', list: '' };
 let currentObjet = null, currentComps = [], currentFiche = null, currentPhotos = [];
 let editing = false;
+let cropMode = false; // mode « cadrer » : le prochain clic sur la photo = point focal
 let capFiles = [];
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -169,7 +170,8 @@ function setTab(name) {
   $$('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === name));
 }
 function route() {
-  if (!user) return;
+  if (!user || !tenantId) return; // !tenantId : arrivée magic link — le hashchange de nettoyage
+  // de l'URL d'auth tire route() pendant resolveTenant() → requêtes avec owner_id null (22P02)
   const h = location.hash || '#/';
   const mObj = h.match(/^#\/objet\/([^/]+)$/);
   if (h.startsWith('#/capture')) { setTab('capture'); show('capture'); initCapture(); }
@@ -199,11 +201,13 @@ async function loadCollection() {
 async function loadPhotoMap() {
   photoMap = {};
   if (!collection.length) return;
-  const { data } = await sb.from('photos').select('objet_id,storage_path').order('created_at');
+  const { data } = await sb.from('photos').select('objet_id,storage_path,focal_x,focal_y').order('created_at');
   const first = {};
-  for (const p of data ?? []) if (!first[p.objet_id]) first[p.objet_id] = p.storage_path;
-  const urlByPath = await signPaths(Object.values(first));
-  for (const [oid, p] of Object.entries(first)) if (urlByPath[p]) photoMap[oid] = urlByPath[p];
+  for (const p of data ?? []) if (!first[p.objet_id]) first[p.objet_id] = p;
+  const urlByPath = await signPaths(Object.values(first).map(p => p.storage_path));
+  for (const [oid, p] of Object.entries(first)) {
+    if (urlByPath[p.storage_path]) photoMap[oid] = { url: urlByPath[p.storage_path], fx: p.focal_x, fy: p.focal_y };
+  }
 }
 
 // Signe un lot de chemins du bucket privé 'photos' → { path: url }
@@ -267,7 +271,7 @@ function cardHtml(o) {
     : '<em>non localisé</em>';
   const meta = [o.categorie, o.periode, o.ecole].filter(Boolean).map(esc).join(' · ') || '<em>à identifier</em>';
   return `<article class="card" data-oid="${esc(o.id)}">
-    <div class="card-img">${img ? `<img src="${esc(img)}" alt="" loading="lazy">` : catEmoji(o.categorie)}<span class="card-id">#${esc(o.id)}</span><span class="card-status" style="background:${ST_COLOR[o.statut] || '#8A94B8'}"></span></div>
+    <div class="card-img">${img ? `<img src="${esc(img.url)}" alt="" loading="lazy" style="object-position:${img.fx ?? 50}% ${img.fy ?? 50}%">` : catEmoji(o.categorie)}<span class="card-id">#${esc(o.id)}</span><span class="card-status" style="background:${ST_COLOR[o.statut] || '#8A94B8'}"></span></div>
     <div class="card-body">
       <div class="card-title">${esc(o.titre || 'Sans titre')}</div>
       <div class="card-meta">${meta}</div>
@@ -338,6 +342,7 @@ async function loadObjet(id) {
   }
   currentObjet = o;
   editing = false;
+  cropMode = false;
   const [{ data: photos }, { data: comps }, { data: fiches }] = await Promise.all([
     sb.from('photos').select('*').eq('objet_id', id).order('created_at'),
     sb.from('comparables').select('*').eq('objet_id', id).order('date_vente', { ascending: false, nullsFirst: false }),
@@ -367,8 +372,9 @@ function renderObjet() {
 
   const gallery = currentPhotos.length ? `
     <div class="panel">
-      <div class="gallery-main" data-action="zoom" title="Agrandir">
+      <div class="gallery-main ${cropMode ? 'crop' : ''}" data-action="zoom" title="${cropMode ? 'Cliquer au centre de l’objet' : 'Agrandir'}">
         ${sel && sel.url ? (isVideo(sel) ? `<video src="${esc(sel.url)}" controls></video>` : `<img src="${esc(sel.url)}" alt="photo de l'objet">`) : catEmoji(o.categorie)}
+        ${sel && sel.url && !isVideo(sel) ? `<button class="crop-btn" data-action="crop-toggle">${cropMode ? '✕ annuler' : '🎯 Cadrer'}</button>` : ''}
       </div>
       <div class="thumbs">
         ${currentPhotos.map((p, i) => `
@@ -561,8 +567,29 @@ $('#objet-body').addEventListener('click', async e => {
   }
   else if (act === 'zoom') {
     const sel = currentPhotos.find(p => p.sel) ?? currentPhotos[0];
-    if (sel?.url) openLightbox(sel);
+    if (!sel?.url) return;
+    if (cropMode) {
+      // Cadrage : le clic définit le point focal (% de l'image, en tenant compte
+      // du letterboxing object-fit:contain de la zone d'affichage)
+      const img = el.querySelector('img');
+      if (!img?.naturalWidth) return;
+      const r = el.getBoundingClientRect();
+      const scale = Math.min(r.width / img.naturalWidth, r.height / img.naturalHeight);
+      const ox = (r.width - img.naturalWidth * scale) / 2;
+      const oy = (r.height - img.naturalHeight * scale) / 2;
+      const fx = Math.min(100, Math.max(0, Math.round((e.clientX - r.left - ox) / (img.naturalWidth * scale) * 100)));
+      const fy = Math.min(100, Math.max(0, Math.round((e.clientY - r.top - oy) / (img.naturalHeight * scale) * 100)));
+      const { error } = await sb.from('photos').update({ focal_x: fx, focal_y: fy }).eq('id', sel.id);
+      if (error) { toast(error.message, true); return; }
+      sel.focal_x = fx; sel.focal_y = fy;
+      cropMode = false;
+      renderObjet();
+      toast('✓ Cadrage enregistré — les vignettes de la collection suivront ce point');
+      return;
+    }
+    openLightbox(sel);
   }
+  else if (act === 'crop-toggle') { cropMode = !cropMode; renderObjet(); }
   else if (act === 'add-photo') { $('#file-add-photo').click(); }
   else if (act === 'take-photo') { openCamera('objet'); }
   else if (act === 'rebound') {
@@ -822,12 +849,14 @@ async function openCamera(target = 'capture') {
   }
   $('#camera-video').srcObject = camStream;
   $('#camera-modal').classList.remove('hidden');
+  document.body.classList.add('cam-open'); // toasts remontés en haut (sinon masqués par l'obturateur)
 }
 function closeCamera() {
   camStream?.getTracks().forEach(t => t.stop());
   camStream = null;
   $('#camera-video').srcObject = null;
   $('#camera-modal').classList.add('hidden');
+  document.body.classList.remove('cam-open');
   // Mode fiche objet : les clichés ont été uploadés au fil de l'eau → on relance
   // l'analyse si besoin (même règle que l'ajout par fichier) et on recharge la fiche.
   if (camTarget === 'objet' && currentObjet && camUploaded > 0) {
@@ -862,7 +891,7 @@ $('#camera-shot').addEventListener('click', () => {
       if (n > 0) { camUploaded += n; toast('Photo ajoutée à la fiche — tu peux enchaîner ou Terminer'); }
     } else {
       addCapFiles([file]);
-      toast('Photo ajoutée — tu peux enchaîner (revers, signature…) puis « Enregistrer l\'objet »');
+      toast('Photo ajoutée — enchaîne ou « Enregistrer l\'objet »');
     }
   }, 'image/jpeg', 0.85);
 });
