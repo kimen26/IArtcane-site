@@ -111,6 +111,17 @@ main{max-width:1240px;margin:0 auto;padding:28px 24px 80px}
 .conf{display:inline-flex;align-items:center;gap:3px}
 .conf i{width:11px;height:11px;border-radius:3px;border:1.5px solid var(--line-strong);background:transparent}
 .conf i.on{background:var(--blue);border-color:var(--blue)}
+
+/* Mobile : listing 2 colonnes type marketplace — photo cadrée + titre + prix */
+@media (max-width:640px){
+  .grid{grid-template-columns:repeat(2,1fr);gap:10px}
+  .card-body{padding:10px 11px 11px;gap:5px}
+  .card-title{font-size:13px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .card-meta,.card-loc{display:none}
+  .card-foot{padding-top:6px}
+  .card-id{top:6px;left:6px;font-size:11px;padding:2px 7px}
+  .card-status{top:8px;right:8px}
+}
 .conf-label{font-size:11px;color:var(--ink-3);margin-left:6px}
 
 /* statuts */
@@ -139,6 +150,9 @@ main{max-width:1240px;margin:0 auto;padding:28px 24px 80px}
 .gallery-main.crop::after{content:'Cliquer au centre de l’objet';position:absolute;left:50%;bottom:12px;transform:translateX(-50%);background:rgba(13,27,62,.78);color:#fff;font-size:12.5px;font-weight:500;font-family:var(--sans);padding:6px 14px;border-radius:999px;pointer-events:none;white-space:nowrap}
 .crop-btn{position:absolute;top:10px;right:10px;z-index:2;background:rgba(13,27,62,.75);color:#fff;border:1px solid rgba(255,255,255,.35);font-size:12.5px;font-weight:600;font-family:var(--sans);padding:6px 12px;border-radius:999px;cursor:pointer;backdrop-filter:blur(4px)}
 .crop-btn:hover{background:rgba(13,27,62,.92)}
+.crop-btn.del-photo{right:auto;left:10px}
+.btn.danger{color:var(--red);border-color:var(--red)}
+.btn.danger:hover{background:var(--red);color:#fff}
 .thumbs{display:flex;gap:10px;padding:14px 16px;flex-wrap:wrap}
 .thumb{width:64px;height:64px;border-radius:var(--r-sm);display:grid;place-items:center;font-size:22px;color:rgba(255,255,255,.9);border:2px solid transparent;cursor:pointer;background:linear-gradient(135deg,#3D5A96,#22355E);overflow:hidden;position:relative;flex-shrink:0}
 .thumb img{width:100%;height:100%;object-fit:contain;position:absolute;inset:0}

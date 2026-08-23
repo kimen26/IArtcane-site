@@ -356,6 +356,32 @@ async function loadObjet(id) {
   loadSimilar(o);
 }
 
+// Suppression d'une photo (fichier storage + ligne) — policy storage delete : migration 0007.
+async function deletePhoto() {
+  const sel = currentPhotos.find(p => p.sel) ?? currentPhotos[0];
+  if (!sel || !currentObjet) return;
+  if (!confirm('Supprimer cette photo ? (fichier + référence, définitif)')) return;
+  await sb.storage.from('photos').remove([sel.storage_path]); // tolérant : la ligne prime
+  const { error } = await sb.from('photos').delete().eq('owner_id', tenantId).eq('id', sel.id);
+  if (error) { toast(error.message, true); return; }
+  toast('Photo supprimée');
+  await loadObjet(currentObjet.id);
+}
+
+// Suppression d'un objet : fichiers storage puis ligne `objets` — les FK
+// on delete cascade emportent photos/comparables/fiches/jobs/corrections.
+async function deleteObjet() {
+  const o = currentObjet;
+  if (!o) return;
+  if (!confirm(`Supprimer l'objet #${o.id} ?\n${currentPhotos.length} photo(s), fiche, comparables et corrections partent avec — définitif.`)) return;
+  const paths = currentPhotos.map(p => p.storage_path);
+  if (paths.length) await sb.storage.from('photos').remove(paths);
+  const { error } = await sb.from('objets').delete().eq('owner_id', tenantId).eq('id', o.id);
+  if (error) { toast(error.message, true); return; }
+  toast(`Objet #${o.id} supprimé`);
+  location.hash = '#/';
+}
+
 function dlRow(label, val, editField, type = 'text') {
   const v = (val ?? '') === '' ? null : String(val);
   if (editing && editField) {
@@ -375,6 +401,7 @@ function renderObjet() {
       <div class="gallery-main ${cropMode ? 'crop' : ''}" data-action="zoom" title="${cropMode ? 'Cliquer au centre de l’objet' : 'Agrandir'}">
         ${sel && sel.url ? (isVideo(sel) ? `<video src="${esc(sel.url)}" controls></video>` : `<img src="${esc(sel.url)}" alt="photo de l'objet">`) : catEmoji(o.categorie)}
         ${sel && sel.url && !isVideo(sel) ? `<button class="crop-btn" data-action="crop-toggle">${cropMode ? '✕ annuler' : '🎯 Cadrer'}</button>` : ''}
+        ${sel && sel.url ? `<button class="crop-btn del-photo" data-action="del-photo" title="Supprimer cette photo">🗑</button>` : ''}
       </div>
       <div class="thumbs">
         ${currentPhotos.map((p, i) => `
@@ -445,6 +472,7 @@ function renderObjet() {
       <button class="btn" data-action="relancer">↻ Relancer l'analyse IA</button>
       <button class="btn" data-action="take-photo">📸 Prendre une photo</button>
       <button class="btn" data-action="add-photo">🖼️ Ajouter depuis la galerie</button>
+      <button class="btn danger" data-action="del-objet">🗑 Supprimer l'objet</button>
     </div>`;
 
   const fichePanel = currentFiche ? `
@@ -590,6 +618,8 @@ $('#objet-body').addEventListener('click', async e => {
     openLightbox(sel);
   }
   else if (act === 'crop-toggle') { cropMode = !cropMode; renderObjet(); }
+  else if (act === 'del-photo') { deletePhoto(); }
+  else if (act === 'del-objet') { deleteObjet(); }
   else if (act === 'add-photo') { $('#file-add-photo').click(); }
   else if (act === 'take-photo') { openCamera('objet'); }
   else if (act === 'rebound') {
