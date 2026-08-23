@@ -58,6 +58,7 @@ const isVideo = p => p.kind === 'video' || /\.(mp4|mov|webm)$/i.test(p.storage_p
 
 // ─── État ───────────────────────────────────────────────────────────────────
 let user = null;
+let tenantId = null;          // locataire courant : soi-même, ou l'owner dont on est membre (D-015)
 let collection = [];           // cache des objets (rechargé à chaque visite collection)
 let photoMap = {};             // objet_id → URL signée de la 1re photo
 const filters = { q: '', chip: '', group: 'categorie', list: '' };
@@ -87,8 +88,17 @@ function showLogin() {
 async function enterApp() {
   $('#tabs').classList.remove('hidden');
   $('#avatar').classList.remove('hidden');
+  await resolveTenant();
   await Promise.all([loadHeader(), loadProfile()]);
   route();
+}
+
+// Locataire courant : si l'utilisateur est membre d'une collection (magasin),
+// c'est ELLE qu'il voit et alimente — le même catalogue pour tous les vendeurs (D-015).
+// v1 : un seul locataire partagé pris en compte (le premier) ; switcher multi-locataires plus tard.
+async function resolveTenant() {
+  const { data } = await sb.from('collection_members').select('owner_id').eq('member_id', user.id).limit(1);
+  tenantId = data?.[0]?.owner_id ?? user.id;
 }
 
 $('#login-btn').addEventListener('click', async () => {
@@ -117,11 +127,12 @@ async function loadProfile() {
 
 async function loadHeader() {
   const [{ count }, { data: next }] = await Promise.all([
-    sb.from('objets').select('*', { count: 'exact', head: true }),
-    sb.rpc('peek_objet_id', { p_owner: user.id }),
+    sb.from('objets').select('*', { count: 'exact', head: true }).eq('owner_id', tenantId),
+    sb.rpc('peek_objet_id', { p_owner: tenantId }),
   ]);
   const n = count ?? 0;
-  $('#header-counter').innerHTML = `<b>${fmtNum(n)}</b> objet${n > 1 ? 's' : ''} · prochain n° <b>${next ?? '—'}</b>`;
+  const shared = tenantId !== user.id ? 'catalogue partagé · ' : '';
+  $('#header-counter').innerHTML = `${shared}<b>${fmtNum(n)}</b> objet${n > 1 ? 's' : ''} · prochain n° <b>${next ?? '—'}</b>`;
   $('#tab-count').textContent = n;
 }
 
@@ -150,7 +161,7 @@ $('#obj-back').addEventListener('click', () => { location.hash = '#/'; });
 async function loadCollection() {
   const body = $('#collection-body');
   body.innerHTML = '<div class="skeleton" style="height:220px"></div>';
-  const { data, error } = await sb.from('objets').select('*').order('created_at', { ascending: false });
+  const { data, error } = await sb.from('objets').select('*').eq('owner_id', tenantId).order('created_at', { ascending: false });
   if (error) { toast(error.message, true); body.innerHTML = ''; return; }
   collection = data ?? [];
   await loadPhotoMap();
@@ -556,7 +567,7 @@ $('#objet-body').addEventListener('click', async e => {
   else if (act === 'corr-cancel') { editing = false; renderObjet(); }
   else if (act === 'corr-save') { saveCorrections(); }
   else if (act === 'relancer') {
-    const { error } = await sb.from('jobs').insert({ owner_id: user.id, objet_id: o.id, type: 'reanalyse' });
+    const { error } = await sb.from('jobs').insert({ owner_id: tenantId, objet_id: o.id, type: 'reanalyse' });
     if (error) { toast(error.message, true); return; }
     await sb.from('objets').update({ statut: 'en_file' }).eq('id', o.id);
     toast('Analyse relancée — le cron la traitera');
@@ -583,7 +594,7 @@ async function saveCorrections() {
     }
     if (av !== String(nv ?? '')) {
       updates[champ] = nv;
-      rows.push({ owner_id: user.id, objet_id: o.id, champ, avant: av || null, apres: nv == null ? null : String(nv), auteur });
+      rows.push({ owner_id: tenantId, objet_id: o.id, champ, avant: av || null, apres: nv == null ? null : String(nv), auteur });
     }
   }
   if (!rows.length) { toast('Aucune modification'); editing = false; renderObjet(); return; }
@@ -602,13 +613,13 @@ async function uploadPhotosFor(oid, files, firstIsFace = false) {
   let first = firstIsFace;
   for (const f of files) {
     const ext = (f.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
-    const path = `${user.id}/${oid}/${crypto.randomUUID()}.${ext}`;
+    const path = `${tenantId}/${oid}/${crypto.randomUUID()}.${ext}`;
     const { error } = await sb.storage.from('photos').upload(path, f, { contentType: f.type || undefined });
     if (error) { toast(`Upload « ${f.name} » : ${error.message}`, true); continue; }
     const video = /^video\//.test(f.type);
     const kind = video ? 'video' : (first ? 'face' : 'autre');
     first = false;
-    const { error: e2 } = await sb.from('photos').insert({ owner_id: user.id, objet_id: oid, storage_path: path, kind, source: 'site' });
+    const { error: e2 } = await sb.from('photos').insert({ owner_id: tenantId, objet_id: oid, storage_path: path, kind, source: 'site' });
     if (e2) toast(e2.message, true); else done++;
   }
   return done;
@@ -624,7 +635,7 @@ $('#file-add-photo').addEventListener('change', async e => {
     // L'objet avait trop peu de photos → on relance l'analyse automatiquement
     if (['capture', 'a_completer'].includes(currentObjet.statut)) {
       await sb.from('objets').update({ statut: 'en_file' }).eq('id', oid);
-      await sb.from('jobs').insert({ owner_id: user.id, objet_id: oid, type: 'analyse' });
+      await sb.from('jobs').insert({ owner_id: tenantId, objet_id: oid, type: 'analyse' });
       toast(`${n} photo${n > 1 ? 's' : ''} ajoutée${n > 1 ? 's' : ''} — analyse en file`);
     } else {
       toast(`${n} photo${n > 1 ? 's' : ''} ajoutée${n > 1 ? 's' : ''}`);
@@ -698,8 +709,8 @@ async function initCapture() {
   renderPreviews();
   $('#cap-num').value = '…';
   const [{ data: next }, { data: lieux }] = await Promise.all([
-    sb.rpc('peek_objet_id', { p_owner: user.id }),
-    sb.from('objets').select('zone,contenant'),
+    sb.rpc('peek_objet_id', { p_owner: tenantId }),
+    sb.from('objets').select('zone,contenant').eq('owner_id', tenantId),
   ]);
   $('#cap-num').value = next ?? '';
   const zones = [...new Set((lieux ?? []).map(r => r.zone).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr'));
@@ -756,11 +767,11 @@ $('#cap-save').addEventListener('click', async () => {
   btn.disabled = true;
   btn.textContent = 'Enregistrement…';
   try {
-    const { data: newId, error: e0 } = await sb.rpc('next_objet_id', { p_owner: user.id });
+    const { data: newId, error: e0 } = await sb.rpc('next_objet_id', { p_owner: tenantId });
     if (e0 || !newId) throw (e0 ?? new Error('numérotation impossible'));
     const avecPhotos = capFiles.length > 0;
     const { error: e1 } = await sb.from('objets').insert({
-      owner_id: user.id,
+      owner_id: tenantId,
       id: newId,
       statut: avecPhotos ? 'en_file' : 'a_completer',
       zone: $('#cap-zone').value.trim() || null,
@@ -771,7 +782,7 @@ $('#cap-save').addEventListener('click', async () => {
     if (avecPhotos) {
       const n = await uploadPhotosFor(newId, capFiles, true);
       if (n > 0) {
-        const { error: e2 } = await sb.from('jobs').insert({ owner_id: user.id, objet_id: newId, type: 'analyse' });
+        const { error: e2 } = await sb.from('jobs').insert({ owner_id: tenantId, objet_id: newId, type: 'analyse' });
         if (e2) toast(e2.message, true);
       } else {
         await sb.from('objets').update({ statut: 'a_completer' }).eq('id', newId);
