@@ -59,6 +59,7 @@ const isVideo = p => p.kind === 'video' || /\.(mp4|mov|webm)$/i.test(p.storage_p
 // ─── État ───────────────────────────────────────────────────────────────────
 let user = null;
 let tenantId = null;          // locataire courant : soi-même, ou l'owner dont on est membre (D-015)
+let tenantName = '';          // nom de la « maison » (D-016) — ex. PONAIRE
 let collection = [];           // cache des objets (rechargé à chaque visite collection)
 let photoMap = {};             // objet_id → URL signée de la 1re photo
 const filters = { q: '', chip: '', group: 'categorie', list: '' };
@@ -99,6 +100,8 @@ async function enterApp() {
 async function resolveTenant() {
   const { data } = await sb.from('collection_members').select('owner_id').eq('member_id', user.id).limit(1);
   tenantId = data?.[0]?.owner_id ?? user.id;
+  const { data: t } = await sb.from('tenants').select('name').eq('owner_id', tenantId).maybeSingle();
+  tenantName = t?.name ?? '';
 }
 
 $('#login-btn').addEventListener('click', async () => {
@@ -131,8 +134,8 @@ async function loadHeader() {
     sb.rpc('peek_objet_id', { p_owner: tenantId }),
   ]);
   const n = count ?? 0;
-  const shared = tenantId !== user.id ? 'catalogue partagé · ' : '';
-  $('#header-counter').innerHTML = `${shared}<b>${fmtNum(n)}</b> objet${n > 1 ? 's' : ''} · prochain n° <b>${next ?? '—'}</b>`;
+  const label = tenantName ? `${esc(tenantName)} · ` : (tenantId !== user.id ? 'catalogue partagé · ' : '');
+  $('#header-counter').innerHTML = `${label}<b>${fmtNum(n)}</b> objet${n > 1 ? 's' : ''} · prochain n° <b>${next ?? '—'}</b>`;
   $('#tab-count').textContent = n;
 }
 
