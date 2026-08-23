@@ -180,6 +180,13 @@ h1.obj-title{font-family:var(--serif);font-size:30px;font-weight:700;line-height
 
 .sec-title{font-family:var(--serif);font-size:18px;font-weight:600;display:flex;align-items:center;gap:10px;margin-bottom:14px}
 .sec-title::after{content:"";flex:1;height:1px;background:var(--line)}
+
+/* Boîtes à tiroir (fiche objet) : sections repliables pour gagner en hauteur */
+details.acc>summary{list-style:none;cursor:pointer;user-select:none}
+details.acc>summary::-webkit-details-marker{display:none}
+details.acc>summary::before{content:'▾';color:var(--ink-3);font-size:13px;font-family:var(--sans);width:14px;flex-shrink:0}
+details.acc:not([open])>summary::before{content:'▸'}
+details.acc:not([open])>summary{margin-bottom:0}
 .dl{display:grid;grid-template-columns:170px 1fr;row-gap:9px;column-gap:18px;font-size:14px}
 .dl dt{color:var(--ink-3);font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;padding-top:2px}
 .dl dd{color:var(--ink)}

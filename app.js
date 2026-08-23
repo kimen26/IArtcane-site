@@ -13,6 +13,25 @@ const $ = (sel, el = document) => el.querySelector(sel);
 const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+// Taxonomie canonique v1 (Q15) — la même liste est imposée aux prompts IA
+// (Edge Function identify-photo + runbook cron). catCanon() rabat les variantes
+// du LLM (« ceramiques », « Céramique »…) sur la forme canonique d'affichage.
+const CATS_CANON = {
+  tableau: 'Tableau', peinture: 'Tableau', gravure: 'Gravure / estampe', estampe: 'Gravure / estampe',
+  dessin: 'Dessin', photographie: 'Photographie', photo: 'Photographie', sculpture: 'Sculpture',
+  ceramique: 'Céramique', verrerie: 'Verrerie', verre: 'Verrerie', mobilier: 'Mobilier',
+  montre: 'Montre / horlogerie', horlogerie: 'Montre / horlogerie', bijou: 'Bijou',
+  argenterie: 'Argenterie / métal', metal: 'Argenterie / métal', luminaire: 'Luminaire',
+  textile: 'Textile / tapisserie', tapisserie: 'Textile / tapisserie', livre: 'Livre / document',
+  monnaie: 'Monnaie / médaille', medaille: 'Monnaie / médaille', instrument: 'Instrument',
+  jouet: 'Jouet', curiosite: 'Curiosité', 'art asiatique': 'Art asiatique', 'art tribal': 'Art tribal', autre: 'Autre',
+};
+function catCanon(c) {
+  const k = norm(c).trim().replace(/s$/, '');
+  if (!k) return c;
+  return CATS_CANON[k] ?? (String(c).trim().charAt(0).toUpperCase() + String(c).trim().slice(1));
+}
 const fmtNum = n => Number(n).toLocaleString('fr-FR');
 const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('fr-FR') : '—';
 const pinSvg = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 21s-7-6.1-7-11a7 7 0 1 1 14 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>';
@@ -224,7 +243,7 @@ function objMatches(o) {
   if (f.list === 'a_localiser' && o.zone && o.zone.trim()) return false;
   if (f.list === 'a_valider' && o.statut !== 'fiche_prete') return false;
   if (f.list === 'chere' && !(o.prix_haut >= 1000)) return false;
-  if (f.chip && norm(o.categorie) !== norm(f.chip)) return false;
+  if (f.chip && catCanon(o.categorie) !== f.chip) return false;
   if (f.q) {
     const hay = norm([o.id, o.titre, o.description, o.categorie, o.auteur, o.periode, o.ecole,
       o.technique, o.zone, o.contenant, o.position, o.marques].filter(Boolean).join(' '));
@@ -234,7 +253,7 @@ function objMatches(o) {
 }
 
 function renderChips() {
-  const cats = [...new Set(collection.map(o => o.categorie).filter(Boolean))]
+  const cats = [...new Set(collection.map(o => catCanon(o.categorie)).filter(Boolean))]
     .sort((a, b) => a.localeCompare(b, 'fr'));
   $('#chips').innerHTML = [`<button class="chip ${filters.chip === '' ? 'active' : ''}" data-chip="">Tous</button>`]
     .concat(cats.map(c => `<button class="chip ${filters.chip === c ? 'active' : ''}" data-chip="${esc(c)}">${esc(c)}</button>`))
@@ -269,7 +288,7 @@ function cardHtml(o) {
   const loc = (o.zone || o.contenant)
     ? esc([o.zone, o.contenant].filter(Boolean).join(' / '))
     : '<em>non localisé</em>';
-  const meta = [o.categorie, o.periode, o.ecole].filter(Boolean).map(esc).join(' · ') || '<em>à identifier</em>';
+  const meta = [catCanon(o.categorie), o.periode, o.ecole].filter(Boolean).map(esc).join(' · ') || '<em>à identifier</em>';
   return `<article class="card" data-oid="${esc(o.id)}">
     <div class="card-img">${img ? `<img src="${esc(img.url)}" alt="" loading="lazy" style="object-position:${img.fx ?? 50}% ${img.fy ?? 50}%">` : catEmoji(o.categorie)}<span class="card-id">#${esc(o.id)}</span><span class="card-status" style="background:${ST_COLOR[o.statut] || '#8A94B8'}"></span></div>
     <div class="card-body">
@@ -298,7 +317,7 @@ function renderGrid() {
   } else {
     const groups = new Map();
     for (const o of items) {
-      const raw = (o[g] || '').trim();
+      const raw = String(g === 'categorie' ? (catCanon(o.categorie) ?? '') : (o[g] ?? '')).trim();
       const k = raw || (g === 'zone' ? 'Non localisé' : g === 'periode' ? 'Période inconnue' : 'Sans catégorie');
       if (!groups.has(k)) groups.set(k, []);
       groups.get(k).push(o);
@@ -476,10 +495,10 @@ function renderObjet() {
     </div>`;
 
   const fichePanel = currentFiche ? `
-    <div class="panel panel-pad">
-      <div class="sec-title">Fiche IA <span style="font-size:12px;font-family:var(--mono);color:var(--ink-3);font-weight:400">v${currentFiche.version}${currentFiche.modele ? ' · ' + esc(currentFiche.modele) : ''} · ${fmtDate(currentFiche.created_at)}</span></div>
+    <details class="panel panel-pad acc">
+      <summary class="sec-title">Fiche IA <span style="font-size:12px;font-family:var(--mono);color:var(--ink-3);font-weight:400">v${currentFiche.version}${currentFiche.modele ? ' · ' + esc(currentFiche.modele) : ''} · ${fmtDate(currentFiche.created_at)}</span></summary>
       <div class="md-body">${mdToHtml(currentFiche.contenu_md)}</div>
-    </div>` : `
+    </details>` : `
     <div class="panel panel-pad">
       <div class="sec-title">Fiche IA</div>
       <div class="value-sub">${o.statut === 'en_file' || o.statut === 'analyse'
@@ -495,15 +514,15 @@ function renderObjet() {
         <h1 class="obj-title">${esc(o.titre || 'Sans titre')}</h1>
         ${rebounds ? `<div class="rebounds" style="margin-top:12px">${rebounds}</div>` : ''}
       </div>
-      <div class="panel panel-pad">
-        <div class="sec-title">Identification</div>
+      <details class="panel panel-pad acc" open>
+        <summary class="sec-title">Identification</summary>
         ${identification}
-      </div>
-      <div class="panel panel-pad">
-        <div class="sec-title">Valeur</div>
+      </details>
+      <details class="panel panel-pad acc" open>
+        <summary class="sec-title">Valeur</summary>
         ${valeur}
         ${compsTable}
-      </div>
+      </details>
       ${actions}
       ${fichePanel}
       <div class="panel panel-pad" id="similar-panel" style="display:none">
