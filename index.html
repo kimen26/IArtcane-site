@@ -126,6 +126,17 @@
 </main>
 
 <div class="toasts" id="toasts"></div>
+
+<!-- Caméra en direct (getUserMedia) : la page reste au premier plan, contrairement
+     à l'input capture="environment" qui passe la main à l'app photo du téléphone
+     (process Android tué en arrière-plan → photo perdue). Fallback = input fichier. -->
+<div class="camera-modal hidden" id="camera-modal">
+  <video id="camera-video" autoplay playsinline muted></video>
+  <div class="camera-bar">
+    <button class="btn" id="camera-close">Terminer</button>
+    <button class="camera-shutter" id="camera-shot" title="Prendre la photo" aria-label="Prendre la photo"></button>
+  </div>
+</div>
 <input type="file" id="file-camera" accept="image/*" capture="environment" class="hidden">
 <input type="file" id="file-gallery" accept="image/*,video/*" multiple class="hidden">
 <input type="file" id="file-add-photo" accept="image/*,video/*" multiple class="hidden">

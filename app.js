@@ -760,7 +760,49 @@ dz.addEventListener('drop', e => {
   dz.classList.remove('over');
   addCapFiles(e.dataTransfer.files);
 });
-$('#btn-camera').addEventListener('click', () => $('#file-camera').click());
+// ─── Caméra en direct (getUserMedia) ────────────────────────────────────────
+// L'input capture="environment" passe la main à l'app photo du téléphone : sur
+// Android le navigateur est souvent tué en arrière-plan pendant le cliché → la
+// page se recharge et la photo se perd (« rien n'arrive »). Le flux getUserMedia
+// garde la page au premier plan : plus de handoff, et ça marche aussi sur PC
+// (webcam). Fallback : l'input fichier si la caméra est indisponible/refusée.
+let camStream = null;
+async function openCamera() {
+  if (!navigator.mediaDevices?.getUserMedia) { $('#file-camera').click(); return; }
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 3000 }, height: { ideal: 3000 } },
+      audio: false,
+    });
+  } catch (err) {
+    toast(`Caméra indisponible (${err.name}) — sélecteur de fichiers à la place`);
+    $('#file-camera').click();
+    return;
+  }
+  $('#camera-video').srcObject = camStream;
+  $('#camera-modal').classList.remove('hidden');
+}
+function closeCamera() {
+  camStream?.getTracks().forEach(t => t.stop());
+  camStream = null;
+  $('#camera-video').srcObject = null;
+  $('#camera-modal').classList.add('hidden');
+}
+$('#btn-camera').addEventListener('click', openCamera);
+$('#camera-close').addEventListener('click', closeCamera);
+$('#camera-shot').addEventListener('click', () => {
+  const v = $('#camera-video');
+  if (!v.videoWidth) { toast('Flux caméra pas encore prêt — réessaie', true); return; }
+  const c = document.createElement('canvas');
+  c.width = v.videoWidth;
+  c.height = v.videoHeight;
+  c.getContext('2d').drawImage(v, 0, 0);
+  c.toBlob(b => {
+    if (!b) { toast('Capture impossible', true); return; }
+    addCapFiles([new File([b], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' })]);
+    toast('Photo ajoutée — tu peux enchaîner (revers, signature…) ou Terminer');
+  }, 'image/jpeg', 0.92);
+});
 $('#btn-gallery').addEventListener('click', () => $('#file-gallery').click());
 $('#file-camera').addEventListener('change', e => { addCapFiles(e.target.files); e.target.value = ''; });
 $('#file-gallery').addEventListener('change', e => { addCapFiles(e.target.files); e.target.value = ''; });
