@@ -147,9 +147,18 @@ main{max-width:1240px;margin:0 auto;padding:28px 24px 80px}
 .gallery-main{aspect-ratio:4/3;border-radius:var(--r-lg) var(--r-lg) 0 0;display:grid;place-items:center;font-size:72px;color:rgba(255,255,255,.92);background:linear-gradient(135deg,#2B3A67,#16233F);overflow:hidden;position:relative;cursor:zoom-in}
 .gallery-main img,.gallery-main video{width:100%;height:100%;object-fit:contain;background:#0D1B3E}
 .lightbox.focal{cursor:crosshair}
-.lightbox.cut{cursor:crosshair}
-.lightbox.cut img{max-height:calc(100% - 84px)}
-.cut-sel{position:fixed;border:2px dashed #fff;background:rgba(23,58,143,.28);box-shadow:0 0 0 9999px rgba(13,27,62,.45);pointer-events:none;z-index:5}
+.lightbox.cut{cursor:default}
+.lightbox.cut img{max-height:calc(100dvh - 132px)}
+.cut-sel{position:fixed;border:2px solid #fff;box-shadow:0 0 0 9999px rgba(13,27,62,.55);pointer-events:none;z-index:5}
+.cut-sel i{position:absolute;width:20px;height:20px;background:#fff;border:2px solid var(--blue,#173A8F);border-radius:50%;pointer-events:auto;touch-action:none}
+.cut-sel .h-nw{left:-11px;top:-11px;cursor:nwse-resize}
+.cut-sel .h-n{left:50%;top:-11px;transform:translateX(-50%);cursor:ns-resize}
+.cut-sel .h-ne{right:-11px;top:-11px;cursor:nesw-resize}
+.cut-sel .h-e{right:-11px;top:50%;transform:translateY(-50%);cursor:ew-resize}
+.cut-sel .h-se{right:-11px;bottom:-11px;cursor:nwse-resize}
+.cut-sel .h-s{left:50%;bottom:-11px;transform:translateX(-50%);cursor:ns-resize}
+.cut-sel .h-sw{left:-11px;bottom:-11px;cursor:nesw-resize}
+.cut-sel .h-w{left:-11px;top:50%;transform:translateY(-50%);cursor:ew-resize}
 .cut-bar{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;gap:14px;padding:14px;background:rgba(13,27,62,.82);border-top:1px solid rgba(255,255,255,.18)}
 .cut-hint{color:#fff;font-size:13.5px;opacity:.85}
 .crop-btn.cut-btn{right:auto;left:110px}
@@ -214,6 +223,16 @@ details.acc:not([open])>summary{margin-bottom:0}
 
 .value-big{font-family:var(--mono);font-size:34px;font-weight:700;color:var(--blue-deep);letter-spacing:-.01em}
 .value-sub{font-size:13px;color:var(--ink-2);margin-top:2px}
+
+/* Changelog objet (D-025) — accordéon Historique de la fiche */
+.ev-list{margin-top:10px}
+.ev-row{display:grid;grid-template-columns:auto auto auto 1fr;gap:4px 12px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.ev-row:last-child{border-bottom:none}
+.ev-date{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);white-space:nowrap}
+.ev-act{font-weight:600;white-space:nowrap}
+.ev-qui{color:var(--ink-3);font-size:11.5px;white-space:nowrap}
+.ev-det{color:var(--ink-2);word-break:break-word}
+@media (max-width:640px){.ev-row{grid-template-columns:auto 1fr}.ev-det{grid-column:1/-1}}
 table.comps{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:14px}
 .comps th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line-strong)}
 .comps td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
@@ -280,8 +299,11 @@ table.comps{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:14px
 .toast{background:var(--ink);color:#fff;font-size:13.5px;font-weight:500;padding:11px 20px;border-radius:999px;box-shadow:var(--shadow-hover);animation:fade .2s ease;border:1px solid rgba(255,255,255,.3);max-width:min(92vw,480px);text-align:center;line-height:1.4}
 .toast.err{background:var(--red)}
 body.cam-open .toasts{top:14px;bottom:auto}
-.lightbox{position:fixed;inset:0;z-index:150;background:rgba(13,27,62,.88);display:grid;place-items:center;cursor:zoom-out;padding:24px}
-.lightbox img,.lightbox video{max-width:100%;max-height:100%;border-radius:var(--r-md)}
+.lightbox{position:fixed;inset:0;z-index:150;background:rgba(13,27,62,.88);display:grid;place-items:center;cursor:zoom-out;padding:24px;overflow:hidden}
+.lightbox img,.lightbox video{max-width:calc(100vw - 48px);max-height:calc(100dvh - 48px);border-radius:var(--r-md)}
+.lightbox.zoomed{display:block;overflow:auto;cursor:zoom-out}
+.lightbox.zoomed img,.lightbox.zoomed video{max-width:none;max-height:none}
+body.lb-open{overflow:hidden}
 .hidden{display:none!important}
 
 /* ─── Caméra en direct (capture sans quitter la page) ──────── */

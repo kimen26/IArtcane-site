@@ -82,7 +82,17 @@ let tenantName = '';          // nom de la « maison » (D-016) — ex. PONAIRE
 let collection = [];           // cache des objets (rechargé à chaque visite collection)
 let photoMap = {};             // objet_id → URL signée de la 1re photo
 const filters = { q: '', chip: '', group: 'categorie', list: '' };
-let currentObjet = null, currentComps = [], currentFiche = null, currentPhotos = [];
+let currentObjet = null, currentComps = [], currentFiche = null, currentPhotos = [], currentEvents = [];
+
+// Trace un événement du changelog objet (table `evenements`, D-025) — fire & forget.
+function logEvent(action, detail = {}, oid = currentObjet?.id) {
+  if (!oid || !tenantId) return;
+  sb.from('evenements').insert({
+    owner_id: tenantId, objet_id: oid,
+    acteur: localStorage.getItem('iartcane-qui') ?? 'site',
+    action, detail,
+  }).then(({ error }) => { if (error) console.warn('logEvent:', error.message); });
+}
 let editing = false;
 let capFiles = [];
 
@@ -361,15 +371,17 @@ async function loadObjet(id) {
   }
   currentObjet = o;
   editing = false;
-  const [{ data: photos }, { data: comps }, { data: fiches }] = await Promise.all([
+  const [{ data: photos }, { data: comps }, { data: fiches }, { data: events }] = await Promise.all([
     sb.from('photos').select('*').eq('objet_id', id).order('created_at'),
     sb.from('comparables').select('*').eq('objet_id', id).order('date_vente', { ascending: false, nullsFirst: false }),
     sb.from('fiches').select('*').eq('objet_id', id).order('version', { ascending: false }).limit(1),
+    sb.from('evenements').select('*').eq('objet_id', id).order('created_at', { ascending: false }).limit(50),
   ]);
   const urlByPath = await signPaths((photos ?? []).flatMap(p => [p.storage_path, p.thumb_path].filter(Boolean)));
   currentPhotos = (photos ?? []).map(p => ({ ...p, url: urlByPath[p.storage_path], thumbUrl: urlByPath[p.thumb_path] ?? urlByPath[p.storage_path] }));
   currentComps = comps ?? [];
   currentFiche = (fiches ?? [])[0] ?? null;
+  currentEvents = events ?? [];
   renderObjet();
   loadSimilar(o);
 }
@@ -382,6 +394,7 @@ async function deletePhoto() {
   await sb.storage.from('photos').remove([sel.storage_path]); // tolérant : la ligne prime
   const { error } = await sb.from('photos').delete().eq('owner_id', tenantId).eq('id', sel.id);
   if (error) { toast(error.message, true); return; }
+  logEvent('photo_supprimee', { photo: sel.storage_path });
   toast('Photo supprimée');
   await loadObjet(currentObjet.id);
 }
@@ -418,7 +431,7 @@ function renderObjet() {
     <div class="panel">
       <div class="gallery-main" data-action="zoom" title="Agrandir">
         ${sel && sel.url ? (isVideo(sel) ? `<video src="${esc(sel.url)}" controls></video>` : `<img src="${esc(sel.url)}" alt="photo de l'objet">`) : catEmoji(o.categorie)}
-        ${sel && sel.url && !isVideo(sel) ? `<button class="crop-btn" data-action="crop-toggle" title="Cadrer cette photo (elle s'ouvre en grand)">🎯 Cadrer</button>` : ''}
+        ${sel && sel.url && !isVideo(sel) ? `<button class="crop-btn" data-action="crop-toggle" title="Centrer : choisir le point de la photo sur lequel la carte du listing se centre">🎯 Centrer</button>` : ''}
         ${sel && sel.url && !isVideo(sel) ? `<button class="crop-btn cut-btn" data-action="cut-photo" title="Recadrer : rogne définitivement la photo (résolution d'origine conservée)">✂️ Recadrer</button>` : ''}
         ${sel && sel.url ? `<button class="crop-btn del-photo" data-action="del-photo" title="Supprimer cette photo">🗑</button>` : ''}
       </div>
@@ -506,6 +519,42 @@ function renderObjet() {
         : 'Pas encore de fiche. Ajoute des photos puis relance l\'analyse.'}</div>
     </div>`;
 
+  // Changelog objet (D-025) : qui a fait quoi, quand, avec quel outil —
+  // actions du site (photos, corrections, validation…) + passes IA du cron
+  // (identification, marché, Lens…), champs avant→après quand dispo.
+  const ACT_LABELS = {
+    capture: 'Objet capturé', photo_ajoutee: 'Photo ajoutée', photo_supprimee: 'Photo supprimée',
+    recadrage: 'Recadrage', centrage: 'Centrage', localisation: 'Localisation',
+    correction: 'Correction', validation: 'Fiche validée', relance: 'Analyse relancée',
+    identification: 'Identification IA', passe_marche: 'Recherche de comparables',
+    lens: 'Google Lens (signature)', artiste_maj: 'Fiche artiste', photos_manquantes: 'Photos recommandées',
+  };
+  const evRows = currentEvents.map(ev => {
+    const d = ev.detail ?? {};
+    const bits = [];
+    if (d.modele) bits.push(esc(d.modele));
+    if (d.prompt_version) bits.push('prompt ' + esc(d.prompt_version));
+    if (d.n != null) bits.push(d.n + ' photo' + (d.n > 1 ? 's' : ''));
+    if (d.comps != null) bits.push(d.comps + ' comparable' + (d.comps > 1 ? 's' : ''));
+    if (Array.isArray(d.sources) && d.sources.length) bits.push(esc(d.sources.join(', ')));
+    if (d.champs && typeof d.champs === 'object') {
+      bits.push(Object.entries(d.champs).map(([c, v]) =>
+        `${esc(c)} : « ${esc(v?.avant ?? '—')} » → « ${esc(v?.apres ?? '—')} »`).join(' · '));
+    }
+    if (d.note) bits.push(esc(d.note));
+    return `<div class="ev-row">
+      <span class="ev-date">${fmtDate(ev.created_at)}</span>
+      <span class="ev-act">${esc(ACT_LABELS[ev.action] ?? ev.action)}</span>
+      <span class="ev-qui">${esc(ev.acteur ?? '')}</span>
+      <span class="ev-det">${bits.join(' · ')}</span>
+    </div>`;
+  }).join('');
+  const historyPanel = `
+    <details class="panel panel-pad acc">
+      <summary class="sec-title">Historique <span style="font-size:12px;font-family:var(--mono);color:var(--ink-3);font-weight:400">${currentEvents.length} événement${currentEvents.length > 1 ? 's' : ''}</span></summary>
+      <div class="ev-list">${evRows || '<div class="value-sub">Aucun événement tracé pour l\'instant.</div>'}</div>
+    </details>`;
+
   $('#objet-body').innerHTML = `
   <div class="obj-layout">
     <div class="obj-main">
@@ -525,6 +574,7 @@ function renderObjet() {
       </details>
       ${actions}
       ${fichePanel}
+      ${historyPanel}
       <div class="panel panel-pad" id="similar-panel" style="display:none">
         <div class="sec-title">Objets qui s'en rapprochent</div>
         <div class="similar" id="similar-grid"></div>
@@ -651,12 +701,14 @@ $('#objet-body').addEventListener('click', async e => {
     const { error } = await sb.from('objets').update(updates).eq('id', o.id);
     if (error) { toast(error.message, true); return; }
     Object.assign(currentObjet, updates);
+    logEvent('localisation', { champs: Object.fromEntries(Object.entries(updates).map(([k, v]) => [k, { apres: v }])) });
     renderLocCard(false);
     toast('Localisation mise à jour');
   }
   else if (act === 'valider') {
     const { error } = await sb.from('objets').update({ statut: 'validee' }).eq('id', o.id);
     if (error) { toast(error.message, true); return; }
+    logEvent('validation', { note: 'confiance 4/4 (ground truth)' });
     toast(`#${o.id} validée ✓ — confiance 4/4 (ground truth)`);
     loadObjet(o.id); loadHeader();
   }
@@ -667,6 +719,7 @@ $('#objet-body').addEventListener('click', async e => {
     const { error } = await sb.from('jobs').insert({ owner_id: tenantId, objet_id: o.id, type: 'reanalyse' });
     if (error) { toast(error.message, true); return; }
     await sb.from('objets').update({ statut: 'en_file' }).eq('id', o.id);
+    logEvent('relance', {});
     toast('Analyse relancée — le cron la traitera');
     loadObjet(o.id);
   }
@@ -700,6 +753,7 @@ async function saveCorrections() {
   if (error) { toast(error.message, true); return; }
   const { error: e2 } = await sb.from('corrections').insert(rows);
   if (e2) { toast(e2.message, true); return; }
+  logEvent('correction', { champs: Object.fromEntries(rows.map(r => [r.champ, { avant: r.avant, apres: r.apres }])) });
   toast(`${rows.length} correction${rows.length > 1 ? 's' : ''} gravée${rows.length > 1 ? 's' : ''} — leçons pour l'IA`);
   loadObjet(o.id);
 }
@@ -752,6 +806,7 @@ $('#file-add-photo').addEventListener('change', async e => {
   const oid = currentObjet.id;
   const n = await uploadPhotosFor(oid, files);
   if (n > 0) {
+    logEvent('photo_ajoutee', { n, via: 'fichier' }, oid);
     // L'objet avait trop peu de photos → on relance l'analyse automatiquement
     if (['capture', 'a_completer'].includes(currentObjet.statut)) {
       await sb.from('objets').update({ statut: 'en_file' }).eq('id', oid);
@@ -765,68 +820,88 @@ $('#file-add-photo').addEventListener('change', async e => {
 });
 
 // ─── Lightbox ───────────────────────────────────────────────────────────────
-// Lightbox plein écran, 3 modes :
-//  - null   : simple agrandissement (clic = fermer)
+// Lightbox plein écran, 3 modes (règle Yann 2026-08-24 : par défaut l'image
+// prend la place dispo, PAS PLUS — pas d'ascenseurs ; clic image = zoom 100 %).
+//  - null   : agrandissement ajusté à l'écran (clic image = zoom, clic à côté = fermer)
 //  - 'focal': le clic sur l'image définit le point focal de CETTE photo (la boîte
 //             de l'<img> EST l'image entière → calcul exact, pas de letterbox)
-//  - 'cut'  : recadrage RÉEL — glisser pour sélectionner la zone à garder, la photo
-//             est rognée aux pixels natifs (aucune perte de résolution) et la
-//             source est remplacée (demande Yann 2026-08-24)
+//  - 'cut'  : recadrage RÉEL — cadre à poignées (bords/coins, comme Paint) :
+//             rognage aux pixels natifs, la source est remplacée
 function openLightbox(photo, mode = null) {
   const lb = document.createElement('div');
   lb.className = 'lightbox' + (mode ? ` ${mode}` : '');
   if (mode === 'cut') {
     lb.innerHTML = `<img src="${esc(photo.url)}" alt="">
-      <div class="cut-bar"><span class="cut-hint">Glisse sur l'image pour sélectionner la zone à garder</span>
+      <div class="cut-bar"><span class="cut-hint">Tire les poignées (bords et coins) pour délimiter la zone à garder</span>
       <button class="btn primary small" data-ok disabled>✂️ Recadrer</button>
       <button class="btn small" data-cancel>Annuler</button></div>`;
   } else {
     lb.innerHTML = isVideo(photo) ? `<video src="${esc(photo.url)}" controls autoplay></video>` : `<img src="${esc(photo.url)}" alt="">`;
-    if (mode === 'focal') lb.insertAdjacentHTML('beforeend', '<div class="crop-hint">Cliquer au centre de l’objet — cadrage de <b>cette photo</b> uniquement · clic à côté = annuler</div>');
+    if (mode === 'focal') lb.insertAdjacentHTML('beforeend', '<div class="crop-hint">Cliquer au centre de l’objet — centrage de <b>cette photo</b> uniquement · clic à côté = annuler</div>');
   }
+  const close = () => { lb.remove(); document.body.classList.remove('lb-open'); };
+  document.body.classList.add('lb-open');
 
   if (mode === 'cut') {
     const img = lb.querySelector('img');
     const ok = lb.querySelector('[data-ok]');
-    let sel = null; // coords RELATIVES à l'image affichée (0-1)
+    let sel = { x0: 0, y0: 0, x1: 1, y1: 1 }; // cadre initial = image entière
     let box = null;
+    let drag = null;
+    const MIN = 0.05; // zone minimale 5 %
     const toRel = e => {
       const r = img.getBoundingClientRect();
-      return { x: Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1), y: Math.min(Math.max((e.clientY - r.top) / r.height, 0), 1), r };
+      return { x: Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1), y: Math.min(Math.max((e.clientY - r.top) / r.height, 0), 1) };
+    };
+    const H = {
+      nw: (s, p) => ({ ...s, x0: Math.min(p.x, s.x1 - MIN), y0: Math.min(p.y, s.y1 - MIN) }),
+      n:  (s, p) => ({ ...s, y0: Math.min(p.y, s.y1 - MIN) }),
+      ne: (s, p) => ({ ...s, x1: Math.max(p.x, s.x0 + MIN), y0: Math.min(p.y, s.y1 - MIN) }),
+      e:  (s, p) => ({ ...s, x1: Math.max(p.x, s.x0 + MIN) }),
+      se: (s, p) => ({ ...s, x1: Math.max(p.x, s.x0 + MIN), y1: Math.max(p.y, s.y0 + MIN) }),
+      s:  (s, p) => ({ ...s, y1: Math.max(p.y, s.y0 + MIN) }),
+      sw: (s, p) => ({ ...s, x0: Math.min(p.x, s.x1 - MIN), y1: Math.max(p.y, s.y0 + MIN) }),
+      w:  (s, p) => ({ ...s, x0: Math.min(p.x, s.x1 - MIN) }),
     };
     const draw = () => {
-      if (!box) { box = document.createElement('div'); box.className = 'cut-sel'; lb.append(box); }
+      if (!box) {
+        box = document.createElement('div');
+        box.className = 'cut-sel';
+        box.innerHTML = Object.keys(H).map(h => `<i data-h="${h}" class="h-${h}"></i>`).join('');
+        lb.append(box);
+      }
       const r = img.getBoundingClientRect();
-      const x = Math.min(sel.x0, sel.x1), y = Math.min(sel.y0, sel.y1);
-      box.style.left = `${r.left + x * r.width}px`;
-      box.style.top = `${r.top + y * r.height}px`;
-      box.style.width = `${Math.abs(sel.x1 - sel.x0) * r.width}px`;
-      box.style.height = `${Math.abs(sel.y1 - sel.y0) * r.height}px`;
+      box.style.left = `${r.left + sel.x0 * r.width}px`;
+      box.style.top = `${r.top + sel.y0 * r.height}px`;
+      box.style.width = `${(sel.x1 - sel.x0) * r.width}px`;
+      box.style.height = `${(sel.y1 - sel.y0) * r.height}px`;
     };
-    img.addEventListener('pointerdown', e => {
+    if (img.complete && img.naturalWidth) draw(); else img.addEventListener('load', draw, { once: true });
+    lb.addEventListener('pointerdown', e => {
+      const h = e.target.dataset?.h;
+      if (!h) return;
       e.preventDefault(); e.stopPropagation();
-      const p = toRel(e);
-      sel = { x0: p.x, y0: p.y, x1: p.x, y1: p.y };
-      img.setPointerCapture(e.pointerId);
+      drag = h;
+    });
+    lb.addEventListener('pointermove', e => {
+      if (!drag) return;
+      sel = H[drag](sel, toRel(e));
       draw();
+      ok.disabled = false;
     });
-    img.addEventListener('pointermove', e => { if (!sel) return; const p = toRel(e); sel.x1 = p.x; sel.y1 = p.y; draw(); });
-    img.addEventListener('pointerup', e => {
-      e.stopPropagation();
-      if (sel && Math.abs(sel.x1 - sel.x0) > 0.03 && Math.abs(sel.y1 - sel.y0) > 0.03) ok.disabled = false;
-    });
-    lb.querySelector('[data-cancel]').addEventListener('click', e => { e.stopPropagation(); lb.remove(); });
+    lb.addEventListener('pointerup', () => { drag = null; });
+    lb.querySelector('[data-cancel]').addEventListener('click', e => { e.stopPropagation(); close(); });
     ok.addEventListener('click', async e => {
       e.stopPropagation();
-      if (!sel) return;
       ok.disabled = true; ok.textContent = 'Recadrage…';
       try {
         const blob = await (await fetch(photo.url)).blob();
         const bmp = await createImageBitmap(blob);
-        const sx = Math.round(Math.min(sel.x0, sel.x1) * bmp.width);
-        const sy = Math.round(Math.min(sel.y0, sel.y1) * bmp.height);
-        const sw = Math.round(Math.abs(sel.x1 - sel.x0) * bmp.width);
-        const sh = Math.round(Math.abs(sel.y1 - sel.y0) * bmp.height);
+        const sx = Math.round(sel.x0 * bmp.width);
+        const sy = Math.round(sel.y0 * bmp.height);
+        const sw = Math.round((sel.x1 - sel.x0) * bmp.width);
+        const sh = Math.round((sel.y1 - sel.y0) * bmp.height);
+        if (sw < 20 || sh < 20) throw new Error('zone trop petite');
         const c = document.createElement('canvas');
         c.width = sw; c.height = sh;                       // pixels natifs : pas de perte
         c.getContext('2d').drawImage(bmp, sx, sy, sw, sh, 0, 0, sw, sh);
@@ -835,7 +910,7 @@ function openLightbox(photo, mode = null) {
         const newPath = photo.storage_path.replace(/[^/]+$/, `${crypto.randomUUID()}.jpg`);
         const { error: e1 } = await sb.storage.from('photos').upload(newPath, out, { contentType: 'image/jpeg' });
         if (e1) throw e1;
-        // miniature régénérée depuis la version rognée + cadrage focal remis à zéro
+        // miniature régénérée depuis la version rognée + centrage remis à zéro
         const tb = await makeThumbBlob(out);
         let thumbPath = null;
         if (tb) {
@@ -848,8 +923,9 @@ function openLightbox(photo, mode = null) {
           .eq('id', photo.id);
         if (e2) throw e2;
         await sb.storage.from('photos').remove([photo.storage_path, photo.thumb_path].filter(Boolean));
-        lb.remove();
+        close();
         toast('✓ Photo recadrée — résolution d’origine conservée');
+        logEvent('recadrage', { photo: newPath });
         await loadObjet(currentObjet.id);
       } catch (err) {
         toast(`Recadrage échoué : ${err.message ?? err}`, true);
@@ -859,18 +935,23 @@ function openLightbox(photo, mode = null) {
   } else {
     lb.addEventListener('click', async e => {
       const img = e.target.closest('img');
-      if (mode !== 'focal' || !img) { lb.remove(); return; }
+      if (mode !== 'focal') {
+        if (img && !isVideo(photo)) { e.stopPropagation(); lb.classList.toggle('zoomed'); return; }
+        close(); return;
+      }
+      if (!img) { close(); return; }
       e.stopPropagation();
       const r = img.getBoundingClientRect();
-      if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) { lb.remove(); return; }
+      if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) { close(); return; }
       const fx = Math.round((e.clientX - r.left) / r.width * 100);
       const fy = Math.round((e.clientY - r.top) / r.height * 100);
       const { error } = await sb.from('photos').update({ focal_x: fx, focal_y: fy }).eq('id', photo.id);
-      if (error) { toast(error.message, true); lb.remove(); return; }
+      if (error) { toast(error.message, true); close(); return; }
       photo.focal_x = fx; photo.focal_y = fy;
-      lb.remove();
+      close();
       renderObjet();
-      toast('✓ Cadrage enregistré pour cette photo — la carte de la collection le suivra');
+      toast('✓ Centrage enregistré pour cette photo — la carte de la collection le suivra');
+      logEvent('centrage', { photo: photo.storage_path, fx, fy });
     });
   }
   document.body.append(lb);
@@ -1056,7 +1137,7 @@ $('#camera-shot').addEventListener('click', () => {
     const file = new File([b], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
     if (camTarget === 'objet' && currentObjet) {
       const n = await uploadPhotosFor(currentObjet.id, [file]);
-      if (n > 0) { camUploaded += n; toast('Photo ajoutée à la fiche — tu peux enchaîner ou Terminer'); }
+      if (n > 0) { camUploaded += n; logEvent('photo_ajoutee', { n, via: 'camera' }); toast('Photo ajoutée à la fiche — tu peux enchaîner ou Terminer'); }
     } else {
       addCapFiles([file]);
       toast('Photo ajoutée — enchaîne ou « Enregistrer l\'objet »');
@@ -1084,6 +1165,7 @@ $('#cap-save').addEventListener('click', async () => {
       source_capture: 'site',
     });
     if (e1) throw e1;
+    logEvent('capture', { n: capFiles.length, zone: $('#cap-zone').value.trim() || null }, newId);
     if (avecPhotos) {
       const n = await uploadPhotosFor(newId, capFiles, true);
       if (n > 0) {
