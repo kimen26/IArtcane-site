@@ -99,9 +99,12 @@ let capFiles = [];
 // ═══════════════════════════════════════════════════════════════════════════
 // AUTH
 // ═══════════════════════════════════════════════════════════════════════════
-sb.auth.onAuthStateChange((_event, session) => {
+sb.auth.onAuthStateChange((event, session) => {
   user = session?.user ?? null;
-  if (user) enterApp(); else showLogin();
+  // Ne rejouer enterApp() qu'à la connexion — TOKEN_REFRESHED (~1×/h) ne doit pas
+  // recharger toute la vue (audit 2026-08-24).
+  if (user) { if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') enterApp(); }
+  else showLogin();
 });
 
 function show(view) {
@@ -113,6 +116,9 @@ function showLogin() {
   $('#tabs').classList.add('hidden');
   $('#avatar').classList.add('hidden');
   $('#header-counter').textContent = '';
+  // Réarmer le realtime : à la prochaine connexion (autre tenant possible),
+  // watchLive() doit recréer le canal avec le bon filtre owner_id.
+  if (liveOn) { sb.removeAllChannels(); liveOn = false; }
   show('login');
 }
 async function enterApp() {
@@ -229,7 +235,7 @@ async function loadCollection() {
 async function loadPhotoMap() {
   photoMap = {};
   if (!collection.length) return;
-  const { data } = await sb.from('photos').select('objet_id,storage_path,thumb_path,focal_x,focal_y').order('created_at');
+  const { data } = await sb.from('photos').select('objet_id,storage_path,thumb_path,focal_x,focal_y').eq('owner_id', tenantId).order('created_at');
   const first = {};
   for (const p of data ?? []) if (!first[p.objet_id]) first[p.objet_id] = p;
   const urlByPath = await signPaths(Object.values(first).flatMap(p => [p.storage_path, p.thumb_path].filter(Boolean)));
@@ -300,7 +306,7 @@ function cardHtml(o) {
     : '<em>non localisé</em>';
   const meta = [catCanon(o.categorie), o.periode, o.ecole].filter(Boolean).map(esc).join(' · ') || '<em>à identifier</em>';
   return `<article class="card" data-oid="${esc(o.id)}">
-    <div class="card-img">${img ? `<img src="${esc(img.url)}" alt="" loading="lazy" style="object-position:${img.fx ?? 50}% ${img.fy ?? 50}%">` : catEmoji(o.categorie)}<span class="card-id">#${esc(o.id)}</span><span class="card-status" style="background:${ST_COLOR[o.statut] || '#8A94B8'}"></span></div>
+    <div class="card-img">${img ? `<img src="${esc(img.url)}" alt="${esc(o.titre || 'Objet de la collection')}" loading="lazy" style="object-position:${img.fx ?? 50}% ${img.fy ?? 50}%">` : catEmoji(o.categorie)}<span class="card-id">#${esc(o.id)}</span><span class="card-status" style="background:${ST_COLOR[o.statut] || '#8A94B8'}"></span></div>
     <div class="card-body">
       <div class="card-title">${esc(o.titre || 'Sans titre')}</div>
       <div class="card-meta">${meta}</div>
@@ -353,7 +359,7 @@ $('#group-by').addEventListener('change', e => { filters.group = e.target.value;
 // ═══════════════════════════════════════════════════════════════════════════
 // VUE OBJET
 // ═══════════════════════════════════════════════════════════════════════════
-// Champs éditables en mode « Corriger » (chaque diff → table corrections = leçon PMO)
+// Champs éditables en mode « Corriger » (chaque diff → événement 'correction' = leçon PMO)
 const CHAMPS_EDIT = [
   ['titre', 'Titre'], ['categorie', 'Catégorie'], ['technique', 'Technique'],
   ['periode', 'Période'], ['ecole', 'Région / école'], ['auteur', 'Auteur'],
@@ -364,7 +370,7 @@ const CHAMPS_EDIT = [
 async function loadObjet(id) {
   const body = $('#objet-body');
   body.innerHTML = '<div class="skeleton" style="height:320px"></div>';
-  const { data: o, error } = await sb.from('objets').select('*').eq('id', id).maybeSingle();
+  const { data: o, error } = await sb.from('objets').select('*').eq('owner_id', tenantId).eq('id', id).maybeSingle();
   if (error || !o) {
     body.innerHTML = emptyHtml('Objet introuvable', `Aucun objet #${id} dans ta collection.`);
     return;
@@ -372,10 +378,10 @@ async function loadObjet(id) {
   currentObjet = o;
   editing = false;
   const [{ data: photos }, { data: comps }, { data: fiches }, { data: events }] = await Promise.all([
-    sb.from('photos').select('*').eq('objet_id', id).order('created_at'),
-    sb.from('comparables').select('*').eq('objet_id', id).order('date_vente', { ascending: false, nullsFirst: false }),
-    sb.from('fiches').select('*').eq('objet_id', id).order('version', { ascending: false }).limit(1),
-    sb.from('evenements').select('*').eq('objet_id', id).order('created_at', { ascending: false }).limit(50),
+    sb.from('photos').select('*').eq('owner_id', tenantId).eq('objet_id', id).order('created_at'),
+    sb.from('comparables').select('*').eq('owner_id', tenantId).eq('objet_id', id).order('date_vente', { ascending: false, nullsFirst: false }),
+    sb.from('fiches').select('*').eq('owner_id', tenantId).eq('objet_id', id).order('version', { ascending: false }).limit(1),
+    sb.from('evenements').select('*').eq('owner_id', tenantId).eq('objet_id', id).order('created_at', { ascending: false }).limit(50),
   ]);
   const urlByPath = await signPaths((photos ?? []).flatMap(p => [p.storage_path, p.thumb_path].filter(Boolean)));
   currentPhotos = (photos ?? []).map(p => ({ ...p, url: urlByPath[p.storage_path], thumbUrl: urlByPath[p.thumb_path] ?? urlByPath[p.storage_path] }));
@@ -388,7 +394,7 @@ async function loadObjet(id) {
 
 // Suppression d'une photo (fichier storage + ligne) — policy storage delete : migration 0007.
 async function deletePhoto() {
-  const sel = currentPhotos.find(p => p.sel) ?? currentPhotos[0];
+  const sel = selPhoto();
   if (!sel || !currentObjet) return;
   if (!confirm('Supprimer cette photo ? (fichier + référence, définitif)')) return;
   await sb.storage.from('photos').remove([sel.storage_path]); // tolérant : la ligne prime
@@ -400,11 +406,11 @@ async function deletePhoto() {
 }
 
 // Suppression d'un objet : fichiers storage puis ligne `objets` — les FK
-// on delete cascade emportent photos/comparables/fiches/jobs/corrections.
+// on delete cascade emportent photos/comparables/fiches/jobs/evenements.
 async function deleteObjet() {
   const o = currentObjet;
   if (!o) return;
-  if (!confirm(`Supprimer l'objet #${o.id} ?\n${currentPhotos.length} photo(s), fiche, comparables et corrections partent avec — définitif.`)) return;
+  if (!confirm(`Supprimer l'objet #${o.id} ?\n${currentPhotos.length} photo(s), fiche, comparables et historique partent avec — définitif.`)) return;
   const paths = currentPhotos.map(p => p.storage_path);
   if (paths.length) await sb.storage.from('photos').remove(paths);
   const { error } = await sb.from('objets').delete().eq('owner_id', tenantId).eq('id', o.id);
@@ -438,7 +444,7 @@ function renderObjet() {
       <div class="thumbs">
         ${currentPhotos.map((p, i) => `
           <div class="thumb ${i === selIdx ? 'sel' : ''}" data-action="thumb" data-idx="${i}" title="${esc(p.kind)}">
-            ${p.url ? (isVideo(p) ? '🎬' : `<img src="${esc(p.thumbUrl || p.url)}" alt="">`) : '📷'}
+            ${p.url ? (isVideo(p) ? '🎬' : `<img src="${esc(p.thumbUrl || p.url)}" alt="${esc(p.kind)} — ${esc(o.titre || 'objet')}">`) : '📷'}
             <span class="kind">${esc(p.kind)}</span>
           </div>`).join('')}
         <div class="thumb add" data-action="add-photo" title="Ajouter une photo">＋</div>
@@ -632,19 +638,20 @@ async function loadSimilar(o) {
   if (!panel) return;
   if (!o.categorie) return;
   const { data } = await sb.from('objets').select('*')
-    .eq('categorie', o.categorie).neq('id', o.id)
+    .eq('owner_id', tenantId).eq('categorie', o.categorie).neq('id', o.id)
     .order('created_at', { ascending: false }).limit(3);
   if (!data?.length) return;
-  const { data: ph } = await sb.from('photos').select('objet_id,storage_path')
-    .in('objet_id', data.map(s => s.id)).order('created_at');
+  // Miniatures 480 px (plusieurs Mo → ~30 Ko par vignette — audit 2026-08-24)
+  const { data: ph } = await sb.from('photos').select('objet_id,storage_path,thumb_path')
+    .eq('owner_id', tenantId).in('objet_id', data.map(s => s.id)).order('created_at');
   const first = {};
-  for (const p of ph ?? []) if (!first[p.objet_id]) first[p.objet_id] = p.storage_path;
+  for (const p of ph ?? []) if (!first[p.objet_id]) first[p.objet_id] = p.thumb_path ?? p.storage_path;
   const urls = await signPaths(Object.values(first));
   panel.style.display = '';
   $('#similar-grid').innerHTML = data.map(s => {
     const img = urls[first[s.id]];
     return `<div class="sim-card" data-action="similar" data-oid="${esc(s.id)}">
-      <div class="sim-img">${img ? `<img src="${esc(img)}" alt="">` : catEmoji(s.categorie)}</div>
+      <div class="sim-img">${img ? `<img src="${esc(img)}" alt="${esc(s.titre || 'Objet similaire')}" loading="lazy">` : catEmoji(s.categorie)}</div>
       <div><div class="sim-t">${esc(s.titre || 'Sans titre')}</div>
       <div class="sim-m">#${esc(s.id)}${s.prix_bas != null ? ` · ${fmtNum(s.prix_bas)}–${fmtNum(s.prix_haut)} €` : ''}</div></div>
     </div>`;
@@ -652,6 +659,17 @@ async function loadSimilar(o) {
 }
 
 // ─── Actions de la vue Objet (délégation) ───────────────────────────────────
+const selPhoto = () => currentPhotos.find(p => p.sel) ?? currentPhotos[0];
+
+// Met l'objet en file d'analyse (statut + job). L'index unique partiel
+// jobs_un_en_attente_idx (migration 0011) renvoie 23505 si un job est déjà en
+// file pour cet objet — c'est le comportement voulu, on l'ignore.
+async function queueAnalyse(oid, type = 'analyse') {
+  await sb.from('objets').update({ statut: 'en_file' }).eq('owner_id', tenantId).eq('id', oid);
+  const { error } = await sb.from('jobs').insert({ owner_id: tenantId, objet_id: oid, type });
+  if (error && error.code !== '23505') toast(error.message, true);
+}
+
 $('#objet-body').addEventListener('click', async e => {
   const el = e.target.closest('[data-action]');
   if (!el) return;
@@ -663,7 +681,7 @@ $('#objet-body').addEventListener('click', async e => {
     renderObjet();
   }
   else if (act === 'zoom') {
-    const sel = currentPhotos.find(p => p.sel) ?? currentPhotos[0];
+    const sel = selPhoto();
     if (!sel?.url) return;
     openLightbox(sel);
   }
@@ -671,12 +689,12 @@ $('#objet-body').addEventListener('click', async e => {
   // retour Yann : « pour la cadrer il faut la voir ») et le clic y définit le
   // point focal de CETTE photo seulement (chaque photo a son cadrage).
   else if (act === 'crop-toggle') {
-    const sel = currentPhotos.find(p => p.sel) ?? currentPhotos[0];
+    const sel = selPhoto();
     if (!sel?.url) return;
     openLightbox(sel, 'focal');
   }
   else if (act === 'cut-photo') {
-    const sel = currentPhotos.find(p => p.sel) ?? currentPhotos[0];
+    const sel = selPhoto();
     if (!sel?.url) return;
     openLightbox(sel, 'cut');
   }
@@ -698,7 +716,7 @@ $('#objet-body').addEventListener('click', async e => {
       contenant: $('#loc-contenant').value.trim() || null,
       position: $('#loc-position').value.trim() || null,
     };
-    const { error } = await sb.from('objets').update(updates).eq('id', o.id);
+    const { error } = await sb.from('objets').update(updates).eq('owner_id', tenantId).eq('id', o.id);
     if (error) { toast(error.message, true); return; }
     Object.assign(currentObjet, updates);
     logEvent('localisation', { champs: Object.fromEntries(Object.entries(updates).map(([k, v]) => [k, { apres: v }])) });
@@ -706,7 +724,7 @@ $('#objet-body').addEventListener('click', async e => {
     toast('Localisation mise à jour');
   }
   else if (act === 'valider') {
-    const { error } = await sb.from('objets').update({ statut: 'validee' }).eq('id', o.id);
+    const { error } = await sb.from('objets').update({ statut: 'validee' }).eq('owner_id', tenantId).eq('id', o.id);
     if (error) { toast(error.message, true); return; }
     logEvent('validation', { note: 'confiance 4/4 (ground truth)' });
     toast(`#${o.id} validée ✓ — confiance 4/4 (ground truth)`);
@@ -716,9 +734,7 @@ $('#objet-body').addEventListener('click', async e => {
   else if (act === 'corr-cancel') { editing = false; renderObjet(); }
   else if (act === 'corr-save') { saveCorrections(); }
   else if (act === 'relancer') {
-    const { error } = await sb.from('jobs').insert({ owner_id: tenantId, objet_id: o.id, type: 'reanalyse' });
-    if (error) { toast(error.message, true); return; }
-    await sb.from('objets').update({ statut: 'en_file' }).eq('id', o.id);
+    await queueAnalyse(o.id, 'reanalyse');
     logEvent('relance', {});
     toast('Analyse relancée — le cron la traitera');
     loadObjet(o.id);
@@ -744,15 +760,14 @@ async function saveCorrections() {
     }
     if (av !== String(nv ?? '')) {
       updates[champ] = nv;
-      rows.push({ owner_id: tenantId, objet_id: o.id, champ, avant: av || null, apres: nv == null ? null : String(nv), auteur });
+      rows.push({ champ, avant: av || null, apres: nv == null ? null : String(nv) });
     }
   }
   if (!rows.length) { toast('Aucune modification'); editing = false; renderObjet(); return; }
   updates.statut = 'contestee';
-  const { error } = await sb.from('objets').update(updates).eq('id', o.id);
+  const { error } = await sb.from('objets').update(updates).eq('owner_id', tenantId).eq('id', o.id);
   if (error) { toast(error.message, true); return; }
-  const { error: e2 } = await sb.from('corrections').insert(rows);
-  if (e2) { toast(e2.message, true); return; }
+  // Ground truth tracée dans evenements (corrections absorbée, D-027) — le cron la relit là.
   logEvent('correction', { champs: Object.fromEntries(rows.map(r => [r.champ, { avant: r.avant, apres: r.apres }])) });
   toast(`${rows.length} correction${rows.length > 1 ? 's' : ''} gravée${rows.length > 1 ? 's' : ''} — leçons pour l'IA`);
   loadObjet(o.id);
@@ -809,8 +824,7 @@ $('#file-add-photo').addEventListener('change', async e => {
     logEvent('photo_ajoutee', { n, via: 'fichier' }, oid);
     // L'objet avait trop peu de photos → on relance l'analyse automatiquement
     if (['capture', 'a_completer'].includes(currentObjet.statut)) {
-      await sb.from('objets').update({ statut: 'en_file' }).eq('id', oid);
-      await sb.from('jobs').insert({ owner_id: tenantId, objet_id: oid, type: 'analyse' });
+      await queueAnalyse(oid);
       toast(`${n} photo${n > 1 ? 's' : ''} ajoutée${n > 1 ? 's' : ''} — analyse en file`);
     } else {
       toast(`${n} photo${n > 1 ? 's' : ''} ajoutée${n > 1 ? 's' : ''}`);
@@ -831,12 +845,12 @@ function openLightbox(photo, mode = null) {
   const lb = document.createElement('div');
   lb.className = 'lightbox' + (mode ? ` ${mode}` : '');
   if (mode === 'cut') {
-    lb.innerHTML = `<img src="${esc(photo.url)}" alt="">
+    lb.innerHTML = `<img src="${esc(photo.url)}" alt="Photo à recadrer — ${esc(currentObjet?.titre || 'objet')}">
       <div class="cut-bar"><span class="cut-hint">Tire les poignées (bords et coins) pour délimiter la zone à garder</span>
       <button class="btn primary small" data-ok disabled>✂️ Recadrer</button>
       <button class="btn small" data-cancel>Annuler</button></div>`;
   } else {
-    lb.innerHTML = isVideo(photo) ? `<video src="${esc(photo.url)}" controls autoplay></video>` : `<img src="${esc(photo.url)}" alt="">`;
+    lb.innerHTML = isVideo(photo) ? `<video src="${esc(photo.url)}" controls autoplay></video>` : `<img src="${esc(photo.url)}" alt="Photo plein écran — ${esc(currentObjet?.titre || 'objet')}">`;
     if (mode === 'focal') lb.insertAdjacentHTML('beforeend', '<div class="crop-hint">Cliquer au centre de l’objet — centrage de <b>cette photo</b> uniquement · clic à côté = annuler</div>');
   }
   const close = () => { lb.remove(); document.body.classList.remove('lb-open'); };
@@ -920,7 +934,7 @@ function openLightbox(photo, mode = null) {
         }
         const { error: e2 } = await sb.from('photos')
           .update({ storage_path: newPath, thumb_path: thumbPath, focal_x: null, focal_y: null })
-          .eq('id', photo.id);
+          .eq('owner_id', tenantId).eq('id', photo.id);
         if (e2) throw e2;
         await sb.storage.from('photos').remove([photo.storage_path, photo.thumb_path].filter(Boolean));
         close();
@@ -945,7 +959,7 @@ function openLightbox(photo, mode = null) {
       if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) { close(); return; }
       const fx = Math.round((e.clientX - r.left) / r.width * 100);
       const fy = Math.round((e.clientY - r.top) / r.height * 100);
-      const { error } = await sb.from('photos').update({ focal_x: fx, focal_y: fy }).eq('id', photo.id);
+      const { error } = await sb.from('photos').update({ focal_x: fx, focal_y: fy }).eq('owner_id', tenantId).eq('id', photo.id);
       if (error) { toast(error.message, true); close(); return; }
       photo.focal_x = fx; photo.focal_y = fy;
       close();
@@ -1009,7 +1023,9 @@ function mdToHtml(md) {
 // VUE CAPTURER
 // ═══════════════════════════════════════════════════════════════════════════
 async function initCapture() {
-  capFiles = [];
+  // NE PAS vider capFiles ici (audit 2026-08-24) : naviguer Capturer → Collection →
+  // Capturer ne doit pas perdre les clichés non enregistrés. capFiles n'est vidé
+  // qu'après un enregistrement réussi (cap-save).
   renderPreviews();
   $('#cap-num').value = '…';
   const [{ data: next }, { data: lieux }] = await Promise.all([
@@ -1110,10 +1126,7 @@ function closeCamera() {
   // l'analyse si besoin (même règle que l'ajout par fichier) et on recharge la fiche.
   if (camTarget === 'objet' && currentObjet && camUploaded > 0) {
     const oid = currentObjet.id;
-    if (['capture', 'a_completer'].includes(currentObjet.statut)) {
-      sb.from('objets').update({ statut: 'en_file' }).eq('id', oid)
-        .then(() => sb.from('jobs').insert({ owner_id: tenantId, objet_id: oid, type: 'analyse' }));
-    }
+    if (['capture', 'a_completer'].includes(currentObjet.statut)) queueAnalyse(oid);
     loadObjet(oid);
   }
   camTarget = 'capture';
@@ -1169,10 +1182,9 @@ $('#cap-save').addEventListener('click', async () => {
     if (avecPhotos) {
       const n = await uploadPhotosFor(newId, capFiles, true);
       if (n > 0) {
-        const { error: e2 } = await sb.from('jobs').insert({ owner_id: tenantId, objet_id: newId, type: 'analyse' });
-        if (e2) toast(e2.message, true);
+        await queueAnalyse(newId);
       } else {
-        await sb.from('objets').update({ statut: 'a_completer' }).eq('id', newId);
+        await sb.from('objets').update({ statut: 'a_completer' }).eq('owner_id', tenantId).eq('id', newId);
       }
     }
     capFiles = [];

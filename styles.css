@@ -36,6 +36,8 @@ header{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:
 .logo-name .w-i{color:var(--blue)}
 /* Rébus R2 : le monogramme ⌈ART⌋ remplace les lettres du milieu (I ⌈ART⌋ cane) */
 .logo-name .logo-glyph{height:.72em;width:auto;align-self:center;margin:0 .04em;display:block}
+/* Cygne celtique — marque ronde accolée au nom, façon ® */
+.logo-name .logo-mark{height:.62em;width:.62em;align-self:flex-start;margin-left:.18em;margin-top:-.05em;display:block;border-radius:50%}
 .header-counter{margin-left:8px;padding:5px 12px;background:var(--blue-softer);border:1px solid var(--line);border-radius:999px;font-size:12.5px;color:var(--ink-2);white-space:nowrap}
 .header-counter b{color:var(--blue-deep)}
 .header-right{margin-left:auto;display:flex;align-items:center;gap:14px}
@@ -77,7 +79,6 @@ main{max-width:1240px;margin:0 auto;padding:28px 24px 80px}
 .chip{padding:6px 14px;font-size:13px;font-weight:500;border-radius:999px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink-2)}
 .chip:hover{border-color:var(--blue);color:var(--blue-deep)}
 .chip.active{background:var(--blue);border-color:var(--blue);color:#fff}
-.chip.ghost{border-style:dashed;color:var(--ink-3)}
 .lists-shortcut{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:26px}
 .ls{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:var(--r-md);background:var(--surface);border:1px solid var(--line);font-size:13px;color:var(--ink-2);box-shadow:var(--shadow)}
 .ls:hover{border-color:var(--blue);color:var(--blue-deep)}
@@ -240,7 +241,6 @@ table.comps{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:14px
 .comps .prix{font-family:var(--mono);font-weight:600;text-align:right}
 .comps th:last-child,.comps td:last-child{text-align:right}
 .link-lot{color:var(--blue);font-size:12.5px;font-weight:500}
-.trend{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--green);font-weight:600;background:var(--green-soft);padding:3px 10px;border-radius:999px}
 
 .similar{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
 @media (max-width:640px){.similar{grid-template-columns:1fr}}
