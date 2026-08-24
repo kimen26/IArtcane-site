@@ -219,12 +219,13 @@ async function loadCollection() {
 async function loadPhotoMap() {
   photoMap = {};
   if (!collection.length) return;
-  const { data } = await sb.from('photos').select('objet_id,storage_path,focal_x,focal_y').order('created_at');
+  const { data } = await sb.from('photos').select('objet_id,storage_path,thumb_path,focal_x,focal_y').order('created_at');
   const first = {};
   for (const p of data ?? []) if (!first[p.objet_id]) first[p.objet_id] = p;
-  const urlByPath = await signPaths(Object.values(first).map(p => p.storage_path));
+  const urlByPath = await signPaths(Object.values(first).flatMap(p => [p.storage_path, p.thumb_path].filter(Boolean)));
   for (const [oid, p] of Object.entries(first)) {
-    if (urlByPath[p.storage_path]) photoMap[oid] = { url: urlByPath[p.storage_path], fx: p.focal_x, fy: p.focal_y };
+    const url = urlByPath[p.thumb_path] ?? urlByPath[p.storage_path]; // miniature d'abord (vitesse)
+    if (url) photoMap[oid] = { url, fx: p.focal_x, fy: p.focal_y };
   }
 }
 
@@ -365,8 +366,8 @@ async function loadObjet(id) {
     sb.from('comparables').select('*').eq('objet_id', id).order('date_vente', { ascending: false, nullsFirst: false }),
     sb.from('fiches').select('*').eq('objet_id', id).order('version', { ascending: false }).limit(1),
   ]);
-  const urlByPath = await signPaths((photos ?? []).map(p => p.storage_path));
-  currentPhotos = (photos ?? []).map(p => ({ ...p, url: urlByPath[p.storage_path] }));
+  const urlByPath = await signPaths((photos ?? []).flatMap(p => [p.storage_path, p.thumb_path].filter(Boolean)));
+  currentPhotos = (photos ?? []).map(p => ({ ...p, url: urlByPath[p.storage_path], thumbUrl: urlByPath[p.thumb_path] ?? urlByPath[p.storage_path] }));
   currentComps = comps ?? [];
   currentFiche = (fiches ?? [])[0] ?? null;
   renderObjet();
@@ -418,12 +419,13 @@ function renderObjet() {
       <div class="gallery-main" data-action="zoom" title="Agrandir">
         ${sel && sel.url ? (isVideo(sel) ? `<video src="${esc(sel.url)}" controls></video>` : `<img src="${esc(sel.url)}" alt="photo de l'objet">`) : catEmoji(o.categorie)}
         ${sel && sel.url && !isVideo(sel) ? `<button class="crop-btn" data-action="crop-toggle" title="Cadrer cette photo (elle s'ouvre en grand)">🎯 Cadrer</button>` : ''}
+        ${sel && sel.url && !isVideo(sel) ? `<button class="crop-btn cut-btn" data-action="cut-photo" title="Recadrer : rogne définitivement la photo (résolution d'origine conservée)">✂️ Recadrer</button>` : ''}
         ${sel && sel.url ? `<button class="crop-btn del-photo" data-action="del-photo" title="Supprimer cette photo">🗑</button>` : ''}
       </div>
       <div class="thumbs">
         ${currentPhotos.map((p, i) => `
           <div class="thumb ${i === selIdx ? 'sel' : ''}" data-action="thumb" data-idx="${i}" title="${esc(p.kind)}">
-            ${p.url ? (isVideo(p) ? '🎬' : `<img src="${esc(p.url)}" alt="">`) : '📷'}
+            ${p.url ? (isVideo(p) ? '🎬' : `<img src="${esc(p.thumbUrl || p.url)}" alt="">`) : '📷'}
             <span class="kind">${esc(p.kind)}</span>
           </div>`).join('')}
         <div class="thumb add" data-action="add-photo" title="Ajouter une photo">＋</div>
@@ -621,7 +623,12 @@ $('#objet-body').addEventListener('click', async e => {
   else if (act === 'crop-toggle') {
     const sel = currentPhotos.find(p => p.sel) ?? currentPhotos[0];
     if (!sel?.url) return;
-    openLightbox(sel, true);
+    openLightbox(sel, 'focal');
+  }
+  else if (act === 'cut-photo') {
+    const sel = currentPhotos.find(p => p.sel) ?? currentPhotos[0];
+    if (!sel?.url) return;
+    openLightbox(sel, 'cut');
   }
   else if (act === 'del-photo') { deletePhoto(); }
   else if (act === 'del-objet') { deleteObjet(); }
@@ -698,6 +705,20 @@ async function saveCorrections() {
 }
 
 // ─── Upload de photos (partagé capture + fiche objet) ───────────────────────
+// Miniature JPEG ≤ 480 px générée à l'upload (listing + carrousel — vitesse, 2026-08-24).
+// NULL si échec : l'affichage retombe sur l'image pleine.
+async function makeThumbBlob(blob) {
+  try {
+    const bmp = await createImageBitmap(blob);
+    const M = 480;
+    const s = Math.min(1, M / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    return await new Promise(res => c.toBlob(res, 'image/jpeg', 0.8));
+  } catch { return null; }
+}
+
 async function uploadPhotosFor(oid, files, firstIsFace = false) {
   let done = 0;
   let first = firstIsFace;
@@ -707,9 +728,18 @@ async function uploadPhotosFor(oid, files, firstIsFace = false) {
     const { error } = await sb.storage.from('photos').upload(path, f, { contentType: f.type || undefined });
     if (error) { toast(`Upload « ${f.name} » : ${error.message}`, true); continue; }
     const video = /^video\//.test(f.type);
+    let thumbPath = null;
+    if (!video) {
+      const tb = await makeThumbBlob(f);
+      if (tb) {
+        thumbPath = path.replace(/\.[a-z0-9]+$/i, '') + '.thumb.jpg';
+        const { error: et } = await sb.storage.from('photos').upload(thumbPath, tb, { contentType: 'image/jpeg' });
+        if (et) thumbPath = null;
+      }
+    }
     const kind = video ? 'video' : (first ? 'face' : 'autre');
     first = false;
-    const { error: e2 } = await sb.from('photos').insert({ owner_id: tenantId, objet_id: oid, storage_path: path, kind, source: 'site' });
+    const { error: e2 } = await sb.from('photos').insert({ owner_id: tenantId, objet_id: oid, storage_path: path, thumb_path: thumbPath, kind, source: 'site' });
     if (e2) toast(e2.message, true); else done++;
   }
   return done;
@@ -735,29 +765,114 @@ $('#file-add-photo').addEventListener('change', async e => {
 });
 
 // ─── Lightbox ───────────────────────────────────────────────────────────────
-// Lightbox plein écran. En mode `crop`, le clic sur l'image définit le point
-// focal de cette photo : la boîte de l'<img> EST l'image entière (max-width/
-// max-height), le calcul est donc exact — pas de géométrie letterbox à deviner.
-function openLightbox(photo, crop = false) {
+// Lightbox plein écran, 3 modes :
+//  - null   : simple agrandissement (clic = fermer)
+//  - 'focal': le clic sur l'image définit le point focal de CETTE photo (la boîte
+//             de l'<img> EST l'image entière → calcul exact, pas de letterbox)
+//  - 'cut'  : recadrage RÉEL — glisser pour sélectionner la zone à garder, la photo
+//             est rognée aux pixels natifs (aucune perte de résolution) et la
+//             source est remplacée (demande Yann 2026-08-24)
+function openLightbox(photo, mode = null) {
   const lb = document.createElement('div');
-  lb.className = 'lightbox' + (crop ? ' crop' : '');
-  lb.innerHTML = isVideo(photo) ? `<video src="${esc(photo.url)}" controls autoplay></video>` : `<img src="${esc(photo.url)}" alt="">`;
-  if (crop) lb.insertAdjacentHTML('beforeend', '<div class="crop-hint">Cliquer au centre de l’objet — cadrage de <b>cette photo</b> uniquement · clic à côté = annuler</div>');
-  lb.addEventListener('click', async e => {
-    const img = e.target.closest('img');
-    if (!crop || !img) { lb.remove(); return; }
-    e.stopPropagation();
-    const r = img.getBoundingClientRect();
-    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) { lb.remove(); return; }
-    const fx = Math.round((e.clientX - r.left) / r.width * 100);
-    const fy = Math.round((e.clientY - r.top) / r.height * 100);
-    const { error } = await sb.from('photos').update({ focal_x: fx, focal_y: fy }).eq('id', photo.id);
-    if (error) { toast(error.message, true); lb.remove(); return; }
-    photo.focal_x = fx; photo.focal_y = fy;
-    lb.remove();
-    renderObjet();
-    toast('✓ Cadrage enregistré pour cette photo — la carte de la collection le suivra');
-  });
+  lb.className = 'lightbox' + (mode ? ` ${mode}` : '');
+  if (mode === 'cut') {
+    lb.innerHTML = `<img src="${esc(photo.url)}" alt="">
+      <div class="cut-bar"><span class="cut-hint">Glisse sur l'image pour sélectionner la zone à garder</span>
+      <button class="btn primary small" data-ok disabled>✂️ Recadrer</button>
+      <button class="btn small" data-cancel>Annuler</button></div>`;
+  } else {
+    lb.innerHTML = isVideo(photo) ? `<video src="${esc(photo.url)}" controls autoplay></video>` : `<img src="${esc(photo.url)}" alt="">`;
+    if (mode === 'focal') lb.insertAdjacentHTML('beforeend', '<div class="crop-hint">Cliquer au centre de l’objet — cadrage de <b>cette photo</b> uniquement · clic à côté = annuler</div>');
+  }
+
+  if (mode === 'cut') {
+    const img = lb.querySelector('img');
+    const ok = lb.querySelector('[data-ok]');
+    let sel = null; // coords RELATIVES à l'image affichée (0-1)
+    let box = null;
+    const toRel = e => {
+      const r = img.getBoundingClientRect();
+      return { x: Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1), y: Math.min(Math.max((e.clientY - r.top) / r.height, 0), 1), r };
+    };
+    const draw = () => {
+      if (!box) { box = document.createElement('div'); box.className = 'cut-sel'; lb.append(box); }
+      const r = img.getBoundingClientRect();
+      const x = Math.min(sel.x0, sel.x1), y = Math.min(sel.y0, sel.y1);
+      box.style.left = `${r.left + x * r.width}px`;
+      box.style.top = `${r.top + y * r.height}px`;
+      box.style.width = `${Math.abs(sel.x1 - sel.x0) * r.width}px`;
+      box.style.height = `${Math.abs(sel.y1 - sel.y0) * r.height}px`;
+    };
+    img.addEventListener('pointerdown', e => {
+      e.preventDefault(); e.stopPropagation();
+      const p = toRel(e);
+      sel = { x0: p.x, y0: p.y, x1: p.x, y1: p.y };
+      img.setPointerCapture(e.pointerId);
+      draw();
+    });
+    img.addEventListener('pointermove', e => { if (!sel) return; const p = toRel(e); sel.x1 = p.x; sel.y1 = p.y; draw(); });
+    img.addEventListener('pointerup', e => {
+      e.stopPropagation();
+      if (sel && Math.abs(sel.x1 - sel.x0) > 0.03 && Math.abs(sel.y1 - sel.y0) > 0.03) ok.disabled = false;
+    });
+    lb.querySelector('[data-cancel]').addEventListener('click', e => { e.stopPropagation(); lb.remove(); });
+    ok.addEventListener('click', async e => {
+      e.stopPropagation();
+      if (!sel) return;
+      ok.disabled = true; ok.textContent = 'Recadrage…';
+      try {
+        const blob = await (await fetch(photo.url)).blob();
+        const bmp = await createImageBitmap(blob);
+        const sx = Math.round(Math.min(sel.x0, sel.x1) * bmp.width);
+        const sy = Math.round(Math.min(sel.y0, sel.y1) * bmp.height);
+        const sw = Math.round(Math.abs(sel.x1 - sel.x0) * bmp.width);
+        const sh = Math.round(Math.abs(sel.y1 - sel.y0) * bmp.height);
+        const c = document.createElement('canvas');
+        c.width = sw; c.height = sh;                       // pixels natifs : pas de perte
+        c.getContext('2d').drawImage(bmp, sx, sy, sw, sh, 0, 0, sw, sh);
+        const out = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.92));
+        if (!out) throw new Error('encodage impossible');
+        const newPath = photo.storage_path.replace(/[^/]+$/, `${crypto.randomUUID()}.jpg`);
+        const { error: e1 } = await sb.storage.from('photos').upload(newPath, out, { contentType: 'image/jpeg' });
+        if (e1) throw e1;
+        // miniature régénérée depuis la version rognée + cadrage focal remis à zéro
+        const tb = await makeThumbBlob(out);
+        let thumbPath = null;
+        if (tb) {
+          thumbPath = newPath.replace(/\.jpg$/, '.thumb.jpg');
+          const { error: et } = await sb.storage.from('photos').upload(thumbPath, tb, { contentType: 'image/jpeg' });
+          if (et) thumbPath = null;
+        }
+        const { error: e2 } = await sb.from('photos')
+          .update({ storage_path: newPath, thumb_path: thumbPath, focal_x: null, focal_y: null })
+          .eq('id', photo.id);
+        if (e2) throw e2;
+        await sb.storage.from('photos').remove([photo.storage_path, photo.thumb_path].filter(Boolean));
+        lb.remove();
+        toast('✓ Photo recadrée — résolution d’origine conservée');
+        await loadObjet(currentObjet.id);
+      } catch (err) {
+        toast(`Recadrage échoué : ${err.message ?? err}`, true);
+        ok.disabled = false; ok.textContent = '✂️ Recadrer';
+      }
+    });
+  } else {
+    lb.addEventListener('click', async e => {
+      const img = e.target.closest('img');
+      if (mode !== 'focal' || !img) { lb.remove(); return; }
+      e.stopPropagation();
+      const r = img.getBoundingClientRect();
+      if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) { lb.remove(); return; }
+      const fx = Math.round((e.clientX - r.left) / r.width * 100);
+      const fy = Math.round((e.clientY - r.top) / r.height * 100);
+      const { error } = await sb.from('photos').update({ focal_x: fx, focal_y: fy }).eq('id', photo.id);
+      if (error) { toast(error.message, true); lb.remove(); return; }
+      photo.focal_x = fx; photo.focal_y = fy;
+      lb.remove();
+      renderObjet();
+      toast('✓ Cadrage enregistré pour cette photo — la carte de la collection le suivra');
+    });
+  }
   document.body.append(lb);
 }
 
