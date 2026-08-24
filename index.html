@@ -14,8 +14,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=2026-08-24c">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<!-- cache-buster ?v= : garder en sync avec VERSION dans sw.js -->
+<link rel="stylesheet" href="styles.css?v=2026-08-24i">
 </head>
 <body>
 
@@ -26,6 +27,10 @@
     </div>
     <div class="header-counter mono" id="header-counter"></div>
     <div class="header-right">
+      <div class="menu-gov hidden" id="menu-gov">
+        <button class="menu-btn" id="menu-btn" aria-haspopup="true" aria-expanded="false">☰ Menu</button>
+        <div class="menu-panel hidden" id="menu-panel"></div>
+      </div>
       <button class="avatar hidden" id="avatar" title="Se déconnecter">?</button>
     </div>
   </div>
@@ -34,7 +39,7 @@
 <nav class="tabs hidden" id="tabs">
   <div class="tabs-in">
     <button class="tab active" data-view="collection">Collection<span class="count" id="tab-count"></span></button>
-    <button class="tab" data-view="capture">Capturer</button>
+    <button class="tab hide-lecteur" data-view="capture">Capturer</button>
   </div>
 </nav>
 
@@ -68,6 +73,13 @@
         <option value="periode">Regrouper : période</option>
         <option value="">Sans regroupement</option>
       </select>
+      <div class="prix-filter">
+        <input type="number" id="prix-min" placeholder="Prix min" min="0" inputmode="numeric" aria-label="Prix min">
+        <span class="prix-sep">–</span>
+        <input type="number" id="prix-max" placeholder="Prix max" min="0" inputmode="numeric" aria-label="Prix max">
+      </div>
+      <button class="btn small hidden" id="btn-save-filter" title="Sauvegarder le filtre courant comme liste">💾 Sauvegarder ce filtre</button>
+      <button class="btn small" id="btn-csv" title="Exporter les objets filtrés (CSV, format Excel)">⬇ CSV</button>
     </div>
     <div class="chips" id="chips"></div>
     <div class="lists-shortcut" id="lists"></div>
@@ -78,6 +90,47 @@
   <section class="view" id="view-objet">
     <button class="back" id="obj-back">← Collection</button>
     <div id="objet-body"></div>
+  </section>
+
+  <!-- ═══════════ VUE ACTIVITÉ (quoi de neuf + actions manuelles, D-025) ═══════════ -->
+  <section class="view" id="view-activite">
+    <button class="back js-back">← Collection</button>
+    <div class="sec-title page-title">Activité</div>
+    <div id="activite-body"></div>
+  </section>
+
+  <!-- ═══════════ VUE MAISON (membres, rôles, nom — owner uniquement) ═══════════ -->
+  <section class="view" id="view-maison">
+    <button class="back js-back">← Collection</button>
+    <div class="sec-title page-title">Maison</div>
+    <div id="maison-body"></div>
+  </section>
+
+  <!-- ═══════════ VUE ARTISTES (menu gouvernance, D-028) ═══════════ -->
+  <section class="view" id="view-artistes">
+    <button class="back js-back">← Collection</button>
+    <div class="sec-title page-title">Artistes</div>
+    <div id="artistes-body"></div>
+  </section>
+
+  <!-- ═══════════ VUE ARTISTE (détail) ═══════════ -->
+  <section class="view" id="view-artiste">
+    <button class="back js-back">← Collection</button>
+    <div id="artiste-body"></div>
+  </section>
+
+  <!-- ═══════════ VUE SOURCES ═══════════ -->
+  <section class="view" id="view-sources">
+    <button class="back js-back">← Collection</button>
+    <div class="sec-title page-title">Sources — cartographie des accès (D-028)</div>
+    <div id="sources-body"></div>
+  </section>
+
+  <!-- ═══════════ VUE CATÉGORIES & FAMILLES ═══════════ -->
+  <section class="view" id="view-categories">
+    <button class="back js-back">← Collection</button>
+    <div class="sec-title page-title">Catégories & familles de prompts</div>
+    <div id="categories-body"></div>
   </section>
 
   <!-- ═══════════ VUE CAPTURER ═══════════ -->
@@ -134,7 +187,7 @@
 <input type="file" id="file-gallery" accept="image/*,video/*" multiple class="hidden">
 <input type="file" id="file-add-photo" accept="image/*,video/*" multiple class="hidden">
 
-<script src="config.js?v=2026-08-24c"></script>
-<script type="module" src="app.js?v=2026-08-24c"></script>
+<script src="config.js?v=2026-08-24i"></script>
+<script type="module" src="app.js?v=2026-08-24i"></script>
 </body>
 </html>

@@ -1,0 +1,104 @@
+{
+  "source": "docs/cartographie-sources.md (D-028) — miroir tenu à la main, tenir les deux en sync",
+  "legende": {
+    "API": "API/endpoint ouvert, scriptable directement (curl/cron)",
+    "NAV-AUTO": "Site web public, automatisable en Playwright au ralenti (WAF possible)",
+    "NAV-MAN": "Navigateur uniquement, usage manuel (protection anti-bot, compte, JS lourd)",
+    "BPI-DIST": "Ressource Bpi à distance via EZproxy (compte Yann, Playwright lent, à la demande)",
+    "ACHAT": "Achat unique (livre, clé USB…) — coût one-shot",
+    "PLACE": "Consultation sur place (Bpi Lumière, BnF…)",
+    "PAYANT": "Abonnement pro — non retenu pour le MVP"
+  },
+  "sections": [
+    {
+      "id": "referentiels-artistes",
+      "titre": "Identifier un artiste / une œuvre (référentiels)",
+      "entrees": [
+        { "nom": "Getty ULAN", "acces": "API", "cout": "Gratuit", "usage": "Normaliser un nom d'artiste", "url": "https://www.getty.edu/research/tools/vocabularies/ulan/" },
+        { "nom": "RKD (artistes + images, écoles du Nord)", "acces": "NAV-AUTO", "cout": "Gratuit", "usage": "Flamand/hollandais", "url": "https://rkd.nl/" },
+        { "nom": "Wikidata / WikiArt", "acces": "API", "cout": "Gratuit", "usage": "Styles, courants, corpus recherche", "url": "https://www.wikidata.org/" },
+        { "nom": "data.bnf.fr (autorités)", "acces": "API", "cout": "Gratuit", "usage": "Dates, identifiants, notices artistes (JSON/RDF)", "url": "https://data.bnf.fr/" },
+        { "nom": "Oxford Art Online = Benezit + Grove (signatures photographiées)", "acces": "BPI-DIST", "cout": "Compte Bpi", "usage": "Bio normalisée + signature de référence, à la fiche" },
+        { "nom": "Art Source / Art Index Retrospective (EBSCO)", "acces": "BPI-DIST", "cout": "Compte Bpi", "usage": "Articles revues (Connaissance des Arts, L'Œil…), bibliographie" },
+        { "nom": "Marquis / WBIS (Who's Who in American Art…)", "acces": "BPI-DIST", "cout": "Compte Bpi", "usage": "Provenance, biographies US" },
+        { "nom": "Catalogues raisonnés", "acces": "PLACE", "cout": "Gratuit/payant", "usage": "Attribution définitive — fait foi (Bpi)" },
+        { "nom": "Akoun en ligne (380 000 artistes)", "acces": "NAV-MAN", "cout": "78 €/an illimité", "usage": "Candidat abonnement — voir stratégie d'acquisition ; livres aussi sur place" },
+        { "nom": "askART (signatures)", "acces": "PAYANT", "cout": "35 $/mois", "usage": "À réévaluer si volume US" }
+      ]
+    },
+    {
+      "id": "referentiels-regionaux",
+      "titre": "Référentiels régionaux — le trou d'Alain (Alsace)",
+      "intro": "Beaucoup de peintres alsaciens sont non référencés dans les bases classiques (histoire, guerres, marché régional) : pour ces artistes, les référentiels régionaux sont la seule source fiable. Exemple type : Alfred Winter (1892-1967), quasi introuvable hors sources régionales/Artprice.",
+      "entrees": [
+        { "nom": "François Lotz, « Artistes Peintres Alsaciens », 4 vol. (837 notices) — PDF-OCR sur clé USB", "acces": "ACHAT", "cout": "69 € les 4 vol. (29/29/49/49 à l'unité)", "usage": "⭐ Référentiel de base des peintres alsaciens — recommandé (D-028). Numérique chez Alsace-Collections.fr (autorisation des ayants droit, recherche par mots-clés, filigrane)", "url": "https://www.alsace-collections.fr" },
+        { "nom": "alsace-collections.fr (petites annonces régionales)", "acces": "NAV-AUTO", "cout": "Gratuit", "usage": "Contexte marché régional, objets alsaciens", "url": "https://www.alsace-collections.fr" },
+        { "nom": "Livres Lotz papier", "acces": "PLACE", "cout": "Occasion ~90-330 €", "usage": "Si l'USB ne suffit pas" }
+      ]
+    },
+    {
+      "id": "marques-poincons",
+      "titre": "Marques, poinçons, estampilles",
+      "entrees": [
+        { "nom": "Gotheborg.com (porcelaine asiatique)", "acces": "NAV-AUTO", "cout": "Gratuit", "usage": "Marques chinoises/japonaises", "url": "https://www.gotheborg.com/" },
+        { "nom": "925-1000.com (argent)", "acces": "NAV-AUTO", "cout": "Gratuit", "usage": "Poinçons d'argent", "url": "https://www.925-1000.com/" },
+        { "nom": "PM&M (porcelaine allemande)", "acces": "NAV-AUTO", "cout": "Gratuit", "usage": "Marques allemandes", "url": "https://www.porcelainmarksandmore.com/" },
+        { "nom": "Lugt (Fondation Custodia)", "acces": "NAV-AUTO", "cout": "Gratuit", "usage": "Marques de collections (estampes)", "url": "https://www.marquesdecollections.fr/" },
+        { "nom": "Poinçons de maître FR (Bureaux de la Garantie)", "acces": "NAV-MAN", "cout": "Gratuit", "usage": "Bijoux/orfèvrerie FR" },
+        { "nom": "Dictionnaire des poinçons de maîtres-orfèvres (XIVe-1838)", "acces": "PLACE", "usage": "Orfèvrerie ancienne (Bpi)" }
+      ]
+    },
+    {
+      "id": "comparables-prix",
+      "titre": "Comparables & prix — règle d'or (adjudications réelles)",
+      "entrees": [
+        { "nom": "Drouot", "acces": "NAV-AUTO", "cout": "Gratuit", "usage": "Ventes FR, Asie/tribal", "url": "https://drouot.com/" },
+        { "nom": "Interenchères", "acces": "NAV-AUTO", "cout": "Compte gratuit", "usage": "SVV françaises hors Drouot", "url": "https://www.interencheres.com/" },
+        { "nom": "Catawiki", "acces": "NAV-AUTO", "cout": "Gratuit", "usage": "Milieu de gamme 75-5 000 € — la zone collection familiale", "url": "https://www.catawiki.fr/" },
+        { "nom": "Barnebys", "acces": "NAV-AUTO", "cout": "Gratuit", "usage": "Agrégateur global", "url": "https://www.barnebys.fr/" },
+        { "nom": "LiveAuctioneers / The Saleroom", "acces": "NAV-AUTO", "cout": "Compte gratuit", "usage": "US / UK", "url": "https://www.liveauctioneers.com/" },
+        { "nom": "Dorotheum / Van Ham", "acces": "NAV-AUTO", "cout": "Gratuit", "usage": "Arts décoratifs, montres, bijoux (DACH)", "url": "https://www.dorotheum.com/" },
+        { "nom": "eBay sold / Terapeak", "acces": "API", "cout": "Gratuit", "usage": "Brocante/collection — seule vraie API grand public", "url": "https://www.ebay.fr/" },
+        { "nom": "Gazette Drouot (Europresse)", "acces": "BPI-DIST", "cout": "Compte Bpi", "usage": "Veille marché, contexte ventes" },
+        { "nom": "Chrono24 / WatchCharts", "acces": "NAV-AUTO", "cout": "Gratuit", "usage": "Marché secondaire montres", "url": "https://www.chrono24.fr/" },
+        { "nom": "Akoun en ligne (500 000+ enchères, cotes, bios, déchiffrage de signature)", "acces": "NAV-MAN", "cout": "78 €/an illimité (≈ 6,5 €/mois) ou recharges à l'unité (7 € = 20 fiches)", "usage": "⭐ Candidat n°1 à l'abonnement quand le volume le justifie ; ⚠️ « cote » = contexte, seules les enchères comptent comme comparables" },
+        { "nom": "Artprice", "acces": "NAV-MAN", "cout": "Gratuit limité / Advanced ~359 €/an", "usage": "Pages artiste, indices ; résultats complets payants. OK en navigateur réel — Cloudflare bloque les fetch automatisés", "url": "https://fr.artprice.com/" },
+        { "nom": "Artnet / WorthPoint / Gordon's", "acces": "PAYANT", "cout": "90-600 €/mois", "usage": "❌ MVP — licence un jour si volume (+ anti-bot)" },
+        { "nom": "Lot-Tissimo (DACH)", "acces": "PAYANT", "cout": "90 €/an", "usage": "Premier payant à considérer" },
+        { "nom": "Cotes/indices (Akoun livre, indices Artprice)", "acces": "PLACE", "usage": "⚠️ Contexte uniquement, jamais dans la fourchette" }
+      ]
+    },
+    {
+      "id": "corpus-images",
+      "titre": "Corpus images & vectorisation légale (API ouverts — la voie « masse »)",
+      "entrees": [
+        { "nom": "Met Open Access (490 000+ CC0)", "acces": "API", "usage": "Embeddings similarité visuelle", "url": "https://www.metmuseum.org/art/collection" },
+        { "nom": "Rijksmuseum (700 000+)", "acces": "API", "usage": "Embeddings similarité visuelle", "url": "https://www.rijksmuseum.nl/" },
+        { "nom": "Smithsonian / Europeana / Cleveland / AIC / Paris Musées-Joconde", "acces": "API", "usage": "Embeddings similarité visuelle" },
+        { "nom": "Wikimedia Commons (dont signatures d'artistes, domaine public)", "acces": "API", "usage": "Corpus signatures (filon)", "url": "https://commons.wikimedia.org/" },
+        { "nom": "Gallica / BnF (SRU, IIIF ; Benezit 1911-1924 domaine public)", "acces": "API", "usage": "Dictionnaire artistes OCRisable, catalogues de ventes anciens", "url": "https://gallica.bnf.fr/" },
+        { "nom": "CCFr", "acces": "API", "usage": "Localiser un catalogue raisonné en bibliothèque", "url": "https://ccfr.bnf.fr/" }
+      ]
+    },
+    {
+      "id": "sites-ecartes",
+      "titre": "Sites écartés / non qualifiés",
+      "entrees": [
+        { "nom": "artwort", "usage": "Non qualifié (recherche 2026-08-24 — rien de pertinent) ; probablement sans intérêt, comme soupçonné." },
+        { "nom": "Artmajeur « cotation », I-CAC, ArtValue", "usage": "Cotations déclaratives/estimations automatiques — incompatibles règle d'or." }
+      ]
+    },
+    {
+      "id": "strategie-acquisition",
+      "titre": "Stratégie d'acquisition des sources payantes — pilotée par les trous",
+      "intro": "Les sources payantes restent des candidats en attente, pas des refus définitifs : on n'achète pas « au cas où », on achète quand les données prouvent un trou que la source comble. Les trous sont mesurés via les événements des passes IA (artistes non identifiés, confiance basse, comps introuvables) — à ~500 photos cataloguées, on sort le tableau des trous et on tranche. Règles : achat unique d'abord (recharge 7 € Akoun) avant tout abonnement · réévaluation à chaque bilan de trous · un achat = une entrée dans DECISIONS.md.",
+      "entrees": [
+        { "nom": "Lotz USB (Alsace)", "acces": "ACHAT", "cout": "69 € one-shot", "usage": "✅ Trou déjà avéré (peintres alsaciens non référencés, ex. Alfred Winter) → recommandé dès maintenant" },
+        { "nom": "Akoun en ligne illimité", "acces": "ACHAT", "cout": "78 €/an", "usage": "Déclencheur : N artistes cotés non résolus par les sources gratuites sur une période, ou besoin récurrent de déchiffrage de signatures (1 unité/signature sinon)" },
+        { "nom": "Lot-Tissimo (DACH)", "acces": "ACHAT", "cout": "90 €/an", "usage": "Déclencheur : part significative d'objets DACH (porcelaine allemande, montres) avec comps introuvables hors DACH" },
+        { "nom": "Artprice Advanced", "acces": "ACHAT", "cout": "~359 €/an", "usage": "Déclencheur : gros volume de tableaux cotés où Drouot/Interenchères ne suffisent pas" },
+        { "nom": "askART", "acces": "PAYANT", "cout": "35 $/mois", "usage": "Déclencheur : volume US + besoin signatures photographiées" }
+      ]
+    }
+  ]
+}

@@ -8,6 +8,12 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const { SUPABASE_URL, SUPABASE_ANON_KEY } = window.IARTCANE_CONFIG;
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// ─── Service worker (D-013) : shell offline + réception « Partager avec » ───
+// http(s) uniquement (pas de SW en file://) ; échec silencieux — l'app marche sans.
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
 // ─── Petits utilitaires ─────────────────────────────────────────────────────
 const $ = (sel, el = document) => el.querySelector(sel);
 const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
@@ -34,6 +40,7 @@ function catCanon(c) {
 }
 const fmtNum = n => Number(n).toLocaleString('fr-FR');
 const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('fr-FR') : '—';
+const plur = (n, s, p) => `${n} ${n > 1 ? p : s}`;
 const pinSvg = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 21s-7-6.1-7-11a7 7 0 1 1 14 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>';
 const infoSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg>';
 
@@ -79,19 +86,51 @@ const isVideo = p => p.kind === 'video' || /\.(mp4|mov|webm)$/i.test(p.storage_p
 let user = null;
 let tenantId = null;          // locataire courant : soi-même, ou l'owner dont on est membre (D-015)
 let tenantName = '';          // nom de la « maison » (D-016) — ex. PONAIRE
+let mesTenants = [];          // [{ id, name, role }] — sa maison d'abord (role 'owner'), puis ses memberships
+let tenantRole = 'owner';     // rôle dans le locataire courant : 'owner' | 'vendeur' | 'lecteur'
+// Un lecteur voit tout le catalogue mais ne peut rien modifier (RLS 0012 + UI masquée).
+const canWrite = () => tenantRole !== 'lecteur';
 let collection = [];           // cache des objets (rechargé à chaque visite collection)
 let photoMap = {};             // objet_id → URL signée de la 1re photo
-const filters = { q: '', chip: '', group: 'categorie', list: '' };
-let currentObjet = null, currentComps = [], currentFiche = null, currentPhotos = [], currentEvents = [];
+// cats = chips catégories multi-cochées ; prixMin/prixMax = bornes du filtre prix (null = non renseigné)
+const filters = { q: '', cats: [], group: 'categorie', list: '', prixMin: null, prixMax: null };
+let currentObjet = null, currentComps = [], currentFiche = null, currentPhotos = [], currentEvents = [], currentArtiste = null;
 
 // Trace un événement du changelog objet (table `evenements`, D-025) — fire & forget.
+// Garde lecteur : un lecteur ne grave rien (la RLS 0012 bloquerait de toute façon).
 function logEvent(action, detail = {}, oid = currentObjet?.id) {
-  if (!oid || !tenantId) return;
+  if (!oid || !tenantId || !canWrite()) return;
   sb.from('evenements').insert({
     owner_id: tenantId, objet_id: oid,
     acteur: localStorage.getItem('iartcane-qui') ?? 'site',
     action, detail,
   }).then(({ error }) => { if (error) console.warn('logEvent:', error.message); });
+}
+
+// Libellés des actions tracées dans `evenements` (site + cron) — partagés entre
+// l'historique de la fiche objet et l'écran Activité.
+const ACT_LABELS = {
+  capture: 'Objet capturé', photo_ajoutee: 'Photo ajoutée', photo_supprimee: 'Photo supprimée',
+  recadrage: 'Recadrage', centrage: 'Centrage', localisation: 'Localisation',
+  correction: 'Correction', validation: 'Fiche validée', relance: 'Estimation relancée',
+  identification: 'Identification IA', passe_marche: 'Recherche de comparables',
+  lens: 'Google Lens (signature)', artiste_maj: 'Fiche artiste', photos_manquantes: 'Photos recommandées',
+};
+// Détail utile d'un événement (modèle, prompt, comparables, sources, champs
+// avant→après, note) — rendu HTML échappé, partagé fiche objet + Activité.
+function evDetailBits(d = {}) {
+  const bits = [];
+  if (d.modele) bits.push(esc(d.modele));
+  if (d.prompt_version) bits.push('prompt ' + esc(d.prompt_version));
+  if (d.n != null) bits.push(d.n + ' photo' + (d.n > 1 ? 's' : ''));
+  if (d.comps != null) bits.push(d.comps + ' comparable' + (d.comps > 1 ? 's' : ''));
+  if (Array.isArray(d.sources) && d.sources.length) bits.push(esc(d.sources.join(', ')));
+  if (d.champs && typeof d.champs === 'object') {
+    bits.push(Object.entries(d.champs).map(([c, v]) =>
+      `${esc(c)} : « ${esc(v?.avant ?? '—')} » → « ${esc(v?.apres ?? '—')} »`).join(' · '));
+  }
+  if (d.note) bits.push(esc(d.note));
+  return bits;
 }
 let editing = false;
 let capFiles = [];
@@ -115,7 +154,9 @@ function show(view) {
 function showLogin() {
   $('#tabs').classList.add('hidden');
   $('#avatar').classList.add('hidden');
+  $('#menu-gov').classList.add('hidden');
   $('#header-counter').textContent = '';
+  document.body.classList.remove('role-lecteur');
   // Réarmer le realtime : à la prochaine connexion (autre tenant possible),
   // watchLive() doit recréer le canal avec le bon filtre owner_id.
   if (liveOn) { sb.removeAllChannels(); liveOn = false; }
@@ -124,7 +165,9 @@ function showLogin() {
 async function enterApp() {
   $('#tabs').classList.remove('hidden');
   $('#avatar').classList.remove('hidden');
+  $('#menu-gov').classList.remove('hidden');
   await resolveTenant();
+  renderMenu();
   await Promise.all([loadHeader(), loadProfile()]);
   watchLive();
   route();
@@ -153,13 +196,53 @@ function watchLive() {
 }
 
 // Locataire courant : si l'utilisateur est membre d'une collection (magasin),
-// c'est ELLE qu'il voit et alimente — le même catalogue pour tous les vendeurs (D-015).
-// v1 : un seul locataire partagé pris en compte (le premier) ; switcher multi-locataires plus tard.
+// il peut la voir et l'alimenter — le même catalogue pour tous les vendeurs (D-015).
+// Multi-locataires (0012) : TOUTES les memberships sont lues → switcher « Maison »
+// dans le menu ; le choix est persisté (localStorage). Le rôle courant pilote
+// l'UI : un 'lecteur' passe en lecture seule (canWrite()).
 async function resolveTenant() {
-  const { data } = await sb.from('collection_members').select('owner_id').eq('member_id', user.id).limit(1);
-  tenantId = data?.[0]?.owner_id ?? user.id;
-  const { data: t } = await sb.from('tenants').select('name').eq('owner_id', tenantId).maybeSingle();
-  tenantName = t?.name ?? '';
+  const { data: membres } = await sb.from('collection_members').select('owner_id,role').eq('member_id', user.id);
+  const ids = [user.id, ...(membres ?? []).map(m => m.owner_id)];
+  const { data: noms } = await sb.from('tenants').select('owner_id,name').in('owner_id', ids);
+  const nomDe = id => (noms ?? []).find(t => t.owner_id === id)?.name ?? '';
+  mesTenants = [
+    { id: user.id, name: nomDe(user.id), role: 'owner' },
+    ...(membres ?? []).map(m => ({ id: m.owner_id, name: nomDe(m.owner_id), role: m.role })),
+  ];
+  // Choix persisté si encore valide, sinon la 1re membership (comportement D-015 :
+  // un vendeur/lecteur tombe sur la maison partagée, pas sur sa collection vide),
+  // sinon sa propre maison.
+  const pref = localStorage.getItem('iartcane-tenant');
+  const courant = mesTenants.find(t => t.id === pref)
+    ?? mesTenants.find(t => t.role !== 'owner')
+    ?? mesTenants[0];
+  tenantId = courant.id;
+  tenantRole = courant.role;
+  tenantName = courant.name;
+  applyRole();
+}
+
+// Bascule sur une autre maison (switcher du menu) : persiste le choix et
+// recharge l'en-tête + la collection.
+function selectTenant(id) {
+  const t = mesTenants.find(x => x.id === id);
+  if (!t || t.id === tenantId) return;
+  localStorage.setItem('iartcane-tenant', t.id);
+  tenantId = t.id;
+  tenantRole = t.role;
+  tenantName = t.name;
+  applyRole();
+  renderMenu();
+  loadHeader();
+  const h = location.hash;
+  location.hash = '#/';
+  if (h === '#/' || h === '') route(); // sinon le hashchange déclenche route()
+}
+
+// Reflète le rôle courant dans le DOM : en lecture seule, tout ce qui porte la
+// classe .hide-lecteur est masqué (CSS) et les handlers mutants sont gardés.
+function applyRole() {
+  document.body.classList.toggle('role-lecteur', !canWrite());
 }
 
 $('#login-btn').addEventListener('click', async () => {
@@ -193,7 +276,8 @@ async function loadHeader() {
   ]);
   const n = count ?? 0;
   const label = tenantName ? `${esc(tenantName)} · ` : (tenantId !== user.id ? 'catalogue partagé · ' : '');
-  $('#header-counter').innerHTML = `${label}<b>${fmtNum(n)}</b> objet${n > 1 ? 's' : ''} · prochain n° <b>${next ?? '—'}</b>`;
+  const badgeRO = canWrite() ? '' : '<span class="badge-ro">lecture seule</span>';
+  $('#header-counter').innerHTML = `${label}<b>${fmtNum(n)}</b> objet${n > 1 ? 's' : ''} · prochain n° <b>${next ?? '—'}</b> ${badgeRO}`;
   $('#tab-count').textContent = n;
 }
 
@@ -203,19 +287,82 @@ async function loadHeader() {
 function setTab(name) {
   $$('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === name));
 }
+
+// ─── Menu « gouvernance » de l'en-tête (D-028) ──────────────────────────────
+// Zones transverses de l'app. Ajouter une entrée = une ligne ici + une route
+// dans route() + une <section class="view"> dans index.html.
+// `owner: true` → entrée réservée au propriétaire de la maison courante.
+const MENU_GOUV = [
+  { hash: '#/maison',     icone: '🏠', label: 'Maison',                desc: 'Membres, rôles, nom de la maison', owner: true },
+  { hash: '#/activite',   icone: '📋', label: 'Activité',              desc: 'Quoi de neuf : runs IA, mises à jour, actions — et MAJ forcées du catalogue' },
+  { hash: '#/artistes',   icone: '🎨', label: 'Artistes',              desc: 'Fiches artistes créées par le cron lors des passes d\'identification' },
+  { hash: '#/sources',    icone: '🔭', label: 'Sources',               desc: 'Référentiels, comparables & corpus — cartographie des accès (D-028)' },
+  { hash: '#/categories', icone: '🗂️', label: 'Catégories & familles', desc: 'Taxonomie canonique et prompts d\'identification par famille' },
+];
+const closeMenu = () => {
+  $('#menu-panel').classList.add('hidden');
+  $('#menu-btn').setAttribute('aria-expanded', 'false');
+};
+// Rendu dépendant du contexte : switcher multi-locataires en tête (si > 1
+// maison) + entrées filtrées selon le rôle (Maison = owner uniquement).
+function renderMenu() {
+  const items = MENU_GOUV.filter(e => !e.owner || tenantRole === 'owner');
+  const switcher = mesTenants.length > 1 ? `
+    <div class="menu-sec">Maison</div>
+    ${mesTenants.map(t => `<button class="menu-item menu-tenant ${t.id === tenantId ? 'current' : ''}" data-tenant="${esc(t.id)}">
+      <span class="menu-ico">${t.id === tenantId ? '✓' : ''}</span>
+      <span><span class="menu-label">${esc(t.name || 'Ma collection')}</span><span class="menu-desc">${esc(t.role)}</span></span>
+    </button>`).join('')}
+    <div class="menu-sep"></div>` : '';
+  $('#menu-panel').innerHTML = switcher + items.map(e =>
+    `<button class="menu-item" data-hash="${esc(e.hash)}"><span class="menu-ico">${e.icone}</span><span><span class="menu-label">${esc(e.label)}</span><span class="menu-desc">${esc(e.desc)}</span></span></button>`
+  ).join('');
+}
+$('#menu-btn').addEventListener('click', e => {
+  e.stopPropagation();
+  const opened = !$('#menu-panel').classList.toggle('hidden');
+  $('#menu-btn').setAttribute('aria-expanded', String(opened));
+});
+$('#menu-panel').addEventListener('click', e => {
+  const t = e.target.closest('[data-tenant]');
+  if (t) { closeMenu(); selectTenant(t.dataset.tenant); return; }
+  const b = e.target.closest('[data-hash]');
+  if (b) { closeMenu(); location.hash = b.dataset.hash; }
+});
+document.addEventListener('click', e => { if (!$('#menu-gov').contains(e.target)) closeMenu(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+
 function route() {
   if (!user || !tenantId) return; // !tenantId : arrivée magic link — le hashchange de nettoyage
   // de l'URL d'auth tire route() pendant resolveTenant() → requêtes avec owner_id null (22P02)
+  closeMenu();
   const h = location.hash || '#/';
   const mObj = h.match(/^#\/objet\/([^/]+)$/);
-  if (h.startsWith('#/capture')) { setTab('capture'); show('capture'); initCapture(); }
+  const mArt = h.match(/^#\/artiste\/([^/]+)$/);
+  if (h.startsWith('#/capture')) {
+    if (!canWrite()) { location.replace('#/'); return; } // lecteur : pas de capture (RLS 0012)
+    setTab('capture'); show('capture'); initCapture(); if (consumeShareFlag()) receiveSharedPhotos();
+  }
   else if (mObj) { setTab('collection'); show('objet'); loadObjet(decodeURIComponent(mObj[1])); }
+  // Écrans gouvernance : pas des onglets → aucun tab actif (setTab(null))
+  else if (h.startsWith('#/maison')) {
+    if (tenantRole !== 'owner') { location.replace('#/'); return; } // owner uniquement
+    setTab(null); show('maison'); loadMaison();
+  }
+  else if (h.startsWith('#/activite')) { setTab(null); show('activite'); loadActivite(); }
+  else if (mArt) { setTab(null); show('artiste'); loadArtiste(decodeURIComponent(mArt[1])); }
+  else if (h.startsWith('#/artistes')) { setTab(null); show('artistes'); loadArtistes(); }
+  else if (h.startsWith('#/sources')) { setTab(null); show('sources'); loadSources(); }
+  else if (h.startsWith('#/categories')) { setTab(null); show('categories'); loadCategories(); }
   else { setTab('collection'); show('collection'); loadCollection(); }
 }
 window.addEventListener('hashchange', route);
-$$('.tab').forEach(t => t.addEventListener('click', () => { location.hash = t.dataset.view === 'capture' ? '#/capture' : '#/'; }));
+// data-view → hash : ajouter un onglet = une entrée ici + la route ci-dessus.
+const TAB_HASH = { collection: '#/', capture: '#/capture' };
+$$('.tab').forEach(t => t.addEventListener('click', () => { location.hash = TAB_HASH[t.dataset.view] ?? '#/'; }));
 $('#logo-home').addEventListener('click', () => { location.hash = '#/'; });
 $('#obj-back').addEventListener('click', () => { location.hash = '#/'; });
+$$('.js-back').forEach(b => b.addEventListener('click', () => { location.hash = '#/'; }));
 
 // ═══════════════════════════════════════════════════════════════════════════
 // VUE COLLECTION
@@ -235,13 +382,14 @@ async function loadCollection() {
 async function loadPhotoMap() {
   photoMap = {};
   if (!collection.length) return;
-  const { data } = await sb.from('photos').select('objet_id,storage_path,thumb_path,focal_x,focal_y').eq('owner_id', tenantId).order('created_at');
+  const { data } = await sb.from('photos').select('objet_id,storage_path,thumb_path,focal_x,focal_y,kind').eq('owner_id', tenantId).order('created_at');
   const first = {};
   for (const p of data ?? []) if (!first[p.objet_id]) first[p.objet_id] = p;
   const urlByPath = await signPaths(Object.values(first).flatMap(p => [p.storage_path, p.thumb_path].filter(Boolean)));
   for (const [oid, p] of Object.entries(first)) {
     const url = urlByPath[p.thumb_path] ?? urlByPath[p.storage_path]; // miniature d'abord (vitesse)
-    if (url) photoMap[oid] = { url, fx: p.focal_x, fy: p.focal_y };
+    // vid : 1re « photo » = vidéo → badge ▶ sur la carte (même sans miniature)
+    photoMap[oid] = { url: url ?? null, fx: p.focal_x, fy: p.focal_y, vid: isVideo(p) };
   }
 }
 
@@ -254,31 +402,98 @@ async function signPaths(paths) {
   return out;
 }
 
-function objMatches(o) {
-  const f = filters;
+// Prédicat de filtrage pur — utilisé par objMatches (filtre courant) et par
+// renderLists (compteurs des listes sauvegardées, filtres « virtuels »).
+function matchFiltre(o, f) {
   if (f.list === 'a_localiser' && o.zone && o.zone.trim()) return false;
   if (f.list === 'a_valider' && o.statut !== 'fiche_prete') return false;
   if (f.list === 'chere' && !(o.prix_haut >= 1000)) return false;
-  if (f.chip && catCanon(o.categorie) !== f.chip) return false;
+  if (f.cats?.length && !f.cats.includes(catCanon(o.categorie))) return false;
   if (f.q) {
     const hay = norm([o.id, o.titre, o.description, o.categorie, o.auteur, o.periode, o.ecole,
       o.technique, o.zone, o.contenant, o.position, o.marques].filter(Boolean).join(' '));
     if (!f.q.split(/\s+/).filter(Boolean).every(tok => hay.includes(tok))) return false;
   }
+  // Fourchette prix : on garde l'objet si [prix_bas, prix_haut] intersecte
+  // [min, max] ; un objet sans prix sort dès qu'une borne est renseignée.
+  if (f.prixMin != null || f.prixMax != null) {
+    if (o.prix_bas == null || o.prix_haut == null) return false;
+    if (o.prix_haut < (f.prixMin ?? -Infinity) || o.prix_bas > (f.prixMax ?? Infinity)) return false;
+  }
   return true;
 }
+const objMatches = o => matchFiltre(o, filters);
 
+// Chips catégories multi-cochables (« Tous » = aucune cochée) — une liste
+// sauvegardée peut viser plusieurs catégories canoniques à la fois.
 function renderChips() {
   const cats = [...new Set(collection.map(o => catCanon(o.categorie)).filter(Boolean))]
     .sort((a, b) => a.localeCompare(b, 'fr'));
-  $('#chips').innerHTML = [`<button class="chip ${filters.chip === '' ? 'active' : ''}" data-chip="">Tous</button>`]
-    .concat(cats.map(c => `<button class="chip ${filters.chip === c ? 'active' : ''}" data-chip="${esc(c)}">${esc(c)}</button>`))
+  $('#chips').innerHTML = [`<button class="chip ${filters.cats.length === 0 ? 'active' : ''}" data-chip="">Tous</button>`]
+    .concat(cats.map(c => `<button class="chip ${filters.cats.includes(c) ? 'active' : ''}" data-chip="${esc(c)}">${esc(c)}</button>`))
     .join('');
   $$('#chips .chip').forEach(ch => ch.addEventListener('click', () => {
-    filters.chip = ch.dataset.chip;
-    renderChips(); renderGrid();
+    const c = ch.dataset.chip;
+    if (c === '') filters.cats = [];
+    else {
+      const i = filters.cats.indexOf(c);
+      if (i >= 0) filters.cats.splice(i, 1); else filters.cats.push(c);
+    }
+    renderChips(); renderLists(); renderGrid();
   }));
 }
+
+// ─── Listes sauvegardées (filtres nommés, localStorage par locataire) ───────
+// Une liste = { id, nom, q, cats, prixMin, prixMax } — persistance locale
+// (iartcane-listes-<tenantId>) : le switcher multi-maisons isole les listes.
+const listesKey = () => `iartcane-listes-${tenantId}`;
+function loadListes() {
+  try { return JSON.parse(localStorage.getItem(listesKey())) ?? []; }
+  catch { return []; }
+}
+const saveListes = ls => localStorage.setItem(listesKey(), JSON.stringify(ls));
+
+// Filtre « libre » actif (hors raccourcis codés en dur) = quelque chose à sauvegarder.
+const filtreActif = () => !!(filters.q || filters.cats.length || filters.prixMin != null || filters.prixMax != null);
+
+// La liste sauvegardée active = celle dont le filtre coïncide exactement avec
+// l'état courant (toute retouche du filtre après application la désactive).
+function listeActive() {
+  const same = (a, b) => JSON.stringify([...a].sort()) === JSON.stringify([...b].sort());
+  return loadListes().find(l =>
+    norm(l.q || '') === filters.q &&
+    same(l.cats ?? [], filters.cats) &&
+    (l.prixMin ?? null) === filters.prixMin &&
+    (l.prixMax ?? null) === filters.prixMax) ?? null;
+}
+
+function syncPrixInputs() {
+  $('#prix-min').value = filters.prixMin ?? '';
+  $('#prix-max').value = filters.prixMax ?? '';
+}
+
+// Applique une liste sauvegardée : recherche + chips catégories + fourchette prix.
+function applyListe(l) {
+  $('#search').value = l.q ?? '';
+  filters.q = norm(l.q ?? '');
+  filters.cats = [...(l.cats ?? [])];
+  filters.prixMin = l.prixMin ?? null;
+  filters.prixMax = l.prixMax ?? null;
+  syncPrixInputs();
+  renderChips(); renderLists(); renderGrid();
+}
+
+function resetFiltre() {
+  $('#search').value = '';
+  filters.q = ''; filters.cats = []; filters.prixMin = null; filters.prixMax = null;
+  syncPrixInputs();
+  renderChips(); renderLists(); renderGrid();
+}
+
+// Compteur d'une liste sauvegardée : son filtre rejoué en « virtuel » sur le cache.
+const compteListe = l => collection.filter(o => matchFiltre(o, {
+  q: norm(l.q || ''), cats: l.cats ?? [], prixMin: l.prixMin ?? null, prixMax: l.prixMax ?? null, list: '',
+})).length;
 
 function renderLists() {
   const nLoc = collection.filter(o => !o.zone || !o.zone.trim()).length;
@@ -289,12 +504,31 @@ function renderLists() {
     ['a_valider', 'var(--violet)', 'Fiches à valider', nVal],
     ['chere', 'var(--green)', '> 1 000 €', nCher],
   ];
+  const actId = listeActive()?.id;
   $('#lists').innerHTML = defs.map(([k, col, label, n]) =>
     `<button class="ls ${filters.list === k ? 'active' : ''}" data-list="${k}"><span class="dot" style="background:${col}"></span>${label} <span class="n">${n}</span></button>`
+  ).join('') + loadListes().map(l =>
+    `<button class="ls ${actId === l.id ? 'active' : ''}" data-slist="${esc(l.id)}">🔖 ${esc(l.nom)} <span class="n">${compteListe(l)}</span><span class="ls-del" data-del="${esc(l.id)}" title="Supprimer la liste « ${esc(l.nom)} »">✕</span></button>`
   ).join('');
-  $$('#lists .ls').forEach(b => b.addEventListener('click', () => {
+  // « Sauvegarder ce filtre » n'a de sens que si un filtre est actif
+  $('#btn-save-filter').classList.toggle('hidden', !filtreActif());
+  $$('#lists .ls[data-list]').forEach(b => b.addEventListener('click', () => {
     filters.list = filters.list === b.dataset.list ? '' : b.dataset.list;
     renderLists(); renderGrid();
+  }));
+  $$('#lists .ls[data-slist]').forEach(b => b.addEventListener('click', e => {
+    const ls = loadListes();
+    const l = ls.find(x => x.id === b.dataset.slist);
+    if (!l) return;
+    if (e.target.closest('[data-del]')) {
+      if (confirm(`Supprimer la liste « ${l.nom} » ?`)) {
+        saveListes(ls.filter(x => x.id !== l.id));
+        renderLists();
+        toast(`Liste « ${l.nom} » supprimée`);
+      }
+      return;
+    }
+    if (actId === l.id) resetFiltre(); else applyListe(l); // reclic = désactive
   }));
 }
 
@@ -305,8 +539,12 @@ function cardHtml(o) {
     ? esc([o.zone, o.contenant].filter(Boolean).join(' / '))
     : '<em>non localisé</em>';
   const meta = [catCanon(o.categorie), o.periode, o.ecole].filter(Boolean).map(esc).join(' · ') || '<em>à identifier</em>';
-  return `<article class="card" data-oid="${esc(o.id)}">
-    <div class="card-img">${img ? `<img src="${esc(img.url)}" alt="${esc(o.titre || 'Objet de la collection')}" loading="lazy" style="object-position:${img.fx ?? 50}% ${img.fy ?? 50}%">` : catEmoji(o.categorie)}<span class="card-id">#${esc(o.id)}</span><span class="card-status" style="background:${ST_COLOR[o.statut] || '#8A94B8'}"></span></div>
+  const visuel = img?.url
+    ? `<img src="${esc(img.url)}" alt="${esc(o.titre || 'Objet de la collection')}" loading="lazy" style="object-position:${img.fx ?? 50}% ${img.fy ?? 50}%">`
+    : catEmoji(o.categorie); // pas de visuel : placeholder emoji (+ badge ▶ si vidéo)
+  const badgeVid = img?.vid ? '<span class="card-vid" title="Vidéo" aria-label="Vidéo">▶</span>' : '';
+  return `<article class="card" data-oid="${esc(o.id)}" tabindex="0" role="button" aria-label="${esc(o.titre || 'Objet')} — fiche #${esc(o.id)}">
+    <div class="card-img">${visuel}<span class="card-id">#${esc(o.id)}</span><span class="card-status" style="background:${ST_COLOR[o.statut] || '#8A94B8'}"></span>${badgeVid}</div>
     <div class="card-body">
       <div class="card-title">${esc(o.titre || 'Sans titre')}</div>
       <div class="card-meta">${meta}</div>
@@ -343,18 +581,74 @@ function renderGrid() {
       .map(([k, arr]) => `<div class="group-title">${esc(k)} <span class="n">${arr.length}</span></div><div class="grid">${arr.map(cardHtml).join('')}</div>`)
       .join('');
   }
-  $$('.card', body).forEach(c => c.addEventListener('click', () => {
-    location.hash = '#/objet/' + encodeURIComponent(c.dataset.oid);
-  }));
+  $$('.card', body).forEach(c => {
+    const go = () => { location.hash = '#/objet/' + encodeURIComponent(c.dataset.oid); };
+    c.addEventListener('click', go);
+    // Carte = div focusable (role="button") : Enter/Espace = même navigation que le clic
+    c.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+  });
 }
 
-// Recherche (débounce) + regroupement
+// Recherche (débounce) + filtre prix (même débounce) + regroupement
 let searchTimer;
 $('#search').addEventListener('input', e => {
   clearTimeout(searchTimer);
-  searchTimer = setTimeout(() => { filters.q = norm(e.target.value); renderGrid(); }, 150);
+  searchTimer = setTimeout(() => { filters.q = norm(e.target.value); renderLists(); renderGrid(); }, 150);
 });
+for (const [id, key] of [['#prix-min', 'prixMin'], ['#prix-max', 'prixMax']]) {
+  $(id).addEventListener('input', e => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      const v = e.target.valueAsNumber;
+      filters[key] = Number.isNaN(v) ? null : v; // champ vide = borne non renseignée
+      renderLists(); renderGrid();
+    }, 150);
+  });
+}
 $('#group-by').addEventListener('change', e => { filters.group = e.target.value; renderGrid(); });
+
+// « 💾 Sauvegarder ce filtre » : l'état courant (recherche + chips + prix)
+// devient une liste nommée, persistée en local pour ce locataire.
+$('#btn-save-filter').addEventListener('click', () => {
+  const nom = prompt('Nom de cette liste :', $('#search').value.trim() || 'Ma liste');
+  if (!nom?.trim()) return;
+  const ls = loadListes();
+  ls.push({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    nom: nom.trim(),
+    q: $('#search').value.trim(),
+    cats: [...filters.cats],
+    prixMin: filters.prixMin,
+    prixMax: filters.prixMax,
+  });
+  saveListes(ls);
+  renderLists();
+  toast(`Liste « ${nom.trim()} » sauvegardée`);
+});
+
+// ─── Export CSV (Excel fr-FR : séparateur ';', BOM, champs quotés) ──────────
+// Exporte les objets ACTUELLEMENT FILTRÉS (« ma liste → CSV »), pas toute la
+// collection. Prix bruts (pas de séparateur de milliers dans le CSV).
+const csvCell = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+$('#btn-csv').addEventListener('click', () => {
+  const items = collection.filter(objMatches);
+  if (!items.length) { toast('Aucun objet ne correspond au filtre — rien à exporter', true); return; }
+  const head = ['N°', 'Titre', 'Catégorie', 'Auteur', 'Période', 'École', 'Technique', 'État',
+    'Prix bas (€)', 'Prix haut (€)', 'Confiance', 'Statut', 'Zone', 'Contenant', 'Position', 'Créé le'];
+  const lignes = items.map(o => [
+    o.id, o.titre, catCanon(o.categorie) ?? o.categorie, o.auteur, o.periode, o.ecole,
+    o.technique, o.etat, o.prix_bas, o.prix_haut, o.confiance, STATUTS[o.statut] ?? o.statut,
+    o.zone, o.contenant, o.position, o.created_at,
+  ].map(csvCell).join(';'));
+  const csv = '\uFEFF' + head.map(csvCell).join(';') + '\r\n' + lignes.join('\r\n');
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `iartcane-collection-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast(`${items.length} ${items.length > 1 ? 'objets exportés' : 'objet exporté'}`);
+});
 
 // ═══════════════════════════════════════════════════════════════════════════
 // VUE OBJET
@@ -377,17 +671,20 @@ async function loadObjet(id) {
   }
   currentObjet = o;
   editing = false;
-  const [{ data: photos }, { data: comps }, { data: fiches }, { data: events }] = await Promise.all([
+  const [{ data: photos }, { data: comps }, { data: fiches }, { data: events }, { data: artiste }] = await Promise.all([
     sb.from('photos').select('*').eq('owner_id', tenantId).eq('objet_id', id).order('created_at'),
     sb.from('comparables').select('*').eq('owner_id', tenantId).eq('objet_id', id).order('date_vente', { ascending: false, nullsFirst: false }),
     sb.from('fiches').select('*').eq('owner_id', tenantId).eq('objet_id', id).order('version', { ascending: false }).limit(1),
     sb.from('evenements').select('*').eq('owner_id', tenantId).eq('objet_id', id).order('created_at', { ascending: false }).limit(50),
+    // Fiche artiste (migration 0008) : match exact sur objets.auteur, 0 ligne tolérée
+    o.auteur ? sb.from('artistes').select('*').eq('owner_id', tenantId).eq('nom', o.auteur).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   const urlByPath = await signPaths((photos ?? []).flatMap(p => [p.storage_path, p.thumb_path].filter(Boolean)));
   currentPhotos = (photos ?? []).map(p => ({ ...p, url: urlByPath[p.storage_path], thumbUrl: urlByPath[p.thumb_path] ?? urlByPath[p.storage_path] }));
   currentComps = comps ?? [];
   currentFiche = (fiches ?? [])[0] ?? null;
   currentEvents = events ?? [];
+  currentArtiste = artiste ?? null;
   renderObjet();
   loadSimilar(o);
 }
@@ -437,22 +734,22 @@ function renderObjet() {
     <div class="panel">
       <div class="gallery-main" data-action="zoom" title="Agrandir">
         ${sel && sel.url ? (isVideo(sel) ? `<video src="${esc(sel.url)}" controls></video>` : `<img src="${esc(sel.url)}" alt="photo de l'objet">`) : catEmoji(o.categorie)}
-        ${sel && sel.url && !isVideo(sel) ? `<button class="crop-btn" data-action="crop-toggle" title="Centrer : choisir le point de la photo sur lequel la carte du listing se centre">🎯 Centrer</button>` : ''}
-        ${sel && sel.url && !isVideo(sel) ? `<button class="crop-btn cut-btn" data-action="cut-photo" title="Recadrer : rogne définitivement la photo (résolution d'origine conservée)">✂️ Recadrer</button>` : ''}
-        ${sel && sel.url ? `<button class="crop-btn del-photo" data-action="del-photo" title="Supprimer cette photo">🗑</button>` : ''}
+        ${sel && sel.url && !isVideo(sel) ? `<button class="crop-btn hide-lecteur" data-action="crop-toggle" title="Centrer : choisir le point de la photo sur lequel la carte du listing se centre">🎯 Centrer</button>` : ''}
+        ${sel && sel.url && !isVideo(sel) ? `<button class="crop-btn cut-btn hide-lecteur" data-action="cut-photo" title="Recadrer : rogne définitivement la photo (résolution d'origine conservée)">✂️ Recadrer</button>` : ''}
+        ${sel && sel.url ? `<button class="crop-btn del-photo hide-lecteur" data-action="del-photo" title="Supprimer cette photo">🗑</button>` : ''}
       </div>
       <div class="thumbs">
         ${currentPhotos.map((p, i) => `
-          <div class="thumb ${i === selIdx ? 'sel' : ''}" data-action="thumb" data-idx="${i}" title="${esc(p.kind)}">
+          <div class="thumb ${i === selIdx ? 'sel' : ''}" data-action="thumb" data-idx="${i}" title="${esc(p.kind)}" tabindex="0" role="button" aria-label="Photo ${i + 1} — ${esc(p.kind)}">
             ${p.url ? (isVideo(p) ? '🎬' : `<img src="${esc(p.thumbUrl || p.url)}" alt="${esc(p.kind)} — ${esc(o.titre || 'objet')}">`) : '📷'}
             <span class="kind">${esc(p.kind)}</span>
           </div>`).join('')}
-        <div class="thumb add" data-action="add-photo" title="Ajouter une photo">＋</div>
+        <div class="thumb add hide-lecteur" data-action="add-photo" title="Ajouter une photo" tabindex="0" role="button" aria-label="Ajouter une photo">＋</div>
       </div>
     </div>` : `
     <div class="panel">
-      <div class="gallery-main" data-action="add-photo" title="Ajouter la première photo" style="cursor:pointer">${catEmoji(o.categorie)}</div>
-      <div class="thumbs"><div class="thumb add" data-action="add-photo">＋</div></div>
+      <div class="gallery-main" ${canWrite() ? 'data-action="add-photo" title="Ajouter la première photo" style="cursor:pointer"' : ''}>${catEmoji(o.categorie)}</div>
+      <div class="thumbs"><div class="thumb add hide-lecteur" data-action="add-photo">＋</div></div>
     </div>`;
 
   const rebounds = [o.categorie, o.periode, o.ecole].filter(Boolean)
@@ -474,24 +771,46 @@ function renderObjet() {
         ${o.description ? `<dt>Description</dt><dd><em>${esc(o.description)}</em></dd>` : ''}
       </dl>`;
 
+  // Règle d'or : seules les adjudications nourrissent la fourchette — les
+  // annonces « en vente » sont du contexte et sont affichées à part (badge ambre).
+  const nVendus = currentComps.filter(c => c.source_type !== 'en_vente').length;
   const valeur = (o.prix_bas != null && o.prix_haut != null) ? `
       <div class="value-big">${fmtNum(o.prix_bas)}–${fmtNum(o.prix_haut)} €</div>
-      <div class="value-sub">fourchette issue de ${currentComps.length} adjudication${currentComps.length > 1 ? 's' : ''} réelle${currentComps.length > 1 ? 's' : ''} — jamais d'estimation « de mémoire »</div>`
+      <div class="value-sub">fourchette issue de ${nVendus} adjudication${nVendus > 1 ? 's' : ''} réelle${nVendus > 1 ? 's' : ''} — jamais d'estimation « de mémoire »</div>`
     : `<div class="value-sub">Pas encore d'estimation. La règle d'or : <b>jamais un chiffre sans comparables vendus affichés</b>.</div>`;
 
-  const compsTable = currentComps.length ? `
-    <table class="comps">
-      <thead><tr><th>Maison</th><th>Date</th><th>Lot</th><th>Prix</th><th></th></tr></thead>
-      <tbody>
-        ${currentComps.map(c => `<tr>
-          <td>${esc(c.maison)}</td>
-          <td class="mono">${fmtDate(c.date_vente)}</td>
-          <td>${esc(c.lot ?? '—')}</td>
-          <td class="prix">${c.prix != null ? fmtNum(c.prix) + ' ' + esc(c.devise === 'EUR' ? '€' : c.devise) : '—'}</td>
-          <td>${c.lien ? `<a class="link-lot" href="${esc(c.lien)}" target="_blank" rel="noopener">voir ↗</a>` : ''}</td>
-        </tr>`).join('')}
-      </tbody>
-    </table>` : '';
+  // Comparables visuels : cartes avec image du lot. Adjudications d'abord,
+  // « en vente » ensuite (tri stable : la date descendante de la requête est
+  // conservée à l'intérieur de chaque groupe).
+  const compsSorted = [...currentComps].sort((a, b) =>
+    (a.source_type === 'en_vente' ? 1 : 0) - (b.source_type === 'en_vente' ? 1 : 0));
+  const compsList = compsSorted.length ? `
+    <div class="comps-list">
+      ${compsSorted.map(c => {
+        const enVente = c.source_type === 'en_vente';
+        const img = c.image_url
+          ? `<img src="${esc(c.image_url)}" alt="${esc(c.lot ?? 'lot comparable')}" loading="lazy" onerror="this.style.display='none'">`
+          : '<span class="comp-noimg">🖼️</span>';
+        const thumb = c.lien
+          ? `<a class="comp-thumb" href="${esc(c.lien)}" target="_blank" rel="noopener" title="Voir le lot">${img}</a>`
+          : `<div class="comp-thumb">${img}</div>`;
+        return `<div class="comp-card">
+          ${thumb}
+          <div class="comp-info">
+            <div class="comp-top">
+              <span class="comp-maison">${esc(c.maison ?? '')}</span>
+              <span class="mono comp-date">${fmtDate(c.date_vente)}</span>
+              <span class="comp-badge ${enVente ? 'vente' : 'vendu'}">${enVente ? 'En vente — contexte' : 'Vendu'}</span>
+            </div>
+            <div class="comp-lot">${esc(c.lot ?? '—')}</div>
+            <div class="comp-bot">
+              <span class="comp-prix">${c.prix != null ? fmtNum(c.prix) + ' ' + esc(c.devise === 'EUR' ? '€' : c.devise) : '—'}</span>
+              ${c.lien ? `<a class="link-lot" href="${esc(c.lien)}" target="_blank" rel="noopener">Voir le lot ↗</a>` : ''}
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>` : '';
 
   const actions = editing ? `
     <div class="corr-bar">
@@ -504,14 +823,22 @@ function renderObjet() {
       <button class="btn primary small" data-action="corr-save">Enregistrer les corrections</button>
       <button class="btn small" data-action="corr-cancel">Annuler</button>
     </div>` : `
-    <div class="actions">
+    <div class="actions hide-lecteur">
       <button class="btn primary" data-action="valider" ${o.statut === 'validee' ? 'disabled' : ''}>✓ Valider la fiche</button>
       <button class="btn" data-action="corriger">✏️ Corriger</button>
-      <button class="btn" data-action="relancer">↻ Relancer l'analyse IA</button>
+      <button class="btn" data-action="relancer">↻ Relancer l'estimation</button>
       <button class="btn" data-action="take-photo">📸 Prendre une photo</button>
       <button class="btn" data-action="add-photo">🖼️ Ajouter depuis la galerie</button>
       <button class="btn danger" data-action="del-objet">🗑 Supprimer l'objet</button>
     </div>`;
+
+  // Fiche artiste (table `artistes`, migration 0008) — rien affiché si pas de fiche
+  const artistePanel = currentArtiste ? `
+    <details class="panel panel-pad acc" open>
+      <summary class="sec-title">🎨 Artiste — ${esc(currentArtiste.nom)}</summary>
+      <div class="md-body">${mdToHtml(currentArtiste.bio_md ?? '')}</div>
+      <a class="link-lot" style="display:inline-block;margin-top:12px" href="#/artiste/${encodeURIComponent(currentArtiste.nom)}">Voir la fiche artiste →</a>
+    </details>` : '';
 
   const fichePanel = currentFiche ? `
     <details class="panel panel-pad acc">
@@ -528,26 +855,8 @@ function renderObjet() {
   // Changelog objet (D-025) : qui a fait quoi, quand, avec quel outil —
   // actions du site (photos, corrections, validation…) + passes IA du cron
   // (identification, marché, Lens…), champs avant→après quand dispo.
-  const ACT_LABELS = {
-    capture: 'Objet capturé', photo_ajoutee: 'Photo ajoutée', photo_supprimee: 'Photo supprimée',
-    recadrage: 'Recadrage', centrage: 'Centrage', localisation: 'Localisation',
-    correction: 'Correction', validation: 'Fiche validée', relance: 'Analyse relancée',
-    identification: 'Identification IA', passe_marche: 'Recherche de comparables',
-    lens: 'Google Lens (signature)', artiste_maj: 'Fiche artiste', photos_manquantes: 'Photos recommandées',
-  };
   const evRows = currentEvents.map(ev => {
-    const d = ev.detail ?? {};
-    const bits = [];
-    if (d.modele) bits.push(esc(d.modele));
-    if (d.prompt_version) bits.push('prompt ' + esc(d.prompt_version));
-    if (d.n != null) bits.push(d.n + ' photo' + (d.n > 1 ? 's' : ''));
-    if (d.comps != null) bits.push(d.comps + ' comparable' + (d.comps > 1 ? 's' : ''));
-    if (Array.isArray(d.sources) && d.sources.length) bits.push(esc(d.sources.join(', ')));
-    if (d.champs && typeof d.champs === 'object') {
-      bits.push(Object.entries(d.champs).map(([c, v]) =>
-        `${esc(c)} : « ${esc(v?.avant ?? '—')} » → « ${esc(v?.apres ?? '—')} »`).join(' · '));
-    }
-    if (d.note) bits.push(esc(d.note));
+    const bits = evDetailBits(ev.detail ?? {});
     return `<div class="ev-row">
       <span class="ev-date">${fmtDate(ev.created_at)}</span>
       <span class="ev-act">${esc(ACT_LABELS[ev.action] ?? ev.action)}</span>
@@ -573,10 +882,11 @@ function renderObjet() {
         <summary class="sec-title">Identification</summary>
         ${identification}
       </details>
+      ${artistePanel}
       <details class="panel panel-pad acc" open>
         <summary class="sec-title">Valeur</summary>
         ${valeur}
-        ${compsTable}
+        ${compsList}
       </details>
       ${actions}
       ${fichePanel}
@@ -620,7 +930,7 @@ function renderLocCard(edit) {
       <div class="loc-line"><span class="k">Zone</span><span class="v">${o.zone ? esc(o.zone) : '<span style="color:var(--ink-3)">—</span>'}</span></div>
       <div class="loc-line"><span class="k">Contenant</span><span class="v">${o.contenant ? esc(o.contenant) : '<span style="color:var(--ink-3)">—</span>'}</span></div>
       <div class="loc-line"><span class="k">Position</span><span class="v">${o.position ? esc(o.position) : '<span style="color:var(--ink-3)">—</span>'}</span></div>
-      <div class="loc-line" style="justify-content:flex-end;margin-top:6px"><button class="edit-btn" data-action="loc-edit">✏️ modifier</button></div>`;
+      <div class="loc-line" style="justify-content:flex-end;margin-top:6px"><button class="edit-btn hide-lecteur" data-action="loc-edit">✏️ modifier</button></div>`;
   } else {
     el.innerHTML = `
       <div class="loc-line"><span class="k">Zone</span><input id="loc-zone" value="${esc(o.zone ?? '')}" placeholder="Garage…"></div>
@@ -650,7 +960,7 @@ async function loadSimilar(o) {
   panel.style.display = '';
   $('#similar-grid').innerHTML = data.map(s => {
     const img = urls[first[s.id]];
-    return `<div class="sim-card" data-action="similar" data-oid="${esc(s.id)}">
+    return `<div class="sim-card" data-action="similar" data-oid="${esc(s.id)}" tabindex="0" role="button" aria-label="${esc(s.titre || 'Objet similaire')} — fiche #${esc(s.id)}">
       <div class="sim-img">${img ? `<img src="${esc(img)}" alt="${esc(s.titre || 'Objet similaire')}" loading="lazy">` : catEmoji(s.categorie)}</div>
       <div><div class="sim-t">${esc(s.titre || 'Sans titre')}</div>
       <div class="sim-m">#${esc(s.id)}${s.prix_bas != null ? ` · ${fmtNum(s.prix_bas)}–${fmtNum(s.prix_haut)} €` : ''}</div></div>
@@ -670,10 +980,28 @@ async function queueAnalyse(oid, type = 'analyse') {
   if (error && error.code !== '23505') toast(error.message, true);
 }
 
+// Activation clavier des vignettes/cartes non-boutons (div role="button") :
+// Enter/Espace déclenche le même handler que le clic (délégation ci-dessous).
+$('#objet-body').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const el = e.target.closest('.thumb[data-action], .sim-card[data-action]');
+  if (!el || el !== e.target) return; // ne pas voler l'activation des vrais boutons internes
+  e.preventDefault();
+  el.click();
+});
+
+// Actions qui modifient des données — bloquées pour un lecteur (double garde
+// avec la RLS 0012 ; l'UI est déjà masquée via .hide-lecteur).
+const ACTIONS_MUTANTES = new Set([
+  'crop-toggle', 'cut-photo', 'del-photo', 'del-objet', 'add-photo', 'take-photo',
+  'loc-edit', 'loc-save', 'valider', 'corriger', 'corr-save', 'relancer',
+]);
+
 $('#objet-body').addEventListener('click', async e => {
   const el = e.target.closest('[data-action]');
   if (!el) return;
   const act = el.dataset.action;
+  if (ACTIONS_MUTANTES.has(act) && !canWrite()) return;
   const o = currentObjet;
 
   if (act === 'thumb') {
@@ -703,8 +1031,10 @@ $('#objet-body').addEventListener('click', async e => {
   else if (act === 'add-photo') { $('#file-add-photo').click(); }
   else if (act === 'take-photo') { openCamera('objet'); }
   else if (act === 'rebound') {
-    filters.q = norm(el.dataset.val); filters.chip = ''; filters.list = '';
+    filters.q = norm(el.dataset.val); filters.cats = []; filters.list = '';
+    filters.prixMin = null; filters.prixMax = null;
     $('#search').value = el.dataset.val;
+    syncPrixInputs();
     location.hash = '#/';
   }
   else if (act === 'similar') { location.hash = '#/objet/' + encodeURIComponent(el.dataset.oid); }
@@ -734,9 +1064,10 @@ $('#objet-body').addEventListener('click', async e => {
   else if (act === 'corr-cancel') { editing = false; renderObjet(); }
   else if (act === 'corr-save') { saveCorrections(); }
   else if (act === 'relancer') {
+    if (!confirm(`Relancer l'estimation complète de #${o.id} ?\n\nLa passe entière sera rejouée : identification + recherche de comparables. Le cron la traitera au prochain run.`)) return;
     await queueAnalyse(o.id, 'reanalyse');
     logEvent('relance', {});
-    toast('Analyse relancée — le cron la traitera');
+    toast('Estimation relancée — le cron la traitera');
     loadObjet(o.id);
   }
 });
@@ -815,6 +1146,7 @@ async function uploadPhotosFor(oid, files, firstIsFace = false) {
 }
 
 $('#file-add-photo').addEventListener('change', async e => {
+  if (!canWrite()) { e.target.value = ''; return; }
   const files = [...e.target.files];
   e.target.value = '';
   if (!files.length || !currentObjet) return;
@@ -1020,8 +1352,490 @@ function mdToHtml(md) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// VUES GOUVERNANCE — Artistes / Sources / Catégories & familles (D-028)
+// ═══════════════════════════════════════════════════════════════════════════
+// Garantit le cache collection (comptages objets par artiste, mini-cartes du
+// détail) sans ré-afficher la vue collection.
+async function ensureCollection() {
+  if (collection.length) return;
+  const { data } = await sb.from('objets').select('*').eq('owner_id', tenantId).order('created_at', { ascending: false });
+  collection = data ?? [];
+}
+
+// ─── Artistes : liste des fiches (table `artistes`, migration 0008) ─────────
+async function loadArtistes() {
+  const body = $('#artistes-body');
+  body.innerHTML = '<div class="skeleton" style="height:220px"></div>';
+  const [{ data, error }] = await Promise.all([
+    sb.from('artistes').select('*').eq('owner_id', tenantId).order('nom'),
+    ensureCollection(),
+  ]);
+  if (error) { toast(error.message, true); body.innerHTML = ''; return; }
+  if (!data?.length) {
+    body.innerHTML = emptyHtml('Aucune fiche artiste pour l\'instant', 'Le cron les crée lors des passes d\'identification.');
+    return;
+  }
+  const nbObjets = nom => collection.filter(o => o.auteur === nom).length;
+  body.innerHTML = `<div class="grid">${data.map(a => {
+    const extrait = String(a.bio_md ?? '').replace(/[#*`|>_-]/g, ' ').replace(/\s+/g, ' ').trim();
+    const n = nbObjets(a.nom);
+    return `<article class="card" data-nom="${esc(a.nom)}">
+      <div class="card-body">
+        <div class="card-title">🎨 ${esc(a.nom)}</div>
+        <div class="card-meta art-extrait">${esc(extrait.slice(0, 220))}${extrait.length > 220 ? '…' : ''}</div>
+        <div class="card-foot"><span class="price none">${n} objet${n > 1 ? 's' : ''} lié${n > 1 ? 's' : ''}</span><span class="conf-label">maj ${fmtDate(a.updated_at)}</span></div>
+      </div>
+    </article>`;
+  }).join('')}</div>`;
+  $$('.card', body).forEach(c => c.addEventListener('click', () => {
+    location.hash = '#/artiste/' + encodeURIComponent(c.dataset.nom);
+  }));
+}
+
+// ─── Artiste (détail) : bio complète + objets liés de la collection ─────────
+async function loadArtiste(nom) {
+  const body = $('#artiste-body');
+  body.innerHTML = '<div class="skeleton" style="height:320px"></div>';
+  await ensureCollection();
+  const { data: a, error } = await sb.from('artistes').select('*').eq('owner_id', tenantId).eq('nom', nom).maybeSingle();
+  if (error) { toast(error.message, true); body.innerHTML = ''; return; }
+  if (collection.length && !Object.keys(photoMap).length) await loadPhotoMap();
+  const objets = collection.filter(o => o.auteur === nom);
+  const bioPanel = a ? `
+    <details class="panel panel-pad acc" open>
+      <summary class="sec-title">Biographie</summary>
+      <div class="md-body">${mdToHtml(a.bio_md ?? '')}</div>
+      <div class="value-sub" style="margin-top:12px">Fiche créée le ${fmtDate(a.created_at)} · mise à jour le ${fmtDate(a.updated_at)}</div>
+    </details>` : `
+    <div class="panel panel-pad">
+      <div class="sec-title">Biographie</div>
+      <div class="value-sub">Pas encore de fiche artiste — le cron la crée lors des passes d'identification.</div>
+    </div>`;
+  body.innerHTML = `
+    <h1 class="obj-title" style="margin-bottom:18px">🎨 ${esc(a?.nom ?? nom)}</h1>
+    ${bioPanel}
+    <div class="sec-title" style="margin-top:26px">Objets de la collection <span style="font-family:var(--mono);font-size:13px;color:var(--ink-3);font-weight:400">${objets.length}</span></div>
+    ${objets.length
+      ? `<div class="grid">${objets.map(cardHtml).join('')}</div>`
+      : '<div class="value-sub">Aucun objet rattaché à cet artiste pour l\'instant.</div>'}`;
+  $$('.card', body).forEach(c => {
+    const go = () => { location.hash = '#/objet/' + encodeURIComponent(c.dataset.oid); };
+    c.addEventListener('click', go);
+    // Carte = div focusable (role="button") : Enter/Espace = même navigation que le clic
+    c.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+  });
+}
+
+// ─── Sources : cartographie des accès (miroir docs/cartographie-sources.md) ─
+let sourcesCache = null;
+async function loadSources() {
+  const body = $('#sources-body');
+  body.innerHTML = '<div class="skeleton" style="height:220px"></div>';
+  try {
+    sourcesCache ??= await (await fetch('data/sources.json')).json();
+  } catch {
+    body.innerHTML = emptyHtml('Sources indisponibles', 'data/sources.json introuvable ou invalide.');
+    return;
+  }
+  const s = sourcesCache;
+  const badge = code => (code && s.legende[code])
+    ? `<span class="src-badge acc-${esc(code.toLowerCase().replace(/[^a-z0-9]+/g, '-'))}" title="${esc(s.legende[code])}">${esc(code)}</span>`
+    : '';
+  body.innerHTML = `
+    <details class="panel panel-pad acc">
+      <summary class="sec-title">Légende des accès</summary>
+      <div class="src-legende">${Object.entries(s.legende).map(([k, v]) =>
+        `<div class="src-leg-row">${badge(k)}<span>${esc(v)}</span></div>`).join('')}</div>
+    </details>
+    ${(s.sections ?? []).map(sec => `
+      <div class="panel panel-pad" style="margin-top:18px">
+        <div class="sec-title">${esc(sec.titre)}</div>
+        ${sec.intro ? `<div class="value-sub" style="margin-bottom:12px">${esc(sec.intro)}</div>` : ''}
+        <table class="src-table">
+          <thead><tr><th>Source</th><th>Accès</th><th>Coût</th><th>Usage</th></tr></thead>
+          <tbody>${(sec.entrees ?? []).map(e => `<tr>
+            <td>${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener"><b>${esc(e.nom)}</b> ↗</a>` : `<b>${esc(e.nom)}</b>`}</td>
+            <td>${badge(e.acces)}</td>
+            <td>${esc(e.cout ?? '—')}</td>
+            <td>${esc(e.usage ?? '')}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>`).join('')}`;
+}
+
+// ─── Catégories & familles : taxonomie canonique + prompts (consultation) ───
+let famillesCache = null;
+async function loadCategories() {
+  const body = $('#categories-body');
+  body.innerHTML = '<div class="skeleton" style="height:220px"></div>';
+  try {
+    famillesCache ??= await (await fetch('data/familles.json')).json();
+  } catch {
+    body.innerHTML = emptyHtml('Données indisponibles', 'data/familles.json introuvable — lancer infra/build-site-data.py pour le régénérer.');
+    return;
+  }
+  const d = famillesCache;
+  body.innerHTML = `
+    <div class="note" style="margin-bottom:18px">Consultation — l'édition des prompts arrivera avec le menu admin (table <code>prompts</code>).</div>
+    <div class="panel panel-pad">
+      <div class="sec-title">Taxonomie — ${(d.categories_canon ?? []).length} catégories canoniques</div>
+      <div class="fam-list">${(d.categories_canon ?? []).map(cat => {
+        const fam = d.mapping?.[cat];
+        const b = fam ? d.familles?.[fam] : null;
+        return `<details class="acc fam-row">
+          <summary><span class="fam-emoji">${catEmoji(cat)}</span><span class="fam-cat">${esc(cat)}</span>
+          ${b ? `<span class="chip fam-chip">${esc(fam)} · ${esc(b.version)}</span>` : '<span class="chip fam-chip">—</span>'}</summary>
+          ${b ? `<div class="md-body fam-md">${mdToHtml(b.contenu_md)}</div>` : '<div class="fam-md value-sub">Aucun bloc famille ne couvre cette catégorie.</div>'}
+        </details>`;
+      }).join('')}</div>
+    </div>
+    <div class="panel panel-pad" style="margin-top:18px">
+      <div class="sec-title">Troncs communs</div>
+      <div class="fam-list">${Object.values(d.bases ?? {}).map(b => `
+        <details class="acc fam-row">
+          <summary><span class="fam-emoji">📐</span><span class="fam-cat">${esc(b.nom)}</span><span class="chip fam-chip">${esc(b.version)}</span></summary>
+          <div class="md-body fam-md">${mdToHtml(b.contenu_md)}</div>
+        </details>`).join('')}</div>
+    </div>`;
+}
+
+// ─── Activité : actions manuelles + digest « quoi de neuf » (D-025) ─────────
+// Enfile un job par objet en évitant les doublons : on lit d'abord les jobs
+// en_attente (index unique « un seul job en_attente par objet », migration 0011)
+// et on n'insère que les manquants. Insert par lot ; si un 23505 survient quand
+// même (course avec le cron), repli un par un en le tolérant. Les objets
+// effectivement enfilés passent en statut « en_file ».
+async function enqueueJobs(oids, type) {
+  const { data: pending, error: e0 } = await sb.from('jobs').select('objet_id')
+    .eq('owner_id', tenantId).eq('statut', 'en_attente');
+  if (e0) { toast(e0.message, true); return 0; }
+  const busy = new Set((pending ?? []).map(j => j.objet_id));
+  const todo = oids.filter(id => !busy.has(id));
+  if (!todo.length) return 0;
+  let ok = todo;
+  const { error } = await sb.from('jobs').insert(todo.map(objet_id => ({ owner_id: tenantId, objet_id, type })));
+  if (error) {
+    if (error.code !== '23505') { toast(error.message, true); return 0; }
+    ok = [];
+    for (const objet_id of todo) {
+      const { error: e } = await sb.from('jobs').insert({ owner_id: tenantId, objet_id, type });
+      if (!e) ok.push(objet_id);
+      else if (e.code !== '23505') toast(e.message, true);
+    }
+  }
+  if (ok.length) await sb.from('objets').update({ statut: 'en_file' }).eq('owner_id', tenantId).in('id', ok);
+  return ok.length;
+}
+
+async function majCatalogue() {
+  if (!canWrite()) return;
+  await ensureCollection();
+  if (!collection.length) { toast('Aucun objet dans le catalogue', true); return; }
+  if (!confirm(`Rejouer la passe complète (identification + comparables) sur les ${collection.length} objets du catalogue ?\n\nLes objets déjà en file sont ignorés. Le cron traitera ~5 objets par run de 10 min.`)) return;
+  const n = await enqueueJobs(collection.map(o => o.id), 'maj');
+  toast(n
+    ? `${plur(n, 'objet mis', 'objets mis')} en file — le cron les traitera ~5 par run de 10 min.`
+    : 'Tous les objets sont déjà en file');
+}
+
+async function majArtistes() {
+  if (!canWrite()) return;
+  await ensureCollection();
+  const objs = collection.filter(o => o.auteur && o.auteur.trim());
+  const artistes = [...new Set(objs.map(o => o.auteur))];
+  if (!objs.length) { toast('Aucun objet avec un auteur renseigné', true); return; }
+  if (!confirm(`Mettre à jour les fiches des ${plur(artistes.length, 'artiste', 'artistes')} (${plur(objs.length, 'objet concerné', 'objets concernés')}) ?\n\nLe cron traitera ~5 objets par run de 10 min.`)) return;
+  const n = await enqueueJobs(objs.map(o => o.id), 'artiste_maj');
+  toast(n
+    ? `${plur(n, 'objet mis', 'objets mis')} en file (${plur(artistes.length, 'artiste', 'artistes')}) — le cron les traitera ~5 par run de 10 min.`
+    : 'Ces objets sont déjà tous en file');
+}
+
+// Actions écrites par le cron (vs actions du site) — détermine le groupe du digest.
+const CRON_ACTIONS = new Set(['identification', 'passe_marche', 'lens', 'artiste_maj', 'photos_manquantes']);
+const SITE_PLUR = {
+  capture: ['capture', 'captures'],
+  photo_ajoutee: ['photo ajoutée', 'photos ajoutées'],
+  photo_supprimee: ['photo supprimée', 'photos supprimées'],
+  recadrage: ['recadrage', 'recadrages'],
+  centrage: ['centrage', 'centrages'],
+  localisation: ['localisation', 'localisations'],
+  correction: ['correction', 'corrections'],
+  validation: ['validation', 'validations'],
+  relance: ['relance', 'relances'],
+};
+const capFirst = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+// Phrase synthétique d'un groupe d'événements cron : compteurs par action,
+// modèles / versions de prompt distincts, comparables cumulés, sources distinctes.
+function resumeCron(list) {
+  const by = a => list.filter(e => e.action === a);
+  const uniq = arr => [...new Set(arr.filter(Boolean))];
+  const parts = [];
+  const ids = by('identification');
+  if (ids.length) {
+    const modeles = uniq(ids.map(e => e.detail?.modele));
+    const prompts = uniq(ids.map(e => e.detail?.prompt_version));
+    const meta = [modeles.join(', '), prompts.length ? 'prompts ' + prompts.join(', ') : ''].filter(Boolean).join(' · ');
+    parts.push(plur(ids.length, 'identification', 'identifications') + (meta ? ` (${meta})` : ''));
+  }
+  const pm = by('passe_marche');
+  if (pm.length) {
+    const comps = pm.reduce((s, e) => s + (Number(e.detail?.comps) || 0), 0);
+    const srcs = uniq(pm.flatMap(e => Array.isArray(e.detail?.sources) ? e.detail.sources : []));
+    const meta = [comps ? plur(comps, 'comparable trouvé', 'comparables trouvés') : '', srcs.join(', ')].filter(Boolean).join(' · ');
+    parts.push(plur(pm.length, 'passe marché', 'passes marché') + (meta ? ` (${meta})` : ''));
+  }
+  const am = by('artiste_maj');
+  if (am.length) parts.push(plur(am.length, 'fiche artiste mise à jour', 'fiches artistes mises à jour'));
+  const lens = by('lens');
+  if (lens.length) parts.push(plur(lens.length, 'analyse Lens (signature)', 'analyses Lens (signatures)'));
+  const ph = by('photos_manquantes');
+  if (ph.length) parts.push(plur(ph.length, 'recommandation photos', 'recommandations photos'));
+  return parts.join(', ');
+}
+
+// Phrase synthétique d'un groupe d'événements site : compteurs par action +
+// acteurs distincts entre parenthèses (« 1 correction (Yann) »).
+function resumeSite(list) {
+  const counts = new Map();
+  for (const e of list) {
+    const c = counts.get(e.action) ?? { n: 0, acteurs: new Set() };
+    c.n++;
+    if (e.acteur && e.acteur !== 'site') c.acteurs.add(capFirst(e.acteur));
+    counts.set(e.action, c);
+  }
+  return [...counts].map(([a, c]) => {
+    const [s, p] = SITE_PLUR[a] ?? [ACT_LABELS[a] ?? a, (ACT_LABELS[a] ?? a) + 's'];
+    return plur(c.n, s, p) + (c.acteurs.size ? ` (${[...c.acteurs].join(', ')})` : '');
+  }).join(', ');
+}
+
+// Ligne unitaire du digest : heure, action, acteur, objet (lien fiche) + détail.
+function evRowActivite(ev, titres) {
+  const h = new Date(ev.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const obj = ev.objet_id
+    ? `<a class="link-lot" href="#/objet/${encodeURIComponent(ev.objet_id)}">#${esc(ev.objet_id)}${titres[ev.objet_id] ? ' ' + esc(titres[ev.objet_id]) : ''}</a>`
+    : '';
+  return `<div class="ev-row">
+    <span class="ev-date">${h}</span>
+    <span class="ev-act">${esc(ACT_LABELS[ev.action] ?? ev.action)}</span>
+    <span class="ev-qui">${esc(ev.acteur ?? '')}</span>
+    <span class="ev-det">${[obj, ...evDetailBits(ev.detail ?? {})].filter(Boolean).join(' · ')}</span>
+  </div>`;
+}
+
+async function loadActivite() {
+  const body = $('#activite-body');
+  body.innerHTML = '<div class="skeleton" style="height:220px"></div>';
+  const depuis = new Date(Date.now() - 30 * 864e5).toISOString();
+  const [{ data: evts, error }] = await Promise.all([
+    sb.from('evenements').select('id,objet_id,created_at,acteur,action,detail')
+      .eq('owner_id', tenantId).gte('created_at', depuis)
+      .order('created_at', { ascending: false }).limit(500),
+    ensureCollection(),
+  ]);
+  if (error) { toast(error.message, true); body.innerHTML = ''; return; }
+  // Titres d'objets : cache collection d'abord, appoint pour les absents.
+  const titres = Object.fromEntries(collection.map(o => [o.id, o.titre]));
+  const manquants = [...new Set((evts ?? []).map(e => e.objet_id).filter(id => id && !(id in titres)))];
+  if (manquants.length) {
+    const { data: plus } = await sb.from('objets').select('id,titre').eq('owner_id', tenantId).in('id', manquants);
+    for (const o of plus ?? []) titres[o.id] = o.titre;
+  }
+
+  const actionsPanel = `
+    <div class="panel panel-pad hide-lecteur">
+      <div class="sec-title">Actions</div>
+      <div class="value-sub">Forcer des passes IA sans attendre le rythme du cron — les objets déjà en file sont ignorés.</div>
+      <div class="actions" style="margin-top:12px">
+        <button class="btn primary" id="act-maj-catalogue">↻ MAJ générale du catalogue</button>
+        <button class="btn" id="act-maj-artistes">🎨 MAJ des fiches artistes</button>
+      </div>
+    </div>
+    <div class="sec-title" style="margin-top:28px">Quoi de neuf — 30 derniers jours</div>`;
+
+  if (!evts?.length) {
+    body.innerHTML = actionsPanel
+      + emptyHtml('Rien à signaler sur 30 jours', 'Les runs du cron et les actions du site apparaîtront ici, digérés par jour.');
+  } else {
+    // Groupement par jour (ordre desc conservé) puis par type d'activité.
+    const jours = new Map();
+    for (const ev of evts) {
+      const d = new Date(ev.created_at);
+      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      if (!jours.has(key)) {
+        jours.set(key, {
+          label: d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+          list: [],
+        });
+      }
+      jours.get(key).list.push(ev);
+    }
+    const digRow = (titre, resume, list) => `
+      <details class="acc dig-row">
+        <summary><span class="dig-sum"><b>${esc(titre)}</b> — ${esc(resume)}</span><span class="chip dig-count">${list.length}</span></summary>
+        <div class="ev-list">${list.map(e => evRowActivite(e, titres)).join('')}</div>
+      </details>`;
+    body.innerHTML = actionsPanel + [...jours.values()].map(({ label, list }) => {
+      const cron = list.filter(e => CRON_ACTIONS.has(e.action));
+      const site = list.filter(e => !CRON_ACTIONS.has(e.action));
+      const rows = [];
+      if (cron.length) rows.push(digRow('Run cron', resumeCron(cron), cron));
+      if (site.length) rows.push(digRow('Site', resumeSite(site), site));
+      return `<div class="dig-day">${esc(label)}</div><div class="panel dig-panel">${rows.join('')}</div>`;
+    }).join('');
+  }
+  $('#act-maj-catalogue').addEventListener('click', majCatalogue);
+  $('#act-maj-artistes').addEventListener('click', majArtistes);
+}
+
+// ─── Maison : nom, membres, rôles (owner uniquement — menu déjà filtré) ─────
+// Gestion de SA maison (locataire = son propre id, D-015/D-016). Un vendeur
+// alimente le catalogue comme l'owner ; un lecteur voit tout mais ne peut rien
+// modifier (RLS 0012 + UI en lecture seule).
+async function loadMaison() {
+  const body = $('#maison-body');
+  body.innerHTML = '<div class="skeleton" style="height:220px"></div>';
+  const [{ data: t }, { data: membres, error }] = await Promise.all([
+    sb.from('tenants').select('name').eq('owner_id', user.id).maybeSingle(),
+    sb.from('collection_members').select('member_id,role,created_at').eq('owner_id', user.id).order('created_at'),
+  ]);
+  if (error) { toast(error.message, true); body.innerHTML = ''; return; }
+  // Noms affichés : profiles lisible entre membres d'une maison (policy 0012).
+  const ids = (membres ?? []).map(m => m.member_id);
+  const { data: profs } = ids.length
+    ? await sb.from('profiles').select('id,display_name').in('id', ids)
+    : { data: [] };
+  const nomDe = id => (profs ?? []).find(p => p.id === id)?.display_name || `membre ${id.slice(0, 8)}…`;
+  const rows = (membres ?? []).map(m => `
+    <div class="mbr-row" data-mid="${esc(m.member_id)}">
+      <span class="mbr-name">${esc(nomDe(m.member_id))}</span>
+      <select class="select mbr-role">
+        <option value="vendeur" ${m.role === 'vendeur' ? 'selected' : ''}>vendeur</option>
+        <option value="lecteur" ${m.role === 'lecteur' ? 'selected' : ''}>lecteur</option>
+      </select>
+      <button class="btn small danger mbr-del">Retirer</button>
+    </div>`).join('');
+  body.innerHTML = `
+    <div class="panel panel-pad">
+      <div class="sec-title">Nom de la maison</div>
+      <div class="value-sub">Affiché dans l'en-tête et dans le switcher du menu.</div>
+      <div class="mbr-form" style="margin-top:12px">
+        <input id="maison-name" value="${esc(t?.name ?? '')}" placeholder="PONAIRE…">
+        <button class="btn primary" id="maison-rename">Renommer</button>
+      </div>
+    </div>
+    <div class="panel panel-pad" style="margin-top:18px">
+      <div class="sec-title">Membres <span style="font-family:var(--mono);font-size:13px;color:var(--ink-3);font-weight:400">${(membres ?? []).length}</span></div>
+      <div class="note">Un <b>lecteur</b> voit tout le catalogue mais ne peut rien modifier.</div>
+      <div class="mbr-list">${rows || '<div class="value-sub">Aucun membre pour l\'instant — invite le premier ci-dessous.</div>'}</div>
+    </div>
+    <div class="panel panel-pad" style="margin-top:18px">
+      <div class="sec-title">Inviter un membre</div>
+      <div class="value-sub">Le compte doit déjà exister (créé au premier magic link).</div>
+      <div class="mbr-form" style="margin-top:12px">
+        <input type="email" id="invite-email" placeholder="email@exemple.fr" autocomplete="off">
+        <select class="select" id="invite-role">
+          <option value="vendeur">vendeur</option>
+          <option value="lecteur">lecteur</option>
+        </select>
+        <button class="btn primary" id="invite-btn">Inviter</button>
+      </div>
+      <div id="invite-msg" style="margin-top:10px"></div>
+    </div>`;
+
+  $('#maison-rename').addEventListener('click', async () => {
+    const name = $('#maison-name').value.trim();
+    if (!name) { toast('Nom vide', true); return; }
+    const { error: e } = await sb.from('tenants').upsert({ owner_id: user.id, name });
+    if (e) { toast(e.message, true); return; }
+    const mienne = mesTenants.find(x => x.id === user.id);
+    if (mienne) mienne.name = name;
+    if (tenantId === user.id) tenantName = name;
+    renderMenu();
+    loadHeader();
+    toast(`✓ Maison renommée « ${name} »`);
+  });
+
+  $$('.mbr-row', body).forEach(row => {
+    const mid = row.dataset.mid;
+    const sel = $('.mbr-role', row);
+    sel.addEventListener('change', async () => {
+      const nv = sel.value;
+      if (!confirm(`Passer ${nomDe(mid)} en rôle « ${nv} » ?`)) { loadMaison(); return; }
+      const { error: e } = await sb.from('collection_members').update({ role: nv })
+        .eq('owner_id', user.id).eq('member_id', mid);
+      if (e) { toast(e.message, true); loadMaison(); return; }
+      toast(`✓ ${nomDe(mid)} est maintenant ${nv}`);
+    });
+    $('.mbr-del', row).addEventListener('click', async () => {
+      if (!confirm(`Retirer ${nomDe(mid)} de la maison ?\nIl ne verra plus le catalogue.`)) return;
+      const { error: e } = await sb.from('collection_members').delete()
+        .eq('owner_id', user.id).eq('member_id', mid);
+      if (e) { toast(e.message, true); return; }
+      toast(`${nomDe(mid)} retiré de la maison`);
+      loadMaison();
+    });
+  });
+
+  $('#invite-btn').addEventListener('click', async () => {
+    const email = $('#invite-email').value.trim();
+    const role = $('#invite-role').value;
+    const msg = $('#invite-msg');
+    if (!email) { $('#invite-email').focus(); return; }
+    const { data, error: e } = await sb.rpc('invite_member', { p_email: email, p_role: role });
+    if (e) {
+      // Message métier de la RPC (ex. « compte inexistant ») affiché proprement.
+      msg.innerHTML = `<div class="login-err">${esc(e.message)}</div>`;
+      return;
+    }
+    msg.innerHTML = `<div class="login-ok">✓ ${esc(email)} : ${esc(data ?? 'ajouté')} (${esc(role)}).</div>`;
+    toast(`✓ ${email} ${data ?? 'ajouté'}`);
+    loadMaison();
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // VUE CAPTURER
 // ═══════════════════════════════════════════════════════════════════════════
+// ─── Web Share Target (D-013) : photos reçues via « Partager avec » Android ─
+// Le SW (sw.js) stocke les images du POST share-target dans le cache
+// 'share-inbox' et redirige vers ./?partage=1#/capture — ici on reconstruit
+// des File et on alimente la capture en cours. iOS Safari ne supporte pas
+// l'API (limite admise) : le flag n'apparaît alors jamais.
+function consumeShareFlag() {
+  const inSearch = /[?&]partage=1/.test(location.search);
+  const inHash = /[?&]partage=1/.test(location.hash);
+  if (!inSearch && !inHash) return false;
+  const search = location.search.replace(/([?&])partage=1&?/, '$1').replace(/[?&]$/, '');
+  history.replaceState(null, '', location.pathname + search + (inHash ? '#/capture' : location.hash));
+  return true;
+}
+async function receiveSharedPhotos() {
+  if (!('caches' in window)) return;
+  try {
+    const cache = await caches.open('share-inbox');
+    const keys = await cache.keys();
+    const files = [];
+    for (const req of keys) {
+      const res = await cache.match(req);
+      if (!res) continue;
+      const blob = await res.blob();
+      files.push(new File([blob],
+        res.headers.get('x-name') || 'partage.jpg',
+        { type: res.headers.get('x-type') || blob.type || 'image/jpeg' }));
+    }
+    await caches.delete('share-inbox'); // inbox consommée : on vide pour le prochain partage
+    if (files.length) {
+      addCapFiles(files);
+      toast(`${plur(files.length, 'photo reçue', 'photos reçues')} par partage`);
+    }
+  } catch (err) {
+    console.warn('share-inbox :', err);
+  }
+}
+
 async function initCapture() {
   // NE PAS vider capFiles ici (audit 2026-08-24) : naviguer Capturer → Collection →
   // Capturer ne doit pas perdre les clichés non enregistrés. capFiles n'est vidé
@@ -1162,6 +1976,7 @@ $('#file-camera').addEventListener('change', e => { addCapFiles(e.target.files);
 $('#file-gallery').addEventListener('change', e => { addCapFiles(e.target.files); e.target.value = ''; });
 
 $('#cap-save').addEventListener('click', async () => {
+  if (!canWrite()) return;
   const btn = $('#cap-save');
   btn.disabled = true;
   btn.textContent = 'Enregistrement…';

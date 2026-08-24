@@ -26,6 +26,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15p
 a{color:var(--blue);text-decoration:none}
 button{font-family:inherit;cursor:pointer}
 :focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:4px}
+/* Divs cliquables rendues focusables (role="button") : outline primaire identique */
+.card:focus-visible,.thumb:focus-visible,.sim-card:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 
 /* ─── En-tête ─────────────────────────────────────────────── */
 header{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:1px solid var(--line)}
@@ -43,6 +45,24 @@ header{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:
 .header-right{margin-left:auto;display:flex;align-items:center;gap:14px}
 .avatar{width:34px;height:34px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;font-weight:600;font-size:13px;border:none}
 @media (max-width:640px){.header-counter{display:none}}
+
+/* ─── Menu gouvernance (D-028) : dropdown de l'en-tête ────── */
+.menu-gov{position:relative}
+.menu-btn{padding:8px 14px;border:1px solid var(--line-strong);border-radius:var(--r-md);background:var(--surface);font-size:13.5px;font-weight:600;color:var(--ink-2)}
+.menu-btn:hover{border-color:var(--blue);color:var(--blue-deep);background:var(--blue-softer)}
+.menu-panel{position:absolute;right:0;top:calc(100% + 8px);width:min(320px,88vw);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-hover);padding:8px;z-index:60;display:flex;flex-direction:column;gap:2px}
+.menu-item{display:flex;gap:12px;align-items:flex-start;text-align:left;padding:10px 12px;border:none;background:none;border-radius:var(--r-md)}
+.menu-item:hover{background:var(--blue-softer)}
+.menu-ico{font-size:18px;line-height:1.3;flex-shrink:0}
+.menu-label{display:block;font-size:14px;font-weight:600;color:var(--ink)}
+.menu-desc{display:block;font-size:12px;color:var(--ink-3);margin-top:1px;line-height:1.4}
+/* Switcher multi-locataires (D-015/0012) : section « Maison » en tête du dropdown */
+.menu-sec{padding:8px 12px 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3)}
+.menu-sep{height:1px;background:var(--line);margin:6px 4px}
+.menu-tenant .menu-ico{width:18px;text-align:center;color:var(--green);font-weight:700}
+.menu-tenant.current{background:var(--blue-softer)}
+/* Badge « lecture seule » (rôle lecteur, RLS 0012) dans le compteur d'en-tête */
+.badge-ro{margin-left:8px;padding:1px 8px;border-radius:999px;background:var(--amber-soft);color:var(--amber);font-size:11px;font-weight:600;white-space:nowrap}
 
 /* ─── Nav onglets ─────────────────────────────────────────── */
 nav.tabs{background:var(--surface);border-bottom:1px solid var(--line)}
@@ -85,6 +105,12 @@ main{max-width:1240px;margin:0 auto;padding:28px 24px 80px}
 .ls.active{border-color:var(--blue);background:var(--blue-softer);color:var(--blue-deep)}
 .ls .n{font-family:var(--mono);font-weight:600;color:var(--blue-deep)}
 .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.prix-filter{display:flex;align-items:center;gap:6px}
+.prix-filter input{width:96px;padding:11px 10px;font-size:14px;border:1px solid var(--line-strong);border-radius:var(--r-md);background:var(--surface);color:var(--ink)}
+.prix-filter input:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft);outline:none}
+.prix-sep{color:var(--ink-3)}
+.ls-del{padding:2px 5px;border-radius:50%;font-size:11px;color:var(--ink-3);cursor:pointer}
+.ls-del:hover{color:var(--red);background:var(--red-soft)}
 
 /* ─── Groupes & grille ────────────────────────────────────── */
 .group-title{display:flex;align-items:baseline;gap:10px;margin:26px 0 14px;font-family:var(--serif);font-size:19px;font-weight:600}
@@ -99,6 +125,8 @@ main{max-width:1240px;margin:0 auto;padding:28px 24px 80px}
 .card-img img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
 .card-id{position:absolute;top:10px;left:10px;background:rgba(13,27,62,.72);color:#fff;font-family:var(--mono);font-size:12px;padding:3px 9px;border-radius:7px;backdrop-filter:blur(4px);z-index:1}
 .card-status{position:absolute;top:10px;right:10px;width:10px;height:10px;border-radius:50%;border:2px solid rgba(255,255,255,.85);z-index:1}
+/* Badge ▶ discret quand la 1re « photo » de l'objet est une vidéo (D-013) */
+.card-vid{position:absolute;bottom:10px;right:10px;background:rgba(13,27,62,.72);color:#fff;font-size:11px;line-height:1;padding:4px 8px;border-radius:7px;backdrop-filter:blur(4px);z-index:1}
 .card-body{padding:14px 16px 15px;display:flex;flex-direction:column;gap:7px;flex:1}
 .card-title{font-weight:600;font-size:14.5px;line-height:1.35}
 .card-meta{font-size:12.5px;color:var(--ink-2)}
@@ -122,6 +150,7 @@ main{max-width:1240px;margin:0 auto;padding:28px 24px 80px}
   .card-foot{padding-top:6px}
   .card-id{top:6px;left:6px;font-size:11px;padding:2px 7px}
   .card-status{top:8px;right:8px}
+  .card-vid{bottom:6px;right:6px;padding:3px 7px}
 }
 .conf-label{font-size:11px;color:var(--ink-3);margin-left:6px}
 
@@ -234,13 +263,30 @@ details.acc:not([open])>summary{margin-bottom:0}
 .ev-qui{color:var(--ink-3);font-size:11.5px;white-space:nowrap}
 .ev-det{color:var(--ink-2);word-break:break-word}
 @media (max-width:640px){.ev-row{grid-template-columns:auto 1fr}.ev-det{grid-column:1/-1}}
-table.comps{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:14px}
-.comps th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line-strong)}
-.comps td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
-.comps tr:last-child td{border-bottom:none}
-.comps .prix{font-family:var(--mono);font-weight:600;text-align:right}
-.comps th:last-child,.comps td:last-child{text-align:right}
-.link-lot{color:var(--blue);font-size:12.5px;font-weight:500}
+/* Comparables visuels (migration 0008 : image_url + source_type) — cartes avec
+   image du lot ; badge vert = adjudication (entre dans la fourchette), ambre =
+   annonce en vente (contexte uniquement, règle d'or). */
+.comps-list{display:flex;flex-direction:column;gap:12px;margin-top:14px}
+.comp-card{display:flex;gap:14px;padding:12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface-2)}
+.comp-thumb{width:84px;height:84px;border-radius:var(--r-sm);overflow:hidden;flex-shrink:0;display:grid;place-items:center;background:linear-gradient(135deg,#3D5A96,#22355E);color:rgba(255,255,255,.85)}
+.comp-thumb img{width:100%;height:100%;object-fit:contain}
+.comp-noimg{font-size:22px;opacity:.7}
+.comp-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.comp-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.comp-maison{font-weight:600;font-size:13.5px}
+.comp-date{font-size:12px;color:var(--ink-3)}
+.comp-badge{margin-left:auto;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.comp-badge.vendu{background:var(--green-soft);color:var(--green)}
+.comp-badge.vente{background:var(--amber-soft);color:var(--amber)}
+.comp-lot{font-size:13px;color:var(--ink-2);line-height:1.4}
+.comp-bot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding-top:2px}
+.comp-prix{font-family:var(--mono);font-weight:600;font-size:14px}
+@media (max-width:640px){
+  .comp-card{gap:10px;padding:10px}
+  .comp-thumb{width:64px;height:64px}
+  .comp-badge{margin-left:0}
+}
+.link-lot{color:var(--blue);font-size:12.5px;font-weight:500;white-space:nowrap}
 
 .similar{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
 @media (max-width:640px){.similar{grid-template-columns:1fr}}
@@ -290,6 +336,75 @@ table.comps{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:14px
 .previews .pv button{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;border:none;background:rgba(13,27,62,.75);color:#fff;font-size:11px;line-height:1}
 
 /* ─── Divers ──────────────────────────────────────────────── */
+.page-title{margin-bottom:18px}
+
+/* ─── Écrans gouvernance (menu d'en-tête, D-028) ──────────── */
+/* Activité : digest des événements par jour, lignes dépliables (D-025) */
+.dig-day{font-family:var(--serif);font-size:17px;font-weight:600;margin:24px 0 10px}
+.dig-panel{padding:6px 18px}
+.dig-row{border-bottom:1px solid var(--line)}
+.dig-row:last-child{border-bottom:none}
+.dig-row>summary{display:flex;align-items:center;gap:10px;padding:12px 4px;font-size:14px;margin-bottom:0}
+.dig-sum{flex:1;min-width:0;color:var(--ink-2)}
+.dig-sum b{color:var(--ink)}
+.dig-count{flex-shrink:0;font-family:var(--mono);font-size:11.5px}
+.dig-row .ev-list{margin-top:0;padding:0 4px 14px 24px}
+@media (max-width:640px){
+  .dig-row>summary{align-items:flex-start}
+  .dig-row .ev-list{padding-left:4px}
+}
+
+/* Artistes : cartes sans photo, extrait de bio sur 3 lignes */
+.art-extrait{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+
+/* Sources : badges d'accès colorés par code + tableau des entrées */
+.src-legende{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.src-leg-row{display:flex;gap:10px;align-items:baseline;font-size:13px;color:var(--ink-2)}
+.src-badge{display:inline-block;min-width:74px;text-align:center;padding:2px 8px;border-radius:999px;font-family:var(--mono);font-size:11px;font-weight:600;white-space:nowrap;flex-shrink:0}
+.acc-api{background:var(--green-soft);color:var(--green)}
+.acc-nav-auto{background:var(--blue-soft);color:var(--blue-deep)}
+.acc-nav-man{background:var(--violet-soft);color:var(--violet)}
+.acc-bpi-dist{background:var(--amber-soft);color:var(--amber)}
+.acc-achat{background:var(--blue-softer);color:var(--blue-deep);border:1px solid var(--line-strong)}
+.acc-place{background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line-strong)}
+.acc-payant{background:var(--red-soft);color:var(--red)}
+.src-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:4px}
+.src-table th,.src-table td{border-top:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+.src-table th{border-top:none;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3)}
+.src-table td:nth-child(3){font-size:12.5px;color:var(--ink-2)}
+.src-table td:last-child{color:var(--ink-2)}
+@media (max-width:640px){
+  .src-table,.src-table tbody,.src-table tr,.src-table td{display:block}
+  .src-table thead{display:none}
+  .src-table tr{border-top:1px solid var(--line);padding:8px 0}
+  .src-table td{border:none;padding:3px 0}
+}
+
+/* Catégories & familles : liste des 21 catégories, prompt en accordéon */
+.fam-list{display:flex;flex-direction:column}
+.fam-row{border-bottom:1px solid var(--line)}
+.fam-row:last-child{border-bottom:none}
+.fam-row>summary{display:flex;align-items:center;gap:12px;padding:11px 4px}
+.fam-row>summary::before{flex-shrink:0}
+.fam-emoji{font-size:19px;width:26px;text-align:center;flex-shrink:0}
+.fam-cat{font-weight:600;font-size:14px}
+.fam-chip{margin-left:auto;font-size:11.5px;font-family:var(--mono)}
+.fam-md{padding:4px 4px 16px 42px}
+@media (max-width:640px){.fam-md{padding-left:4px}}
+
+/* Maison : nom, membres, rôles (écran owner, 0012) */
+.mbr-form{display:flex;gap:10px;align-items:center}
+.mbr-form input{flex:1;min-width:0}
+.mbr-list{display:flex;flex-direction:column;margin-top:12px}
+.mbr-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.mbr-name{flex:1;min-width:0;font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mbr-role{flex-shrink:0}
+@media (max-width:640px){
+  .mbr-form{flex-wrap:wrap}
+  .mbr-form input{flex:1 1 100%}
+  .mbr-row{flex-wrap:wrap;gap:8px}
+  .mbr-name{flex:1 1 100%}
+}
 .empty{text-align:center;padding:70px 20px;color:var(--ink-2)}
 .empty .big{font-size:46px;margin-bottom:12px}
 .empty h2{font-family:var(--serif);font-size:22px;color:var(--ink);margin-bottom:6px}
@@ -305,6 +420,9 @@ body.cam-open .toasts{top:14px;bottom:auto}
 .lightbox.zoomed img,.lightbox.zoomed video{max-width:none;max-height:none}
 body.lb-open{overflow:hidden}
 .hidden{display:none!important}
+/* Rôle lecteur (RLS 0012) : tout élément .hide-lecteur est masqué — la RLS
+   bloque l'écriture de toute façon, ceci est la couche UI. */
+body.role-lecteur .hide-lecteur{display:none!important}
 
 /* ─── Caméra en direct (capture sans quitter la page) ──────── */
 .camera-modal{position:fixed;inset:0;z-index:80;background:#000;display:flex;flex-direction:column}
