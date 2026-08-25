@@ -8,13 +8,23 @@
 //    et redirige vers la vue Capturer (app.js les y récupère en File).
 // VERSION : garder en sync avec le cache-buster ?v= de index.html.
 // ═══════════════════════════════════════════════════════════════════════════
-const VERSION = 'iartcane-2026-08-25d'; // sync : ?v=2026-08-25d dans index.html
+const VERSION = 'iartcane-2026-08-25e'; // sync : ?v=2026-08-25e dans index.html
 const SHELL_CACHE = `shell-${VERSION}`;
 const SHARE_CACHE = 'share-inbox'; // hors purge : survit aux changements de VERSION
-const V = '?v=2026-08-25d'; // query des assets versionnés (sync index.html)
+const V = '?v=2026-08-25e'; // query des assets versionnés (sync index.html)
 const SHELL = [
   './', './index.html',
-  './styles.css' + V, './app.js' + V, './config.js' + V,
+  // CSS modulaire (D-039) : tokens → base → components → vues
+  './styles/tokens.css' + V, './styles/base.css' + V, './styles/components.css' + V,
+  './styles/views/collection.css' + V, './styles/views/objet.css' + V,
+  './styles/views/capture.css' + V, './styles/views/artistes.css' + V,
+  './styles/views/activite.css' + V, './styles/views/sources.css' + V,
+  './styles/views/categories.css' + V, './styles/views/maison.css' + V,
+  './app.js' + V, './config.js' + V,
+  // JS core (D-039) — importés sans query par app.js : pré-cachés nus.
+  // Les js/views/*.js restent en cache runtime (limite offline connue : une vue
+  // jamais visitée ne s'ouvre pas hors ligne).
+  './js/core/state.js', './js/core/dom.js', './js/core/format.js', './js/core/data.js',
   './manifest.webmanifest',
   './assets/logo.png', './assets/logo-glyph.png', './assets/mark-cygne.svg',
   './assets/favicon.png', './assets/apple-touch-icon.png',

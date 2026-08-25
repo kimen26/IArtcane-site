@@ -1,0 +1,21 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   IArtcane — design system (issu du shot 01 validé, étendu pour l'app réelle)
+   Catalogue de collection personnelle. Primaire bleu.
+   Confiance comptée (0–4), chiffres en monospace tabulaire.
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root{
+  --bg:#F2F5FC; --surface:#FFFFFF; --surface-2:#F8FAFF;
+  --ink:#0D1B3E; --ink-2:#44507A; --ink-3:#8A94B8;
+  --line:#DEE5F3; --line-strong:#C6D2EA;
+  --blue:#2456E0; --blue-deep:#173A8F; --blue-soft:#E9EFFC; --blue-softer:#F3F7FE;
+  --green:#1E7A46; --green-soft:#E3F4EA;
+  --amber:#9A6B1A; --amber-soft:#FBF1DC;
+  --red:#B3261E;  --red-soft:#FBE7E5;
+  --violet:#6D4AC8; --violet-soft:#EFEAFB;
+  --mono:ui-monospace,"SF Mono","Cascadia Mono",Consolas,monospace;
+  --serif:"Fraunces",Georgia,serif;
+  --sans:"Inter",system-ui,-apple-system,sans-serif;
+  --r-lg:16px; --r-md:12px; --r-sm:8px;
+  --shadow:0 1px 2px rgba(13,27,62,.05),0 4px 16px rgba(13,27,62,.06);
+  --shadow-hover:0 2px 4px rgba(13,27,62,.07),0 10px 28px rgba(13,27,62,.12);
+}

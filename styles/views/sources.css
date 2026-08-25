@@ -1,0 +1,22 @@
+/* ─── Vue Sources : badges d'accès colorés par code + tableau des entrées ─── */
+.src-legende{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.src-leg-row{display:flex;gap:10px;align-items:baseline;font-size:13px;color:var(--ink-2)}
+.src-badge{display:inline-block;min-width:74px;text-align:center;padding:2px 8px;border-radius:999px;font-family:var(--mono);font-size:11px;font-weight:600;white-space:nowrap;flex-shrink:0}
+.acc-api{background:var(--green-soft);color:var(--green)}
+.acc-nav-auto{background:var(--blue-soft);color:var(--blue-deep)}
+.acc-nav-man{background:var(--violet-soft);color:var(--violet)}
+.acc-bpi-dist{background:var(--amber-soft);color:var(--amber)}
+.acc-achat{background:var(--blue-softer);color:var(--blue-deep);border:1px solid var(--line-strong)}
+.acc-place{background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line-strong)}
+.acc-payant{background:var(--red-soft);color:var(--red)}
+.src-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:4px}
+.src-table th,.src-table td{border-top:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+.src-table th{border-top:none;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3)}
+.src-table td:nth-child(3){font-size:12.5px;color:var(--ink-2)}
+.src-table td:last-child{color:var(--ink-2)}
+@media (max-width:640px){
+  .src-table,.src-table tbody,.src-table tr,.src-table td{display:block}
+  .src-table thead{display:none}
+  .src-table tr{border-top:1px solid var(--line);padding:8px 0}
+  .src-table td{border:none;padding:3px 0}
+}

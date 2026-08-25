@@ -1,0 +1,11 @@
+/* ─── Vue Catégories & familles : liste des 21 catégories, prompt en accordéon ─── */
+.fam-list{display:flex;flex-direction:column}
+.fam-row{border-bottom:1px solid var(--line)}
+.fam-row:last-child{border-bottom:none}
+.fam-row>summary{display:flex;align-items:center;gap:12px;padding:11px 4px}
+.fam-row>summary::before{flex-shrink:0}
+.fam-emoji{font-size:19px;width:26px;text-align:center;flex-shrink:0}
+.fam-cat{font-weight:600;font-size:14px}
+.fam-chip{margin-left:auto;font-size:11.5px;font-family:var(--mono)}
+.fam-md{padding:4px 4px 16px 42px}
+@media (max-width:640px){.fam-md{padding-left:4px}}

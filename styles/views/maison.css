@@ -1,0 +1,13 @@
+/* ─── Vue Maison : nom, membres, rôles (écran owner, 0012) ─── */
+.mbr-form{display:flex;gap:10px;align-items:center}
+.mbr-form input{flex:1;min-width:0}
+.mbr-list{display:flex;flex-direction:column;margin-top:12px}
+.mbr-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.mbr-name{flex:1;min-width:0;font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mbr-role{flex-shrink:0}
+@media (max-width:640px){
+  .mbr-form{flex-wrap:wrap}
+  .mbr-form input{flex:1 1 100%}
+  .mbr-row{flex-wrap:wrap;gap:8px}
+  .mbr-name{flex:1 1 100%}
+}

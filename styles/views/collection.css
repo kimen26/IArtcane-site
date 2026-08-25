@@ -1,0 +1,7 @@
+/* ─── Vue Collection : titres de groupes du listing ───────── */
+.group-title{display:flex;align-items:baseline;gap:10px;margin:26px 0 14px;font-family:var(--serif);font-size:1.1875rem;font-weight:600}
+.group-title .n{font-family:var(--mono);font-size:13px;color:var(--ink-3);font-weight:400}
+.group-title::after{content:"";flex:1;height:1px;background:var(--line)}
+@media (max-width:640px){
+  .group-title{margin:14px 0 8px;font-size:1.0625rem}
+}

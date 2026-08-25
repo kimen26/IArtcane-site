@@ -1,0 +1,218 @@
+/* ─── Composants partagés : toolbar, cartes, badges, panneaux, boutons,
+       accordéons, markdown, overlays (lightbox, caméra, toasts) ─── */
+
+/* ─── Barre de recherche & filtres ────────────────────────── */
+.toolbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.search{flex:1;min-width:260px;position:relative}
+.search input{width:100%;padding:12px 16px 12px 42px;font-size:1rem;border:1px solid var(--line-strong);border-radius:var(--r-md);background:var(--surface);color:var(--ink)}
+.search input::placeholder{color:var(--ink-3)}
+.search input:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft);outline:none}
+.search svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--ink-3)}
+.select{padding:11px 14px;font-size:.875rem;border:1px solid var(--line-strong);border-radius:var(--r-md);background:var(--surface);color:var(--ink-2)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.chip{padding:6px 14px;font-size:.8125rem;font-weight:500;border-radius:999px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink-2)}
+.chip:hover{border-color:var(--blue);color:var(--blue-deep)}
+.chip.active{background:var(--blue);border-color:var(--blue);color:#fff}
+.lists-shortcut{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:26px}
+.ls{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:var(--r-md);background:var(--surface);border:1px solid var(--line);font-size:.8125rem;color:var(--ink-2);box-shadow:var(--shadow)}
+.ls:hover{border-color:var(--blue);color:var(--blue-deep)}
+.ls.active{border-color:var(--blue);background:var(--blue-softer);color:var(--blue-deep)}
+.ls .n{font-family:var(--mono);font-weight:600;color:var(--blue-deep)}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.prix-filter{display:flex;align-items:center;gap:6px}
+.prix-filter input{width:96px;padding:11px 10px;font-size:.875rem;border:1px solid var(--line-strong);border-radius:var(--r-md);background:var(--surface);color:var(--ink)}
+.prix-filter input:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft);outline:none}
+.prix-sep{color:var(--ink-3)}
+.ls-del{padding:2px 5px;border-radius:50%;font-size:.6875rem;color:var(--ink-3);cursor:pointer}
+.ls-del:hover{color:var(--red);background:var(--red-soft)}
+/* Panneau « Filtres » (progressive disclosure, référentiel §4.1) : desktop =
+   inline (display:contents → la toolbar est strictement inchangée), mobile =
+   panneau repliable sous la recherche, ouvert par le bouton « Filtres ·N ». */
+#btn-filters{display:none}
+.filters-panel{display:contents}
+.filters-count{min-width:20px;min-height:20px;padding:0 6px;border-radius:999px;background:var(--blue);color:#fff;font-family:var(--mono);font-size:.75rem;font-weight:600;display:inline-grid;place-items:center}
+.filters-chev{font-size:.75em;color:var(--ink-3);transition:transform .15s}
+#btn-filters[aria-expanded="true"] .filters-chev{transform:rotate(180deg)}
+/* Recherche repliée en loupe (mobile uniquement — desktop : barre visible) */
+#btn-search-toggle,.search-close{display:none}
+.btn-icon{padding:10px;min-width:44px;justify-content:center}
+/* Mobile : chrome replié — « Filtres ·N » + loupe sur une ligne, la recherche
+   ne réapparaît que dépliée (.search-open) ; chips et listes sauvegardées en
+   une rangée scrollable, marges resserrées (objectif : ≥ 2 cartes visibles
+   sans scroll à 375 px, police agrandie). */
+@media (max-width:640px){
+  main{padding:16px 14px 64px}
+  .toolbar{gap:8px;margin-bottom:10px}
+  .search{min-width:0}
+  #btn-filters{display:inline-flex;flex-shrink:0;min-height:44px}
+  #btn-search-toggle{display:inline-flex;flex-shrink:0;min-height:44px}
+  #btn-search-toggle.on{color:var(--blue);border-color:var(--blue);background:var(--blue-softer)}
+  .toolbar:not(.search-open) .search{display:none}
+  .toolbar.search-open .search{flex:1 1 100%;order:-1;min-width:0}
+  .toolbar.search-open .search input{padding-right:40px}
+  .toolbar.search-open .search-close{display:grid;place-items:center;position:absolute;right:8px;top:50%;transform:translateY(-50%);width:32px;height:32px;border:none;border-radius:50%;background:none;color:var(--ink-3);font-size:1.25rem;line-height:1}
+  .toolbar.search-open .search-close:hover{color:var(--red);background:var(--red-soft)}
+  .filters-panel{display:none;flex-direction:column;gap:10px;flex:1 1 100%;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px;box-shadow:var(--shadow)}
+  .filters-panel.open{display:flex}
+  .filters-panel .select{width:100%}
+  .filters-panel .prix-filter input{flex:1;min-width:0;width:auto}
+  .filters-panel .btn{justify-content:center}
+  /* Rangées scrollables : le padding vertical du conteneur englobe la zone
+     tactile étendue (::after) pour ne pas créer de scroll vertical parasite */
+  .chips,.lists-shortcut{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}
+  .chips{margin-bottom:6px;padding:7px 0 13px}
+  .lists-shortcut{margin-bottom:12px;padding:3px 0 9px}
+  .chip,.ls{flex-shrink:0}
+  /* Densité marketplace : hauteur visuelle ~30 px mais cible tactile ≥ 44 px
+     (pseudo-élément étendu, WCAG 2.5.8) */
+  .chip{padding:4px 12px;position:relative}
+  .chip::after{content:"";position:absolute;inset:-7px -2px}
+  .ls{position:relative}
+  .ls::after{content:"";position:absolute;inset:-3px 0}
+  .chips::-webkit-scrollbar,.lists-shortcut::-webkit-scrollbar{height:4px}
+  .chips::-webkit-scrollbar-thumb,.lists-shortcut::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+}
+
+/* ─── Grille & cartes ─────────────────────────────────────── */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px}
+
+/* ─── Carte objet ─────────────────────────────────────────── */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow);cursor:pointer;transition:box-shadow .15s,transform .15s,border-color .15s;display:flex;flex-direction:column}
+.card:hover{box-shadow:var(--shadow-hover);transform:translateY(-2px);border-color:var(--line-strong)}
+.card-img{position:relative;aspect-ratio:4/3;display:grid;place-items:center;font-size:44px;color:rgba(255,255,255,.9);background:linear-gradient(135deg,#35507F,#1B2B4D)}
+.card-img img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+.card-id{position:absolute;top:10px;left:10px;background:rgba(13,27,62,.72);color:#fff;font-family:var(--mono);font-size:12px;padding:3px 9px;border-radius:7px;backdrop-filter:blur(4px);z-index:1}
+.card-status{position:absolute;top:10px;right:10px;width:10px;height:10px;border-radius:50%;border:2px solid rgba(255,255,255,.85);z-index:1}
+/* Badge ▶ discret quand la 1re « photo » de l'objet est une vidéo (D-013) */
+.card-vid{position:absolute;bottom:10px;right:10px;background:rgba(13,27,62,.72);color:#fff;font-size:11px;line-height:1;padding:4px 8px;border-radius:7px;backdrop-filter:blur(4px);z-index:1}
+.card-body{padding:14px 16px 15px;display:flex;flex-direction:column;gap:7px;flex:1}
+.card-title{font-weight:600;font-size:.9375rem;line-height:1.35}
+.card-meta{font-size:.8125rem;color:var(--ink-2)}
+.card-loc{display:flex;align-items:center;gap:6px;font-size:.8125rem;color:var(--ink-2)}
+.card-loc svg{color:var(--ink-3);flex-shrink:0}
+.card-foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:8px;border-top:1px solid var(--line)}
+.price{font-family:var(--mono);font-size:.875rem;font-weight:600;color:var(--blue-deep);white-space:nowrap}
+.price.none{color:var(--ink-3);font-weight:400}
+
+/* confiance : 4 marques, comptée pas colorée */
+.conf{display:inline-flex;align-items:center;gap:3px}
+.conf i{width:11px;height:11px;border-radius:3px;border:1.5px solid var(--line-strong);background:transparent}
+.conf i.on{background:var(--blue);border-color:var(--blue)}
+
+/* Mobile : listing 2 colonnes type marketplace — photo cadrée + titre + prix */
+@media (max-width:640px){
+  .grid{grid-template-columns:repeat(2,1fr);gap:8px}
+  /* 3/2 au lieu de 4/3 : ~15 % de hauteur d'image en moins par rangée sans
+     nuire à la reconnaissance (le cadrage focal suit, object-fit:cover) */
+  .card-img{aspect-ratio:3/2}
+  .card-body{padding:8px 10px 9px;gap:4px}
+  .card-title{font-size:.875rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .card-meta,.card-loc{display:none}
+  .card-foot{padding-top:5px}
+  .card-id{top:6px;left:6px;font-size:11px;padding:2px 7px}
+  .card-status{top:8px;right:8px}
+  .card-vid{bottom:6px;right:6px;padding:3px 7px}
+}
+.conf-label{font-size:11px;color:var(--ink-3);margin-left:6px}
+
+/* statuts */
+.st{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 11px;border-radius:999px;white-space:nowrap}
+.st-capture{background:var(--amber-soft);color:var(--amber)}
+.st-en_file,.st-analyse{background:var(--blue-soft);color:var(--blue-deep)}
+.st-fiche_prete{background:var(--violet-soft);color:var(--violet)}
+.st-a_completer{background:var(--amber-soft);color:var(--amber)}
+.st-validee{background:var(--green-soft);color:var(--green)}
+.st-contestee{background:var(--red-soft);color:var(--red)}
+
+/* ─── Panneaux & navigation transverse ────────────────────── */
+.back{display:inline-flex;align-items:center;gap:7px;background:none;border:none;color:var(--ink-2);font-size:.875rem;font-weight:500;margin-bottom:20px;padding:6px 10px 6px 0}
+.back:hover{color:var(--blue-deep)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow)}
+.panel-pad{padding:20px 22px}
+.page-title{margin-bottom:18px}
+.note{display:flex;gap:10px;padding:13px 16px;background:var(--green-soft);border-radius:var(--r-md);font-size:13px;color:var(--green)}
+.badge-soft{display:inline-flex;align-items:center;padding:4px 12px;border-radius:999px;background:var(--blue-softer);border:1px solid var(--line);font-size:.8125rem;font-weight:500;color:var(--ink-2)}
+.link-lot{color:var(--blue);font-size:12.5px;font-weight:500;white-space:nowrap}
+
+.sec-title{font-family:var(--serif);font-size:1.125rem;font-weight:600;display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.sec-title::after{content:"";flex:1;height:1px;background:var(--line)}
+.sec-title .btn.small{margin-left:auto}
+
+h1.obj-title{font-family:var(--serif);font-size:1.875rem;font-weight:700;line-height:1.2;letter-spacing:.005em}
+
+/* Boîtes à tiroir : sections repliables pour gagner en hauteur */
+details.acc>summary{list-style:none;cursor:pointer;user-select:none}
+details.acc>summary::-webkit-details-marker{display:none}
+details.acc>summary::before{content:'▾';color:var(--ink-3);font-size:13px;font-family:var(--sans);width:14px;flex-shrink:0}
+details.acc:not([open])>summary::before{content:'▸'}
+details.acc:not([open])>summary{margin-bottom:0}
+.dl{display:grid;grid-template-columns:170px 1fr;row-gap:9px;column-gap:18px;font-size:.875rem}
+.dl dt{color:var(--ink-3);font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;padding-top:2px}
+.dl dd{color:var(--ink)}
+.dl dd em{color:var(--ink-2)}
+.dl dd .miss{color:var(--ink-3);font-style:italic}
+.dl.editing dd input,.dl.editing dd select{width:100%;padding:7px 10px;font-size:13.5px;border:1px solid var(--blue);border-radius:7px;background:var(--blue-softer);color:var(--ink)}
+@media (max-width:640px){.dl{grid-template-columns:1fr}}
+
+/* ─── Boutons ─────────────────────────────────────────────── */
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:var(--r-md);font-size:.875rem;font-weight:600;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink-2);transition:all .12s}
+.btn:hover{border-color:var(--blue);color:var(--blue-deep);background:var(--blue-softer)}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.primary:hover{background:var(--blue-deep);border-color:var(--blue-deep)}
+.btn:disabled{opacity:.55;cursor:default}
+.btn.small{padding:7px 13px;font-size:.8125rem}
+.btn.danger{color:var(--red);border-color:var(--red)}
+.btn.danger:hover{background:var(--red);color:#fff}
+
+.disclaimer{margin-top:26px;padding:13px 18px;background:var(--blue-softer);border:1px solid var(--line);border-radius:var(--r-md);font-size:12.5px;color:var(--ink-2);display:flex;gap:10px;align-items:flex-start}
+.disclaimer svg{flex-shrink:0;margin-top:1px;color:var(--blue-deep)}
+
+/* fiche markdown rendue — mesure 65ch, 1er paragraphe en « lead », titres qui
+   collent au contenu qu'ils introduisent, listes aérées (référentiel §2) */
+.md-body{font-size:1rem;line-height:1.6;color:var(--ink);max-width:65ch}
+.md-body>p:first-of-type{font-size:1.125rem;line-height:1.55}
+.md-body h1,.md-body h2,.md-body h3,.md-body h4{font-family:var(--serif);font-weight:600;margin:1.6em 0 .55em;line-height:1.25}
+.md-body h1{font-size:1.375rem}.md-body h2{font-size:1.25rem}.md-body h3{font-size:1.125rem}.md-body h4{font-size:1rem}
+.md-body>:first-child{margin-top:0}
+.md-body p{margin:.75em 0}
+.md-body ul,.md-body ol{margin:.75em 0 .75em 1.5em}
+.md-body li{margin:.35em 0}
+.md-body strong{font-weight:600}
+.md-body a{text-decoration:underline;text-underline-offset:2px}
+.md-body em{color:var(--ink-2)}
+.md-body code{font-family:var(--mono);font-size:.8125rem;background:var(--blue-softer);padding:1px 6px;border-radius:5px}
+.md-body hr{border:none;border-top:1px solid var(--line);margin:14px 0}
+.md-body table{width:100%;border-collapse:collapse;font-size:.875rem;margin:10px 0}
+.md-body th,.md-body td{border:1px solid var(--line);padding:6px 9px;text-align:left}
+.md-body th{background:var(--blue-softer);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em}
+
+/* ─── États vides, skeleton, toasts ───────────────────────── */
+.empty{text-align:center;padding:70px 20px;color:var(--ink-2)}
+.empty .big{font-size:46px;margin-bottom:12px}
+.empty h2{font-family:var(--serif);font-size:1.375rem;color:var(--ink);margin-bottom:6px}
+.skeleton{border-radius:var(--r-md);background:linear-gradient(90deg,var(--blue-softer) 25%,var(--line) 50%,var(--blue-softer) 75%);background-size:200% 100%;animation:sk 1.2s infinite}
+@keyframes sk{to{background-position:-200% 0}}
+.toasts{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;gap:8px;align-items:center}
+.toast{background:var(--ink);color:#fff;font-size:.875rem;font-weight:500;padding:11px 20px;border-radius:999px;box-shadow:var(--shadow-hover);animation:fade .2s ease;border:1px solid rgba(255,255,255,.3);max-width:min(92vw,480px);text-align:center;line-height:1.4}
+.toast.err{background:var(--red)}
+body.cam-open .toasts{top:14px;bottom:auto}
+
+/* ─── Lightbox (overlay plein écran) ──────────────────────── */
+.lightbox{position:fixed;inset:0;z-index:150;background:rgba(13,27,62,.88);display:grid;place-items:center;cursor:zoom-out;padding:24px;overflow:hidden}
+.lightbox img,.lightbox video{max-width:calc(100vw - 48px);max-height:calc(100dvh - 48px);border-radius:var(--r-md)}
+.lightbox.zoomed{display:block;overflow:auto;cursor:zoom-out}
+.lightbox.zoomed img,.lightbox.zoomed video{max-width:none;max-height:none}
+body.lb-open{overflow:hidden}
+.hidden{display:none!important}
+/* Rôle lecteur (RLS 0012) : tout élément .hide-lecteur est masqué — la RLS
+   bloque l'écriture de toute façon, ceci est la couche UI. */
+body.role-lecteur .hide-lecteur{display:none!important}
+
+/* ─── Caméra en direct (module partagé capture/fiche) ─────── */
+.camera-modal{position:fixed;inset:0;z-index:80;background:#000;display:flex;flex-direction:column}
+.camera-modal video{flex:1;width:100%;min-height:0;object-fit:contain}
+.camera-bar{display:flex;align-items:center;justify-content:center;gap:32px;padding:18px}
+.camera-bar .btn{background:rgba(255,255,255,.12);color:#fff;border:none}
+.camera-shutter{width:68px;height:68px;border-radius:50%;border:4px solid #fff;background:rgba(255,255,255,.25);cursor:pointer;transition:background .1s}
+.camera-shutter:active{background:#fff}

@@ -1,0 +1,23 @@
+/* ─── Vue Capturer ────────────────────────────────────────── */
+.capture-wrap{max-width:620px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.capture-mode{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.mode-opt{display:flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid var(--line-strong);border-radius:var(--r-md);background:var(--surface);font-size:.875rem;color:var(--ink-2);cursor:pointer;transition:all .12s}
+.mode-opt:has(input:checked){border-color:var(--blue);background:var(--blue-softer);color:var(--blue-deep);font-weight:600}
+.mode-opt:hover{border-color:var(--blue)}
+.mode-opt input{cursor:pointer}
+.dropzone{border:2px dashed var(--line-strong);border-radius:var(--r-lg);background:var(--surface);padding:44px 24px;text-align:center;cursor:pointer;transition:all .15s}
+.dropzone:hover,.dropzone.over{border-color:var(--blue);background:var(--blue-softer)}
+.dropzone .big{font-size:40px;margin-bottom:10px}
+.dropzone .t1{font-weight:600;font-size:15px}
+.dropzone .t2{font-size:13px;color:var(--ink-3);margin-top:4px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:12.5px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.05em}
+.field input{padding:11px 14px;font-size:1rem;border:1px solid var(--line-strong);border-radius:var(--r-md);background:var(--surface)}
+.field input:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft);outline:none}
+.field .hint{font-size:12px;color:var(--ink-3)}
+.field-row{display:grid;grid-template-columns:120px 1fr 1fr;gap:12px}
+@media (max-width:640px){.field-row{grid-template-columns:1fr}}
+.previews{display:flex;gap:10px;flex-wrap:wrap}
+.previews .pv{width:84px;height:84px;border-radius:var(--r-sm);overflow:hidden;position:relative;border:1px solid var(--line);background:linear-gradient(135deg,#3D5A96,#22355E)}
+.previews .pv img{width:100%;height:100%;object-fit:contain}
+.previews .pv button{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;border:none;background:rgba(13,27,62,.75);color:#fff;font-size:11px;line-height:1}
