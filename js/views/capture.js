@@ -1,6 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // IArtcane — views/capture.js : capture d'objet (photos + n° + localisation),
 // réception « Partager avec » (share target PWA, D-013) et mode batch.
+// HO-013 : guidage photo, crop local, commentaire par photo + commentaire objet.
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, $$, esc, toast } from '../core/dom.js';
 import { S, canWrite } from '../core/state.js';
@@ -8,6 +9,7 @@ import { plur } from '../core/format.js';
 import { sb, logEvent, queueAnalyse, uploadPhotosFor } from '../core/data.js';
 import { openCamera } from '../core/camera.js';
 import { loadViewCss } from '../core/css.js';
+import { createOverlay } from '../core/lightbox.js';
 
 // CSS de la vue chargé par la vue (D-041) : aucun <link> dans index.html,
 // donc aucun fichier transverse touché par un chantier sur cet écran.
@@ -72,42 +74,156 @@ async function initCapture() {
   $('#contenants').innerHTML = conts.map(z => `<option>${esc(z)}</option>`).join('');
 }
 
+// capFiles : [{ file, comment }] — HO-013
 function addCapFiles(fileList) {
-  for (const f of fileList) S.capFiles.push(f);
+  for (const f of fileList) {
+    S.capFiles.push(f instanceof File ? { file: f, comment: '' } : { file: f?.file ?? f, comment: f?.comment ?? '' });
+  }
   renderPreviews();
 }
+
 // Les clichés attendent dans capFiles tant que « Enregistrer l'objet » n'est pas cliqué :
 // on prévient avant tout rechargement/fermeture qui les perdrait silencieusement.
 window.addEventListener('beforeunload', e => {
   if (S.capFiles.length) { e.preventDefault(); e.returnValue = ''; }
 });
+
 let pvUrls = [];
 function renderPreviews() {
   const box = $('#previews');
   pvUrls.forEach(u => URL.revokeObjectURL(u));
   pvUrls = [];
   box.innerHTML = '';
-  S.capFiles.forEach((f, i) => {
+  S.capFiles.forEach((item, i) => {
+    const f = item.file;
     const d = document.createElement('div');
     d.className = 'pv';
     if (/^image\//.test(f.type)) {
+      const wrap = document.createElement('div');
+      wrap.className = 'imgwrap';
       const img = document.createElement('img');
       const u = URL.createObjectURL(f);
       pvUrls.push(u);
       img.src = u;
-      d.append(img);
+      wrap.append(img);
+      const cut = document.createElement('button');
+      cut.className = 'cut-btn';
+      cut.textContent = '✂️';
+      cut.title = 'Recadrer';
+      cut.addEventListener('click', (e) => { e.stopPropagation(); openLocalCrop(f, i); });
+      wrap.append(cut);
+      d.append(wrap);
     } else {
       d.style.display = 'grid';
       d.style.placeItems = 'center';
       d.style.fontSize = '26px';
       d.textContent = '🎬';
     }
+    const imgWrap = d.querySelector('.imgwrap') || d;
     const x = document.createElement('button');
+    x.className = 'del-btn';
     x.textContent = '✕';
     x.title = 'Retirer';
     x.addEventListener('click', () => { S.capFiles.splice(i, 1); renderPreviews(); });
-    d.append(x);
+    imgWrap.append(x);
+    const note = document.createElement('textarea');
+    note.className = 'pv-note';
+    note.rows = 2;
+    note.placeholder = 'Note sur cette photo…';
+    note.value = item.comment ?? '';
+    note.addEventListener('input', () => { item.comment = note.value; });
+    d.append(note);
     box.append(d);
+  });
+}
+
+// ─── Recadrage local avant envoi (HO-013) ────────────────────────────────────
+// Sur le fichier local, cadre à poignées (bords/coins), canvas aux pixels natifs,
+// JPEG 0.92 — le cliché rogné remplace l'entrée dans S.capFiles.
+function openLocalCrop(file, index) {
+  const url = URL.createObjectURL(file);
+  const { el: lb, close } = createOverlay({
+    className: 'cut',
+    html: `<img src="${esc(url)}" alt="Photo à recadrer">
+      <div class="cut-bar"><span class="cut-hint">Tire les poignées (bords et coins) pour délimiter la zone à garder</span>
+      <button class="btn primary small" data-ok disabled>✂️ Recadrer</button>
+      <button class="btn small" data-cancel>Annuler</button></div>`,
+    onClose: () => URL.revokeObjectURL(url),
+  });
+
+  const img = lb.querySelector('img');
+  const ok = lb.querySelector('[data-ok]');
+  let sel = { x0: 0, y0: 0, x1: 1, y1: 1 };
+  let box = null;
+  let drag = null;
+  const MIN = 0.05;
+  const toRel = e => {
+    const r = img.getBoundingClientRect();
+    return { x: Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1), y: Math.min(Math.max((e.clientY - r.top) / r.height, 0), 1) };
+  };
+  const H = {
+    nw: (s, p) => ({ ...s, x0: Math.min(p.x, s.x1 - MIN), y0: Math.min(p.y, s.y1 - MIN) }),
+    n:  (s, p) => ({ ...s, y0: Math.min(p.y, s.y1 - MIN) }),
+    ne: (s, p) => ({ ...s, x1: Math.max(p.x, s.x0 + MIN), y0: Math.min(p.y, s.y1 - MIN) }),
+    e:  (s, p) => ({ ...s, x1: Math.max(p.x, s.x0 + MIN) }),
+    se: (s, p) => ({ ...s, x1: Math.max(p.x, s.x0 + MIN), y1: Math.max(p.y, s.y0 + MIN) }),
+    s:  (s, p) => ({ ...s, y1: Math.max(p.y, s.y0 + MIN) }),
+    sw: (s, p) => ({ ...s, x0: Math.min(p.x, s.x1 - MIN), y1: Math.max(p.y, s.y0 + MIN) }),
+    w:  (s, p) => ({ ...s, x0: Math.min(p.x, s.x1 - MIN) }),
+  };
+  const draw = () => {
+    if (!box) {
+      box = document.createElement('div');
+      box.className = 'cut-sel';
+      box.innerHTML = Object.keys(H).map(h => `<i data-h="${h}" class="h-${h}"></i>`).join('');
+      lb.append(box);
+    }
+    const r = img.getBoundingClientRect();
+    box.style.left = `${r.left + sel.x0 * r.width}px`;
+    box.style.top = `${r.top + sel.y0 * r.height}px`;
+    box.style.width = `${(sel.x1 - sel.x0) * r.width}px`;
+    box.style.height = `${(sel.y1 - sel.y0) * r.height}px`;
+  };
+  if (img.complete && img.naturalWidth) draw(); else img.addEventListener('load', draw, { once: true });
+  lb.addEventListener('pointerdown', e => {
+    const h = e.target.dataset?.h;
+    if (!h) return;
+    e.preventDefault(); e.stopPropagation();
+    drag = h;
+  });
+  lb.addEventListener('pointermove', e => {
+    if (!drag) return;
+    sel = H[drag](sel, toRel(e));
+    draw();
+    ok.disabled = false;
+  });
+  lb.addEventListener('pointerup', () => { drag = null; });
+  lb.querySelector('[data-cancel]').addEventListener('click', e => { e.stopPropagation(); close(); });
+  ok.addEventListener('click', async e => {
+    e.stopPropagation();
+    ok.disabled = true; ok.textContent = 'Recadrage…';
+    try {
+      const bmp = await createImageBitmap(file);
+      const sx = Math.round(sel.x0 * bmp.width);
+      const sy = Math.round(sel.y0 * bmp.height);
+      const sw = Math.round((sel.x1 - sel.x0) * bmp.width);
+      const sh = Math.round((sel.y1 - sel.y0) * bmp.height);
+      if (sw < 20 || sh < 20) throw new Error('zone trop petite');
+      const c = document.createElement('canvas');
+      c.width = sw; c.height = sh;
+      c.getContext('2d').drawImage(bmp, sx, sy, sw, sh, 0, 0, sw, sh);
+      const out = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.92));
+      if (!out) throw new Error('encodage impossible');
+      const name = (file.name.replace(/\.[^.]+$/, '') || 'photo') + '.jpg';
+      const cropped = new File([out], name, { type: 'image/jpeg', lastModified: Date.now() });
+      if (S.capFiles[index]) S.capFiles[index].file = cropped;
+      close();
+      toast('✓ Photo recadrée');
+      renderPreviews();
+    } catch (err) {
+      toast(`Recadrage échoué : ${err.message ?? err}`, true);
+      ok.disabled = false; ok.textContent = '✂️ Recadrer';
+    }
   });
 }
 
@@ -136,6 +252,7 @@ $('#cap-save').addEventListener('click', async () => {
   const btn = $('#cap-save');
   const zone = $('#cap-zone').value.trim() || null;
   const contenant = $('#cap-contenant').value.trim() || null;
+  const commentaire = $('#cap-commentaire').value.trim() || null;
   btn.disabled = true;
   btn.textContent = mode === 'batch' ? 'Enregistrement des objets…' : 'Enregistrement…';
   try {
@@ -144,15 +261,15 @@ $('#cap-save').addEventListener('click', async () => {
       let ok = 0, fails = 0;
       const ids = [];
       const files = [...S.capFiles];
-      for (const f of files) {
+      for (const item of files) {
         const { data: newId, error: e0 } = await sb.rpc('next_objet_id', { p_owner: S.tenantId });
         if (e0 || !newId) { fails++; continue; }
         const { error: e1 } = await sb.from('objets').insert({
-          owner_id: S.tenantId, id: newId, statut: 'en_file', zone, contenant, source_capture: 'site',
+          owner_id: S.tenantId, id: newId, statut: 'en_file', zone, contenant, commentaire, source_capture: 'site',
         });
         if (e1) { fails++; continue; }
         logEvent('capture', { n: 1, zone }, newId);
-        const n = await uploadPhotosFor(newId, [f], true);
+        const n = await uploadPhotosFor(newId, [item], true);
         if (n > 0) {
           await queueAnalyse(newId);
         } else {
@@ -176,6 +293,7 @@ $('#cap-save').addEventListener('click', async () => {
       statut: avecPhotos ? 'en_file' : 'a_completer',
       zone,
       contenant,
+      commentaire,
       source_capture: 'site',
     });
     if (e1) throw e1;

@@ -99,3 +99,10 @@
 .sim-img img{width:100%;height:100%;object-fit:contain;position:absolute;inset:0}
 .sim-t{font-size:13px;font-weight:600;line-height:1.3}
 .sim-m{font-size:11.5px;color:var(--ink-3);font-family:var(--mono)}
+
+/* HO-013 : commentaires photo, commentaire objet, consigne humaine */
+.thumb-wrap{display:flex;flex-direction:column;gap:4px;align-items:center;max-width:64px}
+.thumb-comment{font-size:10.5px;color:var(--ink-2);line-height:1.25;max-width:64px;word-break:break-word;text-align:center}
+.human-note{font-size:13.5px;color:var(--ink-2);line-height:1.4;padding:8px 10px;background:var(--blue-softer);border-radius:var(--r-sm);border-left:3px solid var(--blue)}
+.alert-gentle{background:var(--amber-soft);border:1px solid var(--amber);color:var(--ink);border-radius:var(--r-md);font-size:13.5px}
+.alert-gentle span{color:var(--ink-2)}

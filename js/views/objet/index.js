@@ -101,16 +101,19 @@ function renderObjet() {
       </div>
       <div class="thumbs">
         ${O.photos.map((p, i) => `
-          <div class="thumb ${i === selIdx ? 'sel' : ''}" data-action="thumb" data-idx="${i}" title="${esc(p.kind)}" tabindex="0" role="button" aria-label="Photo ${i + 1} — ${esc(p.kind)}">
-            ${p.url ? (isVideo(p) ? '🎬' : `<img src="${esc(p.thumbUrl || p.url)}" alt="${esc(p.kind)} — ${esc(o.titre || 'objet')}" loading="lazy" decoding="async">`) : '📷'}
-            <span class="kind">${esc(p.kind)}</span>
+          <div class="thumb-wrap">
+            <div class="thumb ${i === selIdx ? 'sel' : ''}" data-action="thumb" data-idx="${i}" title="${esc(p.kind)}" tabindex="0" role="button" aria-label="Photo ${i + 1} — ${esc(p.kind)}">
+              ${p.url ? (isVideo(p) ? '🎬' : `<img src="${esc(p.thumbUrl || p.url)}" alt="${esc(p.kind)} — ${esc(o.titre || 'objet')}" loading="lazy" decoding="async">`) : '📷'}
+              <span class="kind">${esc(p.kind)}</span>
+            </div>
+            ${p.commentaire ? `<div class="thumb-comment">${esc(p.commentaire)}</div>` : ''}
           </div>`).join('')}
-        <div class="thumb add hide-lecteur" data-action="add-photo" title="Ajouter une photo" tabindex="0" role="button" aria-label="Ajouter une photo">＋</div>
+        <div class="thumb-wrap"><div class="thumb add hide-lecteur" data-action="add-photo" title="Ajouter une photo" tabindex="0" role="button" aria-label="Ajouter une photo">＋</div></div>
       </div>
     </div>` : `
     <div class="panel">
       <div class="gallery-main" ${canWrite() ? 'data-action="add-photo" title="Ajouter la première photo" style="cursor:pointer"' : ''}>${catEmoji(o.categorie)}</div>
-      <div class="thumbs"><div class="thumb add hide-lecteur" data-action="add-photo">＋</div></div>
+      <div class="thumbs"><div class="thumb-wrap"><div class="thumb add hide-lecteur" data-action="add-photo">＋</div></div></div>
     </div>`;
 
   const rebounds = [o.categorie, o.periode, o.ecole].filter(Boolean)
@@ -130,6 +133,7 @@ function renderObjet() {
         ${dlRow('Marques / poinçons', o.marques)}
         ${dlRow('État', o.etat)}
         ${o.description ? `<dt>Description</dt><dd><em>${esc(o.description)}</em></dd>` : ''}
+        ${o.commentaire ? `<dt>💬 Note</dt><dd class="human-note">${esc(o.commentaire)}</dd>` : ''}
       </dl>`;
 
   // Règle d'or : seules les adjudications nourrissent la fourchette — les
@@ -234,9 +238,14 @@ function renderObjet() {
       <div class="ev-list">${evRows || '<div class="value-sub">Aucun événement tracé pour l\'instant.</div>'}</div>
     </details>`;
 
+  const consigneAlert = o.consigne_humain
+    ? `<div class="panel panel-pad alert-gentle">📷 Photos à refaire : <span>${esc(o.consigne_humain)}</span></div>`
+    : '';
+
   $('#objet-body').innerHTML = `
   <div class="obj-layout">
     <div class="obj-main">
+      ${consigneAlert}
       ${gallery}
       <div class="panel panel-pad">
         <h1 class="obj-title">${esc(o.titre || 'Sans titre')}</h1>
@@ -437,8 +446,8 @@ $('#file-add-photo').addEventListener('change', async e => {
   const n = await uploadPhotosFor(oid, files);
   if (n > 0) {
     logEvent('photo_ajoutee', { n, via: 'fichier' }, oid);
-    // L'objet avait trop peu de photos → on relance l'analyse automatiquement
-    if (['capture', 'a_completer'].includes(S.currentObjet.statut)) {
+    // Toute nouvelle photo doit rejouer l'analyse, sauf sur une fiche validée (D-042).
+    if (S.currentObjet.statut !== 'validee') {
       await queueAnalyse(oid);
       toast(`${n} photo${n > 1 ? 's' : ''} ajoutée${n > 1 ? 's' : ''} — analyse en file`);
     } else {

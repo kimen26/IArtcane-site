@@ -1,10 +1,12 @@
-/* ─── Vue Capturer ────────────────────────────────────────── */
+/* ─── Vue Capturer ────────────────────────── */
 .capture-wrap{max-width:620px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
 .capture-mode{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
 .mode-opt{display:flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid var(--line-strong);border-radius:var(--r-md);background:var(--surface);font-size:.875rem;color:var(--ink-2);cursor:pointer;transition:all .12s}
 .mode-opt:has(input:checked){border-color:var(--blue);background:var(--blue-softer);color:var(--blue-deep);font-weight:600}
 .mode-opt:hover{border-color:var(--blue)}
 .mode-opt input{cursor:pointer}
+.capture-guide{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;font-size:12px;color:var(--ink-3)}
+.capture-guide span{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 11px}
 .dropzone{border:2px dashed var(--line-strong);border-radius:var(--r-lg);background:var(--surface);padding:44px 24px;text-align:center;cursor:pointer;transition:all .15s}
 .dropzone:hover,.dropzone.over{border-color:var(--blue);background:var(--blue-softer)}
 .dropzone .big{font-size:40px;margin-bottom:10px}
@@ -12,12 +14,35 @@
 .dropzone .t2{font-size:13px;color:var(--ink-3);margin-top:4px}
 .field{display:flex;flex-direction:column;gap:6px}
 .field label{font-size:12.5px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.05em}
-.field input{padding:11px 14px;font-size:1rem;border:1px solid var(--line-strong);border-radius:var(--r-md);background:var(--surface)}
-.field input:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft);outline:none}
+.field input,.field textarea{padding:11px 14px;font-size:1rem;border:1px solid var(--line-strong);border-radius:var(--r-md);background:var(--surface);resize:vertical}
+.field input:focus,.field textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft);outline:none}
 .field .hint{font-size:12px;color:var(--ink-3)}
 .field-row{display:grid;grid-template-columns:120px 1fr 1fr;gap:12px}
 @media (max-width:640px){.field-row{grid-template-columns:1fr}}
 .previews{display:flex;gap:10px;flex-wrap:wrap}
-.previews .pv{width:84px;height:84px;border-radius:var(--r-sm);overflow:hidden;position:relative;border:1px solid var(--line);background:linear-gradient(135deg,#3D5A96,#22355E)}
-.previews .pv img{width:100%;height:100%;object-fit:contain}
-.previews .pv button{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;border:none;background:rgba(13,27,62,.75);color:#fff;font-size:11px;line-height:1}
+.previews .pv{width:108px;display:flex;flex-direction:column;gap:6px}
+.previews .pv>.imgwrap{width:108px;height:84px;border-radius:var(--r-sm);overflow:hidden;position:relative;border:1px solid var(--line);background:linear-gradient(135deg,#3D5A96,#22355E)}
+.previews .pv>.imgwrap>img{width:100%;height:100%;object-fit:contain}
+.previews .pv button{position:absolute;width:22px;height:22px;border-radius:50%;border:none;background:rgba(13,27,62,.75);color:#fff;font-size:11px;line-height:1;cursor:pointer}
+.previews .pv .cut-btn{top:3px;right:27px}
+.previews .pv .del-btn{top:3px;right:3px}
+.previews .pv .pv-note{width:100%;font-size:11px;padding:5px 7px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);color:var(--ink);resize:vertical;min-height:42px}
+.previews .pv .pv-note:focus{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue-soft);outline:none}
+
+/* Recadrage local (inspiré de objet.css, dupliqué ici car les CSS de vue sont autonomes D-039) */
+.lightbox.cut{cursor:default}
+.lightbox.cut img{max-height:calc(100dvh - 132px)}
+.cut-sel{position:fixed;border:2px dashed #fff;box-shadow:0 0 0 9999px rgba(13,27,62,.55);pointer-events:none;z-index:10}
+.cut-sel i{position:absolute;width:28px;height:28px;background:var(--blue);border:3px solid #fff;border-radius:50%;pointer-events:auto;touch-action:none;box-shadow:0 2px 6px rgba(0,0,0,.45);transform:translate(-50%,-50%);transition:transform .1s,background .1s}
+.cut-sel i:hover{background:var(--blue-deep);transform:translate(-50%,-50%) scale(1.15)}
+.cut-sel i:active{background:var(--blue-deep);transform:translate(-50%,-50%) scale(1.05)}
+.cut-sel .h-nw{left:0;top:0;cursor:nwse-resize}
+.cut-sel .h-n{left:50%;top:0;cursor:ns-resize}
+.cut-sel .h-ne{right:0;top:0;cursor:nesw-resize}
+.cut-sel .h-e{right:0;top:50%;cursor:ew-resize}
+.cut-sel .h-se{right:0;bottom:0;cursor:nwse-resize}
+.cut-sel .h-s{left:50%;bottom:0;cursor:ns-resize}
+.cut-sel .h-sw{left:0;bottom:0;cursor:nesw-resize}
+.cut-sel .h-w{left:0;top:50%;cursor:ew-resize}
+.cut-bar{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;gap:14px;padding:14px;background:rgba(13,27,62,.82);border-top:1px solid rgba(255,255,255,.18)}
+.cut-hint{color:#fff;font-size:13.5px;opacity:.85}

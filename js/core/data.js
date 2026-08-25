@@ -143,10 +143,15 @@ export async function uploadImageWithThumb(dossier, file) {
   return { path, thumbPath, video };
 }
 
+// Accepte un tableau de File purs (rétro-compat caméra / fiche objet)
+// ou de { file, comment } (capture enrichie HO-013).
 export async function uploadPhotosFor(oid, files, firstIsFace = false) {
   let done = 0;
   let first = firstIsFace;
-  for (const f of files) {
+  for (const item of files) {
+    const f = item instanceof File ? item : item?.file;
+    const comment = item instanceof File ? null : item?.comment ?? null;
+    if (!f) continue;
     const up = await uploadImageWithThumb(`${S.tenantId}/${oid}`, f);
     if (!up) continue;
     const kind = up.video ? 'video' : (first ? 'face' : 'autre');
@@ -154,6 +159,7 @@ export async function uploadPhotosFor(oid, files, firstIsFace = false) {
     const { error } = await sb.from('photos').insert({
       owner_id: S.tenantId, objet_id: oid,
       storage_path: up.path, thumb_path: up.thumbPath, kind, source: 'site',
+      commentaire: comment,
     });
     if (error) toast(error.message, true); else done++;
   }
