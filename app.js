@@ -7,15 +7,18 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const { SUPABASE_URL, SUPABASE_ANON_KEY } = window.IARTCANE_CONFIG;
 // Options auth explicites (2026-08-25, retour Yann « magic link redemandé ») :
-// PKCE (flux recommandé, plus robuste que l'implicite), session persistée en
-// localStorage, rafraîchie automatiquement. ⚠️ ne PAS changer storageKey :
-// ça déconnecterait tout le monde une fois. Une session = un appareil × un
-// navigateur (la PWA installée a son propre stockage) — normal de cliquer un
-// lien par contexte, anormal de le refaire à chaque visite (→ vérifier le
-// dashboard : JWT expiry, projet free en pause après 7 j d'inactivité).
+// session persistée en localStorage, rafraîchie automatiquement.
+// ⚠️ flowType 'implicit' volontaire (D-037) : PKCE impose d'ouvrir le lien dans
+// LE navigateur qui a fait la demande (le code_verifier y est stocké) — or Yann/
+// Alain demandent sur un appareil et cliquent depuis une appli mail/autre
+// navigateur/autre appareil → échec systématique. L'implicite (jetons en #hash)
+// marche partout. ⚠️ ne PAS changer storageKey (déconnecterait tout le monde).
+// Une session = un appareil × un navigateur (la PWA installée a son propre
+// stockage) — normal de cliquer un lien par contexte, anormal de le refaire à
+// chaque visite (→ dashboard : JWT expiry, projet free en pause après 7 j).
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
-    flowType: 'pkce',
+    flowType: 'implicit',
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
@@ -52,6 +55,18 @@ function catCanon(c) {
   if (!k) return c;
   return CATS_CANON[k] ?? (String(c).trim().charAt(0).toUpperCase() + String(c).trim().slice(1));
 }
+
+// Rattachement objet ↔ fiche artiste : l'auteur saisi par l'IA n'est presque
+// jamais le nom canonique exact (« Atelier Roger Capron (signé) », « attribué
+// à Alain Maunier », « Signé « DODIK » (…) ») — on matche (normalisé, sans
+// accents) sur le nom complet OU sur le nom de cœur (avant parenthèses).
+const auteurMatch = (auteur, nom) => {
+  if (!auteur || !nom) return false;
+  const a = norm(auteur), n = norm(nom);
+  if (a === n || a.includes(n)) return true;
+  const core = n.split(/[("«]/)[0].trim();
+  return core.length >= 5 && a.includes(core);
+};
 const fmtNum = n => Number(n).toLocaleString('fr-FR');
 const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('fr-FR') : '—';
 const plur = (n, s, p) => `${n} ${n > 1 ? p : s}`;
@@ -101,14 +116,14 @@ let user = null;
 let tenantId = null;          // locataire courant : soi-même, ou l'owner dont on est membre (D-015)
 let tenantName = '';          // nom de la « maison » (D-016) — ex. PONAIRE
 let mesTenants = [];          // [{ id, name, role }] — sa maison d'abord (role 'owner'), puis ses memberships
-let tenantRole = 'owner';     // rôle dans le locataire courant : 'owner' | 'vendeur' | 'lecteur'
+let tenantRole = 'owner';     // rôle dans le locataire courant : 'owner' | 'admin' | 'lecteur'
 // Un lecteur voit tout le catalogue mais ne peut rien modifier (RLS 0012 + UI masquée).
 const canWrite = () => tenantRole !== 'lecteur';
 let collection = [];           // cache des objets (rechargé à chaque visite collection)
 let photoMap = {};             // objet_id → URL signée de la 1re photo
 // cats = chips catégories multi-cochées ; prixMin/prixMax = bornes du filtre prix (null = non renseigné)
 const filters = { q: '', cats: [], group: 'categorie', list: '', prixMin: null, prixMax: null };
-let currentObjet = null, currentComps = [], currentFiche = null, currentPhotos = [], currentEvents = [], currentArtiste = null;
+let currentObjet = null, currentComps = [], currentFiche = null, currentPhotos = [], currentEvents = [], currentArtiste = null, currentArtistePhotos = [], currentArtisteNom = null;
 
 // Trace un événement du changelog objet (table `evenements`, D-025) — fire & forget.
 // Garde lecteur : un lecteur ne grave rien (la RLS 0012 bloquerait de toute façon).
@@ -129,6 +144,8 @@ const ACT_LABELS = {
   correction: 'Correction', validation: 'Fiche validée', relance: 'Estimation relancée',
   identification: 'Identification IA', passe_marche: 'Recherche de comparables',
   lens: 'Google Lens (signature)', artiste_maj: 'Fiche artiste', photos_manquantes: 'Photos recommandées',
+  artiste_photo_ajoutee: 'Photo artiste ajoutée', artiste_photo_supprimee: 'Photo artiste supprimée',
+  comparable_supprime: 'Comparable retiré',
 };
 // Détail utile d'un événement (modèle, prompt, comparables, sources, champs
 // avant→après, note) — rendu HTML échappé, partagé fiche objet + Activité.
@@ -208,7 +225,7 @@ function watchLive() {
 }
 
 // Locataire courant : si l'utilisateur est membre d'une collection (magasin),
-// il peut la voir et l'alimenter — le même catalogue pour tous les vendeurs (D-015).
+// il peut la voir et l'alimenter — le même catalogue pour tous les admins (D-015).
 // Multi-locataires (0012) : TOUTES les memberships sont lues → switcher « Maison »
 // dans le menu ; le choix est persisté (localStorage). Le rôle courant pilote
 // l'UI : un 'lecteur' passe en lecture seule (canWrite()).
@@ -222,7 +239,7 @@ async function resolveTenant() {
     ...(membres ?? []).map(m => ({ id: m.owner_id, name: nomDe(m.owner_id), role: m.role })),
   ];
   // Choix persisté si encore valide, sinon la 1re membership (comportement D-015 :
-  // un vendeur/lecteur tombe sur la maison partagée, pas sur sa collection vide),
+  // un membre/lecteur tombe sur la maison partagée, pas sur sa collection vide),
   // sinon sa propre maison.
   const pref = localStorage.getItem('iartcane-tenant');
   const courant = mesTenants.find(t => t.id === pref)
@@ -311,7 +328,7 @@ function setTab(name) {
 // ─── Menu « gouvernance » de l'en-tête (D-028) ──────────────────────────────
 // Zones transverses de l'app. Ajouter une entrée = une ligne ici + une route
 // dans route() + une <section class="view"> dans index.html.
-// `owner: true` → entrée réservée au propriétaire de la maison courante.
+// `owner: true` → entrée réservée aux admins (owner + membre admin).
 const MENU_GOUV = [
   { hash: '#/maison',     icone: '🏠', label: 'Maison',                desc: 'Membres, rôles, nom de la maison', owner: true },
   { hash: '#/activite',   icone: '📋', label: 'Activité',              desc: 'Quoi de neuf : runs IA, mises à jour, actions — et MAJ forcées du catalogue' },
@@ -325,9 +342,9 @@ const closeMenu = () => {
 };
 // Rendu dépendant du contexte : bloc profil (nom + email + déconnexion) en
 // tête, switcher multi-locataires (si > 1 maison), entrées filtrées selon le
-// rôle (Maison = owner uniquement).
+// rôle (Maison = owner + admin).
 function renderMenu() {
-  const items = MENU_GOUV.filter(e => !e.owner || tenantRole === 'owner');
+  const items = MENU_GOUV.filter(e => !e.owner || canWrite());
   const profil = `
     <div class="menu-user">
       <span class="menu-user-name">${esc(profileName || '…')}</span>
@@ -376,7 +393,7 @@ function route() {
   else if (mObj) { setTab('collection'); show('objet'); loadObjet(decodeURIComponent(mObj[1])); }
   // Écrans gouvernance : pas des onglets → aucun tab actif (setTab(null))
   else if (h.startsWith('#/maison')) {
-    if (tenantRole !== 'owner') { location.replace('#/'); return; } // owner uniquement
+    if (!canWrite()) { location.replace('#/'); return; } // owner + admin
     setTab(null); show('maison'); loadMaison();
   }
   else if (h.startsWith('#/activite')) { setTab(null); show('activite'); loadActivite(); }
@@ -787,6 +804,18 @@ async function deleteObjet() {
   location.hash = '#/';
 }
 
+async function deleteComp(cid) {
+  if (!currentObjet || !canWrite()) return;
+  const c = currentComps.find(x => String(x.id) === String(cid));
+  if (!c) return;
+  if (!confirm('Retirer ce comparable de l’estimation ?')) return;
+  const { error } = await sb.from('comparables').delete().eq('owner_id', tenantId).eq('id', cid);
+  if (error) { toast(error.message, true); return; }
+  logEvent('comparable_supprime', { comparable_id: cid, lot: c.lot, maison: c.maison }, currentObjet.id);
+  toast('Comparable retiré');
+  await loadObjet(currentObjet.id);
+}
+
 function dlRow(label, val, editField, type = 'text') {
   const v = (val ?? '') === '' ? null : String(val);
   if (editing && editField) {
@@ -876,7 +905,10 @@ function renderObjet() {
             <div class="comp-lot">${esc(c.lot ?? '—')}</div>
             <div class="comp-bot">
               <span class="comp-prix">${c.prix != null ? fmtNum(c.prix) + ' ' + esc(c.devise === 'EUR' ? '€' : c.devise) : '—'}</span>
-              ${c.lien ? `<a class="link-lot" href="${esc(c.lien)}" target="_blank" rel="noopener">Voir le lot ↗</a>` : ''}
+              <div style="display:flex;gap:8px;align-items:center">
+                ${c.lien ? `<a class="link-lot" href="${esc(c.lien)}" target="_blank" rel="noopener">Voir le lot ↗</a>` : ''}
+                ${canWrite() ? `<button class="btn small danger" data-action="del-comp" data-cid="${esc(c.id)}">Retirer</button>` : ''}
+              </div>
             </div>
           </div>
         </div>`;
@@ -955,7 +987,7 @@ function renderObjet() {
       </details>
       ${artistePanel}
       <details class="panel panel-pad acc" open>
-        <summary class="sec-title">Valeur</summary>
+        <summary class="sec-title">Vente / estimation</summary>
         ${valeur}
         ${compsList}
       </details>
@@ -1066,6 +1098,7 @@ $('#objet-body').addEventListener('keydown', e => {
 const ACTIONS_MUTANTES = new Set([
   'crop-toggle', 'cut-photo', 'del-photo', 'del-objet', 'add-photo', 'take-photo',
   'loc-edit', 'loc-save', 'valider', 'corriger', 'corr-save', 'relancer',
+  'del-comp',
 ]);
 
 $('#objet-body').addEventListener('click', async e => {
@@ -1099,6 +1132,7 @@ $('#objet-body').addEventListener('click', async e => {
   }
   else if (act === 'del-photo') { deletePhoto(); }
   else if (act === 'del-objet') { deleteObjet(); }
+  else if (act === 'del-comp') { deleteComp(el.dataset.cid); }
   else if (act === 'add-photo') { $('#file-add-photo').click(); }
   else if (act === 'take-photo') { openCamera('objet'); }
   else if (act === 'rebound') {
@@ -1140,6 +1174,34 @@ $('#objet-body').addEventListener('click', async e => {
     logEvent('relance', {});
     toast('Estimation relancée — le cron la traitera');
     loadObjet(o.id);
+  }
+});
+
+// ─── Actions de la vue Artiste (délégation) ───────────────────────────────
+function openArtistePhotoLightbox(pid) {
+  const p = currentArtistePhotos.find(x => String(x.id) === String(pid));
+  if (!p?.url) return;
+  const lb = document.createElement('div');
+  lb.className = 'lightbox';
+  lb.innerHTML = `<img src="${esc(p.url)}" alt="${esc(p.kind)}" loading="eager">`;
+  const close = () => { lb.remove(); document.body.classList.remove('lb-open'); };
+  lb.addEventListener('click', close);
+  document.body.classList.add('lb-open');
+  document.body.append(lb);
+}
+
+$('#artiste-body').addEventListener('click', async e => {
+  const el = e.target.closest('[data-action]');
+  if (!el) return;
+  const act = el.dataset.action;
+  if ((act === 'add-artiste-photo' || act === 'del-artiste-photo') && !canWrite()) return;
+  if (act === 'add-artiste-photo') {
+    $('#file-artiste-photo').click();
+  } else if (act === 'del-artiste-photo') {
+    e.stopPropagation();
+    await deleteArtistePhoto(el.dataset.pid);
+  } else if (act === 'zoom-artiste-photo') {
+    openArtistePhotoLightbox(el.dataset.pid);
   }
 });
 
@@ -1456,7 +1518,7 @@ async function loadArtistes() {
     body.innerHTML = emptyHtml('Aucune fiche artiste pour l\'instant', 'Le cron les crée lors des passes d\'identification.');
     return;
   }
-  const nbObjets = nom => collection.filter(o => o.auteur === nom).length;
+  const nbObjets = nom => collection.filter(o => auteurMatch(o.auteur, nom)).length;
   body.innerHTML = `<div class="grid">${data.map(a => {
     // Extrait texte brut : on démarque le markdown SANS toucher aux tirets
     // intra-mots (« hauts-de-Seine ») — seuls les tirets de puce en début de
@@ -1486,11 +1548,22 @@ async function loadArtistes() {
 async function loadArtiste(nom) {
   const body = $('#artiste-body');
   body.innerHTML = '<div class="skeleton" style="height:320px"></div>';
+  currentArtisteNom = nom;
   await ensureCollection();
   const { data: a, error } = await sb.from('artistes').select('*').eq('owner_id', tenantId).eq('nom', nom).maybeSingle();
   if (error) { toast(error.message, true); body.innerHTML = ''; return; }
   if (collection.length && !Object.keys(photoMap).length) await loadPhotoMap();
-  const objets = collection.filter(o => o.auteur === nom);
+  // Photos attachées à la fiche artiste (portrait, signature, œuvre, fiche…)
+  const { data: apRows } = await sb.from('artistes_photos')
+    .select('*').eq('owner_id', tenantId).eq('artiste_nom', nom).order('created_at');
+  const apPaths = (apRows ?? []).flatMap(p => [p.storage_path, p.thumb_path].filter(Boolean));
+  const apUrls = await signPaths(apPaths);
+  currentArtistePhotos = (apRows ?? []).map(p => ({
+    ...p,
+    url: apUrls[p.storage_path],
+    thumbUrl: apUrls[p.thumb_path ?? p.storage_path],
+  }));
+  const objets = collection.filter(o => auteurMatch(o.auteur, nom));
   // Galerie « œuvres » : miniatures (thumb_path via photoMap) des objets liés,
   // en rangée scrollable sous l'en-tête — la reconnaissance visuelle d'abord.
   const oeuvres = objets.filter(o => photoMap[o.id]?.url);
@@ -1501,6 +1574,17 @@ async function loadArtiste(nom) {
         <img src="${esc(img.url)}" alt="${esc(o.titre || 'Œuvre de la collection')}" loading="lazy" decoding="async" style="object-position:${img.fx ?? 50}% ${img.fy ?? 50}%">
       </button>`;
     }).join('')}</div>` : '';
+  const photosPanel = `
+    <div class="panel panel-pad">
+      <div class="sec-title">Fichiers & images</div>
+      ${canWrite() ? `<div class="actions" style="margin-bottom:12px"><button class="btn small" data-action="add-artiste-photo">🖼️ Ajouter une photo</button></div>` : ''}
+      ${currentArtistePhotos.length ? `<div class="art-gal art-gal-files">${currentArtistePhotos.map(p => `
+        <div class="art-gal-item" data-action="zoom-artiste-photo" data-pid="${esc(p.id)}" tabindex="0" role="button" title="${esc(p.kind)}${p.caption ? ' — ' + esc(p.caption) : ''}">
+          <img src="${esc(p.thumbUrl || p.url)}" alt="${esc(p.kind)}" loading="lazy" decoding="async">
+          ${canWrite() ? `<button class="art-gal-del" data-action="del-artiste-photo" data-pid="${esc(p.id)}" title="Supprimer">✕</button>` : ''}
+        </div>
+      `).join('')}</div>` : '<div class="value-sub">Aucune photo, signature ou fiche pour cet artiste.</div>'}
+    </div>`;
   const bioPanel = a ? `
     <details class="panel panel-pad acc" open>
       <summary class="sec-title">Biographie</summary>
@@ -1519,22 +1603,78 @@ async function loadArtiste(nom) {
         ${a ? `<span class="badge-soft">Fiche maj le ${fmtDate(a.updated_at)}</span>` : ''}
       </div>
     </div>
-    ${galerie}
+    ${photosPanel}
+    ${galerie ? `<div class="sec-title" style="margin-top:26px">Œuvres de la collection</div>${galerie}` : ''}
     ${bioPanel}
     <div class="sec-title" style="margin-top:26px">Objets de la collection <span style="font-family:var(--mono);font-size:.8125rem;color:var(--ink-3);font-weight:400">${objets.length}</span></div>
     ${objets.length
       ? `<div class="grid">${objets.map(cardHtml).join('')}</div>`
       : '<div class="value-sub">Aucun objet rattaché à cet artiste pour l\'instant.</div>'}`;
-  $$('.art-gal-item', body).forEach(b => b.addEventListener('click', () => {
+  $$('.art-gal-item[data-oid]', body).forEach(b => b.addEventListener('click', () => {
     location.hash = '#/objet/' + encodeURIComponent(b.dataset.oid);
   }));
   $$('.card', body).forEach(c => {
     const go = () => { location.hash = '#/objet/' + encodeURIComponent(c.dataset.oid); };
     c.addEventListener('click', go);
-    // Carte = div focusable (role="button") : Enter/Espace = même navigation que le clic
     c.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
   });
 }
+
+// ─── Photos attachées à une fiche artiste (portrait, signature, œuvre, fiche) ─
+async function uploadArtistePhoto(file) {
+  if (!currentArtisteNom || !canWrite()) return;
+  const nom = currentArtisteNom;
+  // La fiche artiste doit exister pour la FK — on la crée si besoin.
+  const { data: a } = await sb.from('artistes').select('nom').eq('owner_id', tenantId).eq('nom', nom).maybeSingle();
+  if (!a) {
+    const { error: ec } = await sb.from('artistes').insert({ owner_id: tenantId, nom, bio_md: '' });
+    if (ec) { toast(`Création fiche artiste : ${ec.message}`, true); return; }
+  }
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+  const id = crypto.randomUUID();
+  const path = `${tenantId}/artistes/${id}.${ext}`;
+  const { error: e1 } = await sb.storage.from('photos').upload(path, file, { contentType: file.type || undefined });
+  if (e1) { toast(`Upload : ${e1.message}`, true); return; }
+  const tb = await makeThumbBlob(file);
+  let thumbPath = null;
+  if (tb) {
+    thumbPath = `${tenantId}/artistes/${id}.thumb.jpg`;
+    const { error: et } = await sb.storage.from('photos').upload(thumbPath, tb, { contentType: 'image/jpeg' });
+    if (et) thumbPath = null;
+  }
+  const { error: e2 } = await sb.from('artistes_photos').insert({
+    owner_id: tenantId,
+    artiste_nom: nom,
+    storage_path: path,
+    thumb_path: thumbPath,
+    kind: 'autre',
+  });
+  if (e2) { toast(e2.message, true); return; }
+  logEvent('artiste_photo_ajoutee', { artiste: nom }, null);
+  toast('Photo ajoutée à la fiche artiste');
+  await loadArtiste(nom);
+}
+
+async function deleteArtistePhoto(pid) {
+  if (!currentArtisteNom || !canWrite()) return;
+  const p = currentArtistePhotos.find(x => String(x.id) === String(pid));
+  if (!p) return;
+  if (!confirm('Supprimer cette photo de la fiche artiste ?')) return;
+  const { error } = await sb.from('artistes_photos').delete()
+    .eq('owner_id', tenantId).eq('id', pid);
+  if (error) { toast(error.message, true); return; }
+  await sb.storage.from('photos').remove([p.storage_path, p.thumb_path].filter(Boolean));
+  logEvent('artiste_photo_supprimee', { artiste: currentArtisteNom }, null);
+  toast('Photo supprimée');
+  await loadArtiste(currentArtisteNom);
+}
+
+$('#file-artiste-photo').addEventListener('change', async e => {
+  if (!canWrite()) { e.target.value = ''; return; }
+  const files = [...e.target.files];
+  e.target.value = '';
+  for (const f of files) await uploadArtistePhoto(f);
+});
 
 // ─── Sources : cartographie des accès (miroir docs/cartographie-sources.md) ─
 let sourcesCache = null;
@@ -1800,16 +1940,16 @@ async function loadActivite() {
   $('#act-maj-artistes').addEventListener('click', majArtistes);
 }
 
-// ─── Maison : nom, membres, rôles (owner uniquement — menu déjà filtré) ─────
-// Gestion de SA maison (locataire = son propre id, D-015/D-016). Un vendeur
-// alimente le catalogue comme l'owner ; un lecteur voit tout mais ne peut rien
-// modifier (RLS 0012 + UI en lecture seule).
+// ─── Maison : nom, membres, rôles (owner + admin — menu déjà filtré) ────────
+// Gestion de la maison courante. Un admin a exactement les mêmes droits
+// qu'un owner : inviter, changer les rôles, retirer des membres, renommer.
+// Un lecteur voit tout mais ne peut rien modifier (RLS 0012 + UI en lecture seule).
 async function loadMaison() {
   const body = $('#maison-body');
   body.innerHTML = '<div class="skeleton" style="height:220px"></div>';
   const [{ data: t }, { data: membres, error }] = await Promise.all([
-    sb.from('tenants').select('name').eq('owner_id', user.id).maybeSingle(),
-    sb.from('collection_members').select('member_id,role,created_at').eq('owner_id', user.id).order('created_at'),
+    sb.from('tenants').select('name').eq('owner_id', tenantId).maybeSingle(),
+    sb.from('collection_members').select('member_id,role,created_at').eq('owner_id', tenantId).order('created_at'),
   ]);
   if (error) { toast(error.message, true); body.innerHTML = ''; return; }
   // Noms affichés : profiles lisible entre membres d'une maison (policy 0012).
@@ -1822,7 +1962,7 @@ async function loadMaison() {
     <div class="mbr-row" data-mid="${esc(m.member_id)}">
       <span class="mbr-name">${esc(nomDe(m.member_id))}</span>
       <select class="select mbr-role">
-        <option value="vendeur" ${m.role === 'vendeur' ? 'selected' : ''}>vendeur</option>
+        <option value="admin" ${m.role === 'admin' ? 'selected' : ''}>admin</option>
         <option value="lecteur" ${m.role === 'lecteur' ? 'selected' : ''}>lecteur</option>
       </select>
       <button class="btn small danger mbr-del">Retirer</button>
@@ -1838,7 +1978,7 @@ async function loadMaison() {
     </div>
     <div class="panel panel-pad" style="margin-top:18px">
       <div class="sec-title">Membres <span style="font-family:var(--mono);font-size:13px;color:var(--ink-3);font-weight:400">${(membres ?? []).length}</span></div>
-      <div class="note">Un <b>lecteur</b> voit tout le catalogue mais ne peut rien modifier.</div>
+      <div class="note">Un <b>admin</b> peut tout modifier (catalogue, membres, nom de la maison). Un <b>lecteur</b> voit tout le catalogue mais ne peut rien modifier.</div>
       <div class="mbr-list">${rows || '<div class="value-sub">Aucun membre pour l\'instant — invite le premier ci-dessous.</div>'}</div>
     </div>
     <div class="panel panel-pad" style="margin-top:18px">
@@ -1847,7 +1987,7 @@ async function loadMaison() {
       <div class="mbr-form" style="margin-top:12px">
         <input type="email" id="invite-email" placeholder="email@exemple.fr" autocomplete="off">
         <select class="select" id="invite-role">
-          <option value="vendeur">vendeur</option>
+          <option value="admin">admin</option>
           <option value="lecteur">lecteur</option>
         </select>
         <button class="btn primary" id="invite-btn">Inviter</button>
@@ -1858,11 +1998,11 @@ async function loadMaison() {
   $('#maison-rename').addEventListener('click', async () => {
     const name = $('#maison-name').value.trim();
     if (!name) { toast('Nom vide', true); return; }
-    const { error: e } = await sb.from('tenants').upsert({ owner_id: user.id, name });
+    const { error: e } = await sb.from('tenants').upsert({ owner_id: tenantId, name });
     if (e) { toast(e.message, true); return; }
-    const mienne = mesTenants.find(x => x.id === user.id);
+    const mienne = mesTenants.find(x => x.id === tenantId);
     if (mienne) mienne.name = name;
-    if (tenantId === user.id) tenantName = name;
+    tenantName = name;
     renderMenu();
     loadHeader();
     toast(`✓ Maison renommée « ${name} »`);
@@ -1875,14 +2015,14 @@ async function loadMaison() {
       const nv = sel.value;
       if (!confirm(`Passer ${nomDe(mid)} en rôle « ${nv} » ?`)) { loadMaison(); return; }
       const { error: e } = await sb.from('collection_members').update({ role: nv })
-        .eq('owner_id', user.id).eq('member_id', mid);
+        .eq('owner_id', tenantId).eq('member_id', mid);
       if (e) { toast(e.message, true); loadMaison(); return; }
       toast(`✓ ${nomDe(mid)} est maintenant ${nv}`);
     });
     $('.mbr-del', row).addEventListener('click', async () => {
       if (!confirm(`Retirer ${nomDe(mid)} de la maison ?\nIl ne verra plus le catalogue.`)) return;
       const { error: e } = await sb.from('collection_members').delete()
-        .eq('owner_id', user.id).eq('member_id', mid);
+        .eq('owner_id', tenantId).eq('member_id', mid);
       if (e) { toast(e.message, true); return; }
       toast(`${nomDe(mid)} retiré de la maison`);
       loadMaison();
@@ -1894,7 +2034,7 @@ async function loadMaison() {
     const role = $('#invite-role').value;
     const msg = $('#invite-msg');
     if (!email) { $('#invite-email').focus(); return; }
-    const { data, error: e } = await sb.rpc('invite_member', { p_email: email, p_role: role });
+    const { data, error: e } = await sb.rpc('invite_member', { p_email: email, p_role: role, p_owner: tenantId });
     if (e) {
       // Message métier de la RPC (ex. « compte inexistant ») affiché proprement.
       msg.innerHTML = `<div class="login-err">${esc(e.message)}</div>`;
@@ -2085,12 +2225,47 @@ $('#btn-gallery').addEventListener('click', () => $('#file-gallery').click());
 $('#file-camera').addEventListener('change', e => { addCapFiles(e.target.files); e.target.value = ''; });
 $('#file-gallery').addEventListener('change', e => { addCapFiles(e.target.files); e.target.value = ''; });
 
+$$('input[name="cap-mode"]').forEach(r => r.addEventListener('change', () => {
+  $('#cap-save').textContent = r.value === 'batch' ? 'Enregistrer les objets' : 'Enregistrer l\'objet';
+}));
+
 $('#cap-save').addEventListener('click', async () => {
   if (!canWrite()) return;
+  const mode = $('input[name="cap-mode"]:checked')?.value || 'single';
   const btn = $('#cap-save');
+  const zone = $('#cap-zone').value.trim() || null;
+  const contenant = $('#cap-contenant').value.trim() || null;
   btn.disabled = true;
-  btn.textContent = 'Enregistrement…';
+  btn.textContent = mode === 'batch' ? 'Enregistrement des objets…' : 'Enregistrement…';
   try {
+    if (mode === 'batch') {
+      if (!capFiles.length) { toast('Aucune photo à enregistrer', true); return; }
+      let ok = 0, fails = 0;
+      const ids = [];
+      const files = [...capFiles];
+      for (const f of files) {
+        const { data: newId, error: e0 } = await sb.rpc('next_objet_id', { p_owner: tenantId });
+        if (e0 || !newId) { fails++; continue; }
+        const { error: e1 } = await sb.from('objets').insert({
+          owner_id: tenantId, id: newId, statut: 'en_file', zone, contenant, source_capture: 'site',
+        });
+        if (e1) { fails++; continue; }
+        logEvent('capture', { n: 1, zone }, newId);
+        const n = await uploadPhotosFor(newId, [f], true);
+        if (n > 0) {
+          await queueAnalyse(newId);
+        } else {
+          await sb.from('objets').update({ statut: 'a_completer' }).eq('owner_id', tenantId).eq('id', newId);
+        }
+        ids.push(newId); ok++;
+      }
+      capFiles = [];
+      renderPreviews();
+      toast(`${ok} objet${ok > 1 ? 's' : ''} créé${ok > 1 ? 's' : ''}${fails ? ` (${fails} échec)` : ''}`);
+      loadHeader();
+      if (ids.length) location.hash = '#/objet/' + encodeURIComponent(ids[0]);
+      return;
+    }
     const { data: newId, error: e0 } = await sb.rpc('next_objet_id', { p_owner: tenantId });
     if (e0 || !newId) throw (e0 ?? new Error('numérotation impossible'));
     const avecPhotos = capFiles.length > 0;
@@ -2098,12 +2273,12 @@ $('#cap-save').addEventListener('click', async () => {
       owner_id: tenantId,
       id: newId,
       statut: avecPhotos ? 'en_file' : 'a_completer',
-      zone: $('#cap-zone').value.trim() || null,
-      contenant: $('#cap-contenant').value.trim() || null,
+      zone,
+      contenant,
       source_capture: 'site',
     });
     if (e1) throw e1;
-    logEvent('capture', { n: capFiles.length, zone: $('#cap-zone').value.trim() || null }, newId);
+    logEvent('capture', { n: capFiles.length, zone }, newId);
     if (avecPhotos) {
       const n = await uploadPhotosFor(newId, capFiles, true);
       if (n > 0) {
@@ -2113,6 +2288,7 @@ $('#cap-save').addEventListener('click', async () => {
       }
     }
     capFiles = [];
+    renderPreviews();
     toast(`Objet #${newId} enregistré${avecPhotos ? ' — analyse en file' : ''}`);
     loadHeader();
     location.hash = '#/objet/' + encodeURIComponent(newId);
@@ -2120,6 +2296,6 @@ $('#cap-save').addEventListener('click', async () => {
     toast(err.message ?? String(err), true);
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Enregistrer l\'objet';
+    btn.textContent = mode === 'batch' ? 'Enregistrer les objets' : 'Enregistrer l\'objet';
   }
 });

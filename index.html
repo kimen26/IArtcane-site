@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <!-- cache-buster ?v= : garder en sync avec VERSION dans sw.js -->
-<link rel="stylesheet" href="styles.css?v=2026-08-25a">
+<link rel="stylesheet" href="styles.css?v=2026-08-25c">
 </head>
 <body>
 
@@ -108,7 +108,7 @@
     <div id="activite-body"></div>
   </section>
 
-  <!-- ═══════════ VUE MAISON (membres, rôles, nom — owner uniquement) ═══════════ -->
+  <!-- ═══════════ VUE MAISON (membres, rôles, nom — owner + admin) ═══════════ -->
   <section class="view" id="view-maison">
     <button class="back js-back">← Collection</button>
     <div class="sec-title page-title">Maison</div>
@@ -149,6 +149,10 @@
         <div class="big">📷</div>
         <div class="t1">Déposer les photos de l'objet</div>
         <div class="t2">face · revers · signature · poinçons · défauts</div>
+      </div>
+      <div class="capture-mode" id="capture-mode">
+        <label class="mode-opt"><input type="radio" name="cap-mode" value="single" checked><span>1 objet · plusieurs photos</span></label>
+        <label class="mode-opt"><input type="radio" name="cap-mode" value="batch"><span>1 photo = 1 objet</span></label>
       </div>
       <div class="previews" id="previews"></div>
       <div class="actions" style="justify-content:center">
@@ -195,8 +199,9 @@
 <input type="file" id="file-camera" accept="image/*" capture="environment" class="hidden">
 <input type="file" id="file-gallery" accept="image/*,video/*" multiple class="hidden">
 <input type="file" id="file-add-photo" accept="image/*,video/*" multiple class="hidden">
+<input type="file" id="file-artiste-photo" accept="image/*" multiple class="hidden">
 
-<script src="config.js?v=2026-08-25a"></script>
-<script type="module" src="app.js?v=2026-08-25a"></script>
+<script src="config.js?v=2026-08-25c"></script>
+<script type="module" src="app.js?v=2026-08-25c"></script>
 </body>
 </html>
