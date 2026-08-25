@@ -36,12 +36,12 @@ const pinSvg = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stro
 export const infoSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg>';
 
 export const STATUTS = {
-  capture: 'Capturé', en_file: 'En file', analyse: 'Analyse…', fiche_prete: 'Fiche prête',
-  a_completer: 'À compléter', validee: 'Validée', contestee: 'Contestée',
+  capture: 'Capturé', en_file: 'En file', analyse: 'Analyse en cours', fiche_prete: 'Fiche prête',
+  a_completer: 'À compléter', validee: 'Validée',
 };
 const ST_COLOR = {
   capture: '#9A6B1A', en_file: '#2456E0', analyse: '#2456E0', fiche_prete: '#6D4AC8',
-  a_completer: '#9A6B1A', validee: '#1E7A46', contestee: '#B3261E',
+  a_completer: '#9A6B1A', validee: '#1E7A46',
 };
 // Confiance comptée 0–4 : 4/4 = validée par un humain (ground truth), sinon 1-3 selon l'IA.
 export const confMarks = o => o.statut === 'validee' ? 4 : ({ haute: 3, moyenne: 2, basse: 1 }[o.confiance] ?? 0);

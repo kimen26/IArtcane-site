@@ -25,12 +25,12 @@ export async function deletePhoto() {
 }
 
 // Caméra depuis la fiche : les clichés ont été uploadés au fil de l'eau →
-// on relance l'analyse si besoin (même règle que l'ajout par fichier) et on
-// recharge la fiche à la fermeture (hook passé au module caméra partagé).
+// toute nouvelle photo relance l'analyse (même règle que l'ajout par fichier),
+// sauf si la fiche est déjà validée (ground truth figée), puis on recharge.
 export function onCamClose(n) {
   const o = S.currentObjet;
   if (!o || !n) return;
-  if (['capture', 'a_completer'].includes(o.statut)) queueAnalyse(o.id);
+  if (o.statut !== 'validee') queueAnalyse(o.id);
   hooks.recharger(o.id);
 }
 
