@@ -16,23 +16,20 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <!-- cache-buster ?v= : garder en sync avec VERSION dans sw.js -->
-<link rel="stylesheet" href="styles.css?v=2026-08-24i">
+<link rel="stylesheet" href="styles.css?v=2026-08-25a">
 </head>
 <body>
 
 <header>
   <div class="header-in">
+    <div class="menu-gov hidden" id="menu-gov">
+      <button class="menu-btn-icon" id="menu-btn" aria-haspopup="true" aria-expanded="false" aria-label="Menu">☰</button>
+      <div class="menu-panel hidden" id="menu-panel"></div>
+    </div>
     <div class="logo" id="logo-home" title="Collection">
       <div class="logo-name"><span class="w-i">I</span><img class="logo-glyph" src="assets/logo-glyph.png" alt="ART">cane<img class="logo-mark" src="assets/mark-cygne.svg" alt=""></div>
     </div>
     <div class="header-counter mono" id="header-counter"></div>
-    <div class="header-right">
-      <div class="menu-gov hidden" id="menu-gov">
-        <button class="menu-btn" id="menu-btn" aria-haspopup="true" aria-expanded="false">☰ Menu</button>
-        <div class="menu-panel hidden" id="menu-panel"></div>
-      </div>
-      <button class="avatar hidden" id="avatar" title="Se déconnecter">?</button>
-    </div>
   </div>
 </header>
 
@@ -66,20 +63,32 @@
       <div class="search">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         <input type="text" id="search" placeholder="« ma peinture allemande », « montre gousset », « carton 33 », « 0125 »…">
+        <button class="search-close" id="btn-search-close" aria-label="Effacer et fermer la recherche">×</button>
       </div>
-      <select class="select" id="group-by">
-        <option value="categorie">Regrouper : catégorie</option>
-        <option value="zone">Regrouper : lieu</option>
-        <option value="periode">Regrouper : période</option>
-        <option value="">Sans regroupement</option>
-      </select>
-      <div class="prix-filter">
-        <input type="number" id="prix-min" placeholder="Prix min" min="0" inputmode="numeric" aria-label="Prix min">
-        <span class="prix-sep">–</span>
-        <input type="number" id="prix-max" placeholder="Prix max" min="0" inputmode="numeric" aria-label="Prix max">
+      <!-- Mobile uniquement (< 640 px) : le secondaire part dans le panneau
+           repliable ci-dessous ; sur desktop #btn-filters est masqué et
+           .filters-panel est en display:contents (toolbar inline inchangée). -->
+      <button class="btn" id="btn-filters" aria-expanded="false" aria-controls="filters-panel">Filtres <span class="filters-count hidden" id="filters-count"></span><span class="filters-chev" aria-hidden="true">▾</span></button>
+      <!-- Mobile uniquement : la recherche repliée en loupe (progressive
+           disclosure) ; tap → la barre se déploie avec autofocus. -->
+      <button class="btn btn-icon" id="btn-search-toggle" aria-expanded="false" aria-label="Rechercher">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      </button>
+      <div class="filters-panel" id="filters-panel">
+        <select class="select" id="group-by">
+          <option value="categorie">Regrouper : catégorie</option>
+          <option value="zone">Regrouper : lieu</option>
+          <option value="periode">Regrouper : période</option>
+          <option value="">Sans regroupement</option>
+        </select>
+        <div class="prix-filter">
+          <input type="number" id="prix-min" placeholder="Prix min" min="0" inputmode="numeric" aria-label="Prix min">
+          <span class="prix-sep">–</span>
+          <input type="number" id="prix-max" placeholder="Prix max" min="0" inputmode="numeric" aria-label="Prix max">
+        </div>
+        <button class="btn small hidden" id="btn-save-filter" title="Sauvegarder le filtre courant comme liste">💾 Sauvegarder ce filtre</button>
+        <button class="btn small" id="btn-csv" title="Exporter les objets filtrés (CSV, format Excel)">⬇ CSV</button>
       </div>
-      <button class="btn small hidden" id="btn-save-filter" title="Sauvegarder le filtre courant comme liste">💾 Sauvegarder ce filtre</button>
-      <button class="btn small" id="btn-csv" title="Exporter les objets filtrés (CSV, format Excel)">⬇ CSV</button>
     </div>
     <div class="chips" id="chips"></div>
     <div class="lists-shortcut" id="lists"></div>
@@ -187,7 +196,7 @@
 <input type="file" id="file-gallery" accept="image/*,video/*" multiple class="hidden">
 <input type="file" id="file-add-photo" accept="image/*,video/*" multiple class="hidden">
 
-<script src="config.js?v=2026-08-24i"></script>
-<script type="module" src="app.js?v=2026-08-24i"></script>
+<script src="config.js?v=2026-08-25a"></script>
+<script type="module" src="app.js?v=2026-08-25a"></script>
 </body>
 </html>

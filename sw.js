@@ -8,10 +8,10 @@
 //    et redirige vers la vue Capturer (app.js les y récupère en File).
 // VERSION : garder en sync avec le cache-buster ?v= de index.html.
 // ═══════════════════════════════════════════════════════════════════════════
-const VERSION = 'iartcane-2026-08-24i'; // sync : ?v=2026-08-24i dans index.html
+const VERSION = 'iartcane-2026-08-25a'; // sync : ?v=2026-08-25a dans index.html
 const SHELL_CACHE = `shell-${VERSION}`;
 const SHARE_CACHE = 'share-inbox'; // hors purge : survit aux changements de VERSION
-const V = '?v=2026-08-24i'; // query des assets versionnés (sync index.html)
+const V = '?v=2026-08-25a'; // query des assets versionnés (sync index.html)
 const SHELL = [
   './', './index.html',
   './styles.css' + V, './app.js' + V, './config.js' + V,

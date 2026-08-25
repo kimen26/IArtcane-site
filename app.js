@@ -6,7 +6,21 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
 const { SUPABASE_URL, SUPABASE_ANON_KEY } = window.IARTCANE_CONFIG;
-const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Options auth explicites (2026-08-25, retour Yann « magic link redemandé ») :
+// PKCE (flux recommandé, plus robuste que l'implicite), session persistée en
+// localStorage, rafraîchie automatiquement. ⚠️ ne PAS changer storageKey :
+// ça déconnecterait tout le monde une fois. Une session = un appareil × un
+// navigateur (la PWA installée a son propre stockage) — normal de cliquer un
+// lien par contexte, anormal de le refaire à chaque visite (→ vérifier le
+// dashboard : JWT expiry, projet free en pause après 7 j d'inactivité).
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    flowType: 'pkce',
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+});
 
 // ─── Service worker (D-013) : shell offline + réception « Partager avec » ───
 // http(s) uniquement (pas de SW en file://) ; échec silencieux — l'app marche sans.
@@ -79,7 +93,7 @@ function catEmoji(cat) {
 const prixHtml = o => (o.prix_bas != null && o.prix_haut != null)
   ? `<span class="price">${fmtNum(o.prix_bas)}–${fmtNum(o.prix_haut)} €</span>`
   : '<span class="price none">à estimer</span>';
-const emptyHtml = (t, s) => `<div class="empty"><div class="big">🗃️</div><h2>${esc(t)}</h2><p>${esc(s)}</p></div>`;
+const emptyHtml = (t, s, action = '') => `<div class="empty"><div class="big">🗃️</div><h2>${esc(t)}</h2><p>${esc(s)}</p>${action}</div>`;
 const isVideo = p => p.kind === 'video' || /\.(mp4|mov|webm)$/i.test(p.storage_path || '');
 
 // ─── État ───────────────────────────────────────────────────────────────────
@@ -153,7 +167,6 @@ function show(view) {
 }
 function showLogin() {
   $('#tabs').classList.add('hidden');
-  $('#avatar').classList.add('hidden');
   $('#menu-gov').classList.add('hidden');
   $('#header-counter').textContent = '';
   document.body.classList.remove('role-lecteur');
@@ -164,7 +177,6 @@ function showLogin() {
 }
 async function enterApp() {
   $('#tabs').classList.remove('hidden');
-  $('#avatar').classList.remove('hidden');
   $('#menu-gov').classList.remove('hidden');
   await resolveTenant();
   renderMenu();
@@ -245,6 +257,10 @@ function applyRole() {
   document.body.classList.toggle('role-lecteur', !canWrite());
 }
 
+// Email mémorisé d'un envoi à l'autre (le login revient souvent par paire
+// appareil/navigateur — autant éviter de le retaper à chaque fois).
+$('#login-email').value = localStorage.getItem('iartcane-login-email') ?? '';
+
 $('#login-btn').addEventListener('click', async () => {
   const email = $('#login-email').value.trim();
   if (!email) { $('#login-email').focus(); return; }
@@ -255,18 +271,22 @@ $('#login-btn').addEventListener('click', async () => {
     options: { emailRedirectTo: location.origin + location.pathname },
   });
   btn.disabled = false;
-  $('#login-msg').innerHTML = error
-    ? `<div class="login-err">Erreur : ${esc(error.message)}</div>`
-    : '<div class="login-ok">✓ Lien envoyé — vérifie ta boîte (et les spams). Le lien te reconnecte ici automatiquement.</div>';
+  if (error) {
+    $('#login-msg').innerHTML = `<div class="login-err">Erreur : ${esc(error.message)}</div>`;
+  } else {
+    localStorage.setItem('iartcane-login-email', email);
+    $('#login-msg').innerHTML = `<div class="login-ok">✓ Lien envoyé à <b>${esc(email)}</b> — vérifie ta boîte (et les spams).</div>
+      <div class="login-note">💡 Ouvre le lien <b>sur cet appareil, dans ce navigateur</b> : la connexion est mémorisée par appareil. Si tu utilises l'appli installée sur l'écran d'accueil, elle a sa propre connexion — un lien à cliquer une fois de chaque côté.</div>`;
+  }
 });
 $('#login-email').addEventListener('keydown', e => { if (e.key === 'Enter') $('#login-btn').click(); });
-$('#avatar').addEventListener('click', async () => { await sb.auth.signOut(); location.hash = ''; });
 
+// Profil : le nom vit dans le panneau du menu (en-tête épuré — plus d'avatar).
+let profileName = '';
 async function loadProfile() {
   const { data } = await sb.from('profiles').select('display_name').eq('id', user.id).maybeSingle();
-  const name = data?.display_name || user.email || '?';
-  $('#avatar').textContent = name.trim().charAt(0).toUpperCase();
-  $('#avatar').title = `${name} — se déconnecter`;
+  profileName = data?.display_name || user.email || '?';
+  renderMenu();
 }
 
 async function loadHeader() {
@@ -303,10 +323,18 @@ const closeMenu = () => {
   $('#menu-panel').classList.add('hidden');
   $('#menu-btn').setAttribute('aria-expanded', 'false');
 };
-// Rendu dépendant du contexte : switcher multi-locataires en tête (si > 1
-// maison) + entrées filtrées selon le rôle (Maison = owner uniquement).
+// Rendu dépendant du contexte : bloc profil (nom + email + déconnexion) en
+// tête, switcher multi-locataires (si > 1 maison), entrées filtrées selon le
+// rôle (Maison = owner uniquement).
 function renderMenu() {
   const items = MENU_GOUV.filter(e => !e.owner || tenantRole === 'owner');
+  const profil = `
+    <div class="menu-user">
+      <span class="menu-user-name">${esc(profileName || '…')}</span>
+      ${user?.email && user.email !== profileName ? `<span class="menu-user-mail">${esc(user.email)}</span>` : ''}
+    </div>
+    <button class="menu-item" data-action="logout"><span class="menu-ico">⎋</span><span><span class="menu-label">Se déconnecter</span><span class="menu-desc">La collection reste synchronisée — reconnexion par lien magique</span></span></button>
+    <div class="menu-sep"></div>`;
   const switcher = mesTenants.length > 1 ? `
     <div class="menu-sec">Maison</div>
     ${mesTenants.map(t => `<button class="menu-item menu-tenant ${t.id === tenantId ? 'current' : ''}" data-tenant="${esc(t.id)}">
@@ -314,7 +342,7 @@ function renderMenu() {
       <span><span class="menu-label">${esc(t.name || 'Ma collection')}</span><span class="menu-desc">${esc(t.role)}</span></span>
     </button>`).join('')}
     <div class="menu-sep"></div>` : '';
-  $('#menu-panel').innerHTML = switcher + items.map(e =>
+  $('#menu-panel').innerHTML = profil + switcher + items.map(e =>
     `<button class="menu-item" data-hash="${esc(e.hash)}"><span class="menu-ico">${e.icone}</span><span><span class="menu-label">${esc(e.label)}</span><span class="menu-desc">${esc(e.desc)}</span></span></button>`
   ).join('');
 }
@@ -323,7 +351,9 @@ $('#menu-btn').addEventListener('click', e => {
   const opened = !$('#menu-panel').classList.toggle('hidden');
   $('#menu-btn').setAttribute('aria-expanded', String(opened));
 });
-$('#menu-panel').addEventListener('click', e => {
+$('#menu-panel').addEventListener('click', async e => {
+  const out = e.target.closest('[data-action="logout"]');
+  if (out) { closeMenu(); await sb.auth.signOut(); location.hash = ''; return; }
   const t = e.target.closest('[data-tenant]');
   if (t) { closeMenu(); selectTenant(t.dataset.tenant); return; }
   const b = e.target.closest('[data-hash]');
@@ -476,6 +506,7 @@ function syncPrixInputs() {
 function applyListe(l) {
   $('#search').value = l.q ?? '';
   filters.q = norm(l.q ?? '');
+  if (l.q) toolbarEl().classList.add('search-open'); // recherche active → barre dépliée (sinon filtre invisible)
   filters.cats = [...(l.cats ?? [])];
   filters.prixMin = l.prixMin ?? null;
   filters.prixMax = l.prixMax ?? null;
@@ -540,7 +571,7 @@ function cardHtml(o) {
     : '<em>non localisé</em>';
   const meta = [catCanon(o.categorie), o.periode, o.ecole].filter(Boolean).map(esc).join(' · ') || '<em>à identifier</em>';
   const visuel = img?.url
-    ? `<img src="${esc(img.url)}" alt="${esc(o.titre || 'Objet de la collection')}" loading="lazy" style="object-position:${img.fx ?? 50}% ${img.fy ?? 50}%">`
+    ? `<img src="${esc(img.url)}" alt="${esc(o.titre || 'Objet de la collection')}" loading="lazy" decoding="async" style="object-position:${img.fx ?? 50}% ${img.fy ?? 50}%">`
     : catEmoji(o.categorie); // pas de visuel : placeholder emoji (+ badge ▶ si vidéo)
   const badgeVid = img?.vid ? '<span class="card-vid" title="Vidéo" aria-label="Vidéo">▶</span>' : '';
   return `<article class="card" data-oid="${esc(o.id)}" tabindex="0" role="button" aria-label="${esc(o.titre || 'Objet')} — fiche #${esc(o.id)}">
@@ -556,13 +587,18 @@ function cardHtml(o) {
 
 function renderGrid() {
   const body = $('#collection-body');
+  updateFiltersCount();
   const items = collection.filter(objMatches);
   if (!collection.length) {
     body.innerHTML = emptyHtml('Aucun objet pour l’instant', 'Capture ton premier objet — photo + n° d’étiquette, l’IA fait le reste.');
     return;
   }
   if (!items.length) {
-    body.innerHTML = emptyHtml('Rien ne correspond', 'Essaie d’autres mots, un n° d’étiquette, un lieu…');
+    // Aucun résultat : accuser les filtres actifs + sortie en 1 tap (référentiel §4.5)
+    const avecFiltres = filtreActif() || filters.list;
+    body.innerHTML = emptyHtml('Rien ne correspond', 'Essaie d’autres mots, un n° d’étiquette, un lieu…',
+      avecFiltres ? '<button class="btn" id="btn-reset-filtres" style="margin-top:16px">Réinitialiser les filtres</button>' : '');
+    $('#btn-reset-filtres')?.addEventListener('click', () => { filters.list = ''; resetFiltre(); });
     return;
   }
   const g = filters.group;
@@ -606,6 +642,41 @@ for (const [id, key] of [['#prix-min', 'prixMin'], ['#prix-max', 'prixMax']]) {
   });
 }
 $('#group-by').addEventListener('change', e => { filters.group = e.target.value; renderGrid(); });
+
+// Panneau « Filtres » mobile (progressive disclosure, référentiel §4.1) :
+// la pastille compte les filtres actifs cachés dans le panneau (bornes prix,
+// regroupement ≠ défaut) ; recherche et chips, elles, restent visibles.
+function updateFiltersCount() {
+  const n = (filters.prixMin != null) + (filters.prixMax != null) + (filters.group !== 'categorie');
+  const b = $('#filters-count');
+  b.textContent = n || '';
+  b.classList.toggle('hidden', !n);
+  // Loupe repliée : état actif visible si une recherche est en cours (sinon
+  // le filtre serait caché ET invisible — piège de la progressive disclosure)
+  $('#btn-search-toggle').classList.toggle('on', !!filters.q);
+}
+$('#btn-filters').addEventListener('click', () => {
+  const open = $('#filters-panel').classList.toggle('open');
+  $('#btn-filters').setAttribute('aria-expanded', String(open));
+});
+
+// Recherche repliée en loupe (mobile) : tap → la barre se déploie avec
+// autofocus ; « × » efface la recherche en cours puis referme la barre.
+const toolbarEl = () => $('#view-collection .toolbar');
+$('#btn-search-toggle').addEventListener('click', () => {
+  const open = toolbarEl().classList.toggle('search-open');
+  $('#btn-search-toggle').setAttribute('aria-expanded', String(open));
+  if (open) $('#search').focus();
+});
+$('#btn-search-close').addEventListener('click', () => {
+  if ($('#search').value) {
+    $('#search').value = '';
+    filters.q = '';
+    renderLists(); renderGrid();
+  }
+  toolbarEl().classList.remove('search-open');
+  $('#btn-search-toggle').setAttribute('aria-expanded', 'false');
+});
 
 // « 💾 Sauvegarder ce filtre » : l'état courant (recherche + chips + prix)
 // devient une liste nommée, persistée en local pour ce locataire.
@@ -741,7 +812,7 @@ function renderObjet() {
       <div class="thumbs">
         ${currentPhotos.map((p, i) => `
           <div class="thumb ${i === selIdx ? 'sel' : ''}" data-action="thumb" data-idx="${i}" title="${esc(p.kind)}" tabindex="0" role="button" aria-label="Photo ${i + 1} — ${esc(p.kind)}">
-            ${p.url ? (isVideo(p) ? '🎬' : `<img src="${esc(p.thumbUrl || p.url)}" alt="${esc(p.kind)} — ${esc(o.titre || 'objet')}">`) : '📷'}
+            ${p.url ? (isVideo(p) ? '🎬' : `<img src="${esc(p.thumbUrl || p.url)}" alt="${esc(p.kind)} — ${esc(o.titre || 'objet')}" loading="lazy" decoding="async">`) : '📷'}
             <span class="kind">${esc(p.kind)}</span>
           </div>`).join('')}
         <div class="thumb add hide-lecteur" data-action="add-photo" title="Ajouter une photo" tabindex="0" role="button" aria-label="Ajouter une photo">＋</div>
@@ -789,7 +860,7 @@ function renderObjet() {
       ${compsSorted.map(c => {
         const enVente = c.source_type === 'en_vente';
         const img = c.image_url
-          ? `<img src="${esc(c.image_url)}" alt="${esc(c.lot ?? 'lot comparable')}" loading="lazy" onerror="this.style.display='none'">`
+          ? `<img src="${esc(c.image_url)}" alt="${esc(c.lot ?? 'lot comparable')}" loading="lazy" decoding="async" onerror="this.style.display='none'">`
           : '<span class="comp-noimg">🖼️</span>';
         const thumb = c.lien
           ? `<a class="comp-thumb" href="${esc(c.lien)}" target="_blank" rel="noopener" title="Voir le lot">${img}</a>`
@@ -961,7 +1032,7 @@ async function loadSimilar(o) {
   $('#similar-grid').innerHTML = data.map(s => {
     const img = urls[first[s.id]];
     return `<div class="sim-card" data-action="similar" data-oid="${esc(s.id)}" tabindex="0" role="button" aria-label="${esc(s.titre || 'Objet similaire')} — fiche #${esc(s.id)}">
-      <div class="sim-img">${img ? `<img src="${esc(img)}" alt="${esc(s.titre || 'Objet similaire')}" loading="lazy">` : catEmoji(s.categorie)}</div>
+      <div class="sim-img">${img ? `<img src="${esc(img)}" alt="${esc(s.titre || 'Objet similaire')}" loading="lazy" decoding="async">` : catEmoji(s.categorie)}</div>
       <div><div class="sim-t">${esc(s.titre || 'Sans titre')}</div>
       <div class="sim-m">#${esc(s.id)}${s.prix_bas != null ? ` · ${fmtNum(s.prix_bas)}–${fmtNum(s.prix_haut)} €` : ''}</div></div>
     </div>`;
@@ -1306,12 +1377,22 @@ function openLightbox(photo, mode = null) {
 // ─── Mini rendu markdown (fiches IA) ────────────────────────────────────────
 function mdInline(s) {
   return s
+    // Liens AVANT gras/italique ; http(s) uniquement — tout autre schéma
+    // (javascript:…) ne matche pas et reste du texte échappé, inoffensif.
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
     .replace(/`([^`]+)`/g, '<code>$1</code>');
 }
 function mdToHtml(md) {
-  const lines = esc(md ?? '').split('\n');
+  // Assainissement d'entrée : les bios/fiches LLM arrivent souvent avec des
+  // backslash-échappements (\_ \* \#), des espaces doubles ou des espaces
+  // avant la ponctuation — on nettoie avant l'échappement HTML.
+  const clean = String(md ?? '')
+    .replace(/\\([_*#`[\]])/g, '$1')
+    .replace(/ {2,}/g, ' ')
+    .replace(/ +([,.;:!?»])/g, '$1');
+  const lines = esc(clean).split('\n');
   const out = [];
   let list = null; // 'ul' | 'ol'
   const closeList = () => { if (list) { out.push(`</${list}>`); list = null; } };
@@ -1377,12 +1458,21 @@ async function loadArtistes() {
   }
   const nbObjets = nom => collection.filter(o => o.auteur === nom).length;
   body.innerHTML = `<div class="grid">${data.map(a => {
-    const extrait = String(a.bio_md ?? '').replace(/[#*`|>_-]/g, ' ').replace(/\s+/g, ' ').trim();
+    // Extrait texte brut : on démarque le markdown SANS toucher aux tirets
+    // intra-mots (« hauts-de-Seine ») — seuls les tirets de puce en début de
+    // ligne sont supprimés. Coupe propre à ~220 car. (pas de mot tronqué).
+    const extrait = String(a.bio_md ?? '')
+      .replace(/^\s*#{1,4}\s+/gm, '')
+      .replace(/^\s*[-*]\s+/gm, '')
+      .replace(/[*`>_]/g, ' ')
+      .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+      .replace(/\s+/g, ' ').trim();
+    const court = extrait.length > 220 ? extrait.slice(0, 220).replace(/\s+\S*$/, '') + '…' : extrait;
     const n = nbObjets(a.nom);
     return `<article class="card" data-nom="${esc(a.nom)}">
       <div class="card-body">
         <div class="card-title">🎨 ${esc(a.nom)}</div>
-        <div class="card-meta art-extrait">${esc(extrait.slice(0, 220))}${extrait.length > 220 ? '…' : ''}</div>
+        <div class="card-meta art-extrait">${esc(court)}</div>
         <div class="card-foot"><span class="price none">${n} objet${n > 1 ? 's' : ''} lié${n > 1 ? 's' : ''}</span><span class="conf-label">maj ${fmtDate(a.updated_at)}</span></div>
       </div>
     </article>`;
@@ -1401,23 +1491,43 @@ async function loadArtiste(nom) {
   if (error) { toast(error.message, true); body.innerHTML = ''; return; }
   if (collection.length && !Object.keys(photoMap).length) await loadPhotoMap();
   const objets = collection.filter(o => o.auteur === nom);
+  // Galerie « œuvres » : miniatures (thumb_path via photoMap) des objets liés,
+  // en rangée scrollable sous l'en-tête — la reconnaissance visuelle d'abord.
+  const oeuvres = objets.filter(o => photoMap[o.id]?.url);
+  const galerie = oeuvres.length ? `
+    <div class="art-gal">${oeuvres.map(o => {
+      const img = photoMap[o.id];
+      return `<button class="art-gal-item" data-oid="${esc(o.id)}" title="${esc(o.titre || 'Objet')} — fiche #${esc(o.id)}" aria-label="${esc(o.titre || 'Objet')} — fiche #${esc(o.id)}">
+        <img src="${esc(img.url)}" alt="${esc(o.titre || 'Œuvre de la collection')}" loading="lazy" decoding="async" style="object-position:${img.fx ?? 50}% ${img.fy ?? 50}%">
+      </button>`;
+    }).join('')}</div>` : '';
   const bioPanel = a ? `
     <details class="panel panel-pad acc" open>
       <summary class="sec-title">Biographie</summary>
       <div class="md-body">${mdToHtml(a.bio_md ?? '')}</div>
-      <div class="value-sub" style="margin-top:12px">Fiche créée le ${fmtDate(a.created_at)} · mise à jour le ${fmtDate(a.updated_at)}</div>
     </details>` : `
     <div class="panel panel-pad">
       <div class="sec-title">Biographie</div>
       <div class="value-sub">Pas encore de fiche artiste — le cron la crée lors des passes d'identification.</div>
     </div>`;
+  // En-tête structuré : nom + badges méta (objets liés, fraîcheur de la fiche)
   body.innerHTML = `
-    <h1 class="obj-title" style="margin-bottom:18px">🎨 ${esc(a?.nom ?? nom)}</h1>
+    <div class="art-head">
+      <h1 class="obj-title">🎨 ${esc(a?.nom ?? nom)}</h1>
+      <div class="art-badges">
+        <span class="badge-soft">${objets.length} objet${objets.length > 1 ? 's' : ''} lié${objets.length > 1 ? 's' : ''}</span>
+        ${a ? `<span class="badge-soft">Fiche maj le ${fmtDate(a.updated_at)}</span>` : ''}
+      </div>
+    </div>
+    ${galerie}
     ${bioPanel}
-    <div class="sec-title" style="margin-top:26px">Objets de la collection <span style="font-family:var(--mono);font-size:13px;color:var(--ink-3);font-weight:400">${objets.length}</span></div>
+    <div class="sec-title" style="margin-top:26px">Objets de la collection <span style="font-family:var(--mono);font-size:.8125rem;color:var(--ink-3);font-weight:400">${objets.length}</span></div>
     ${objets.length
       ? `<div class="grid">${objets.map(cardHtml).join('')}</div>`
       : '<div class="value-sub">Aucun objet rattaché à cet artiste pour l\'instant.</div>'}`;
+  $$('.art-gal-item', body).forEach(b => b.addEventListener('click', () => {
+    location.hash = '#/objet/' + encodeURIComponent(b.dataset.oid);
+  }));
   $$('.card', body).forEach(c => {
     const go = () => { location.hash = '#/objet/' + encodeURIComponent(c.dataset.oid); };
     c.addEventListener('click', go);
