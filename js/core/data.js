@@ -46,14 +46,38 @@ export function logEvent(action, detail = {}, oid = S.currentObjet?.id) {
   }).then(({ error }) => { if (error) console.warn('logEvent:', error.message); });
 }
 
-// Met l'objet en file d'analyse (statut + job). L'index unique partiel
-// jobs_un_en_attente_idx (migration 0011) renvoie 23505 si un job est déjà en
-// file pour cet objet — c'est le comportement voulu, on l'ignore.
-export async function queueAnalyse(oid, type = 'analyse') {
-  await sb.from('objets').update({ statut: 'en_file' }).eq('owner_id', S.tenantId).eq('id', oid);
-  const { error } = await sb.from('jobs').insert({ owner_id: S.tenantId, objet_id: oid, type });
-  if (error && error.code !== '23505') toast(error.message, true);
+// ─── File d'analyse (règle métier, partagée fiche objet + écran Activité) ────
+// Enfile un job par objet en évitant les doublons : on lit d'abord les jobs
+// en_attente (index unique partiel jobs_un_en_attente_idx, migration 0011) et on
+// n'insère que les manquants. Insert par lot ; si un 23505 survient quand même
+// (course avec le cron), repli un par un en le tolérant. Les objets réellement
+// enfilés passent au statut « en_file ».
+// @returns {Promise<number>} nombre d'objets effectivement mis en file
+export async function enqueueJobs(oids, type = 'analyse') {
+  if (!oids.length) return 0;
+  const { data: pending, error: e0 } = await sb.from('jobs').select('objet_id')
+    .eq('owner_id', S.tenantId).eq('statut', 'en_attente');
+  if (e0) { toast(e0.message, true); return 0; }
+  const busy = new Set((pending ?? []).map(j => j.objet_id));
+  const todo = oids.filter(id => !busy.has(id));
+  if (!todo.length) return 0;
+  let ok = todo;
+  const { error } = await sb.from('jobs').insert(todo.map(objet_id => ({ owner_id: S.tenantId, objet_id, type })));
+  if (error) {
+    if (error.code !== '23505') { toast(error.message, true); return 0; }
+    ok = [];
+    for (const objet_id of todo) {
+      const { error: e } = await sb.from('jobs').insert({ owner_id: S.tenantId, objet_id, type });
+      if (!e) ok.push(objet_id);
+      else if (e.code !== '23505') toast(e.message, true);
+    }
+  }
+  if (ok.length) await sb.from('objets').update({ statut: 'en_file' }).eq('owner_id', S.tenantId).in('id', ok);
+  return ok.length;
 }
+
+// Mise en file d'UN objet (relance depuis la fiche) — même règle de dédoublonnage.
+export const queueAnalyse = (oid, type = 'analyse') => enqueueJobs([oid], type);
 
 // Garantit le cache collection (comptages objets par artiste, mini-cartes du
 // détail, digest Activité) sans ré-afficher la vue collection.
@@ -93,28 +117,56 @@ export async function makeThumbBlob(blob) {
   } catch { return null; }
 }
 
+// Envoie UN fichier dans le bucket + sa miniature. Primitive partagée par les
+// photos d'objet et les photos de fiche artiste (deux séquences identiques
+// auparavant — factorisées 2026-08-25).
+// @param dossier  préfixe de chemin dans le bucket (sans slash final)
+// @returns { path, thumbPath, video } ou null si l'envoi du fichier a échoué
+export async function uploadImageWithThumb(dossier, file) {
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+  const base = `${dossier}/${crypto.randomUUID()}`;
+  const path = `${base}.${ext}`;
+  const { error } = await sb.storage.from('photos').upload(path, file, { contentType: file.type || undefined });
+  if (error) { toast(`Upload « ${file.name} » : ${error.message}`, true); return null; }
+
+  const video = /^video\//.test(file.type);
+  let thumbPath = null;
+  if (!video) {
+    const tb = await makeThumbBlob(file);
+    if (tb) {
+      thumbPath = `${base}.thumb.jpg`;
+      // Miniature ratée = pas bloquant : l'affichage retombe sur l'image pleine.
+      const { error: et } = await sb.storage.from('photos').upload(thumbPath, tb, { contentType: 'image/jpeg' });
+      if (et) thumbPath = null;
+    }
+  }
+  return { path, thumbPath, video };
+}
+
 export async function uploadPhotosFor(oid, files, firstIsFace = false) {
   let done = 0;
   let first = firstIsFace;
   for (const f of files) {
-    const ext = (f.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
-    const path = `${S.tenantId}/${oid}/${crypto.randomUUID()}.${ext}`;
-    const { error } = await sb.storage.from('photos').upload(path, f, { contentType: f.type || undefined });
-    if (error) { toast(`Upload « ${f.name} » : ${error.message}`, true); continue; }
-    const video = /^video\//.test(f.type);
-    let thumbPath = null;
-    if (!video) {
-      const tb = await makeThumbBlob(f);
-      if (tb) {
-        thumbPath = path.replace(/\.[a-z0-9]+$/i, '') + '.thumb.jpg';
-        const { error: et } = await sb.storage.from('photos').upload(thumbPath, tb, { contentType: 'image/jpeg' });
-        if (et) thumbPath = null;
-      }
-    }
-    const kind = video ? 'video' : (first ? 'face' : 'autre');
+    const up = await uploadImageWithThumb(`${S.tenantId}/${oid}`, f);
+    if (!up) continue;
+    const kind = up.video ? 'video' : (first ? 'face' : 'autre');
     first = false;
-    const { error: e2 } = await sb.from('photos').insert({ owner_id: S.tenantId, objet_id: oid, storage_path: path, thumb_path: thumbPath, kind, source: 'site' });
-    if (e2) toast(e2.message, true); else done++;
+    const { error } = await sb.from('photos').insert({
+      owner_id: S.tenantId, objet_id: oid,
+      storage_path: up.path, thumb_path: up.thumbPath, kind, source: 'site',
+    });
+    if (error) toast(error.message, true); else done++;
   }
   return done;
+}
+
+// Supprime une photo : ligne d'abord (la référence prime), puis les fichiers du
+// bucket (policy storage delete : migration 0007). Partagé fiche objet / fiche
+// artiste — seules la table et les chemins changent.
+// @returns true si la ligne a bien été supprimée
+export async function deleteStoredPhoto(table, id, paths) {
+  const { error } = await sb.from(table).delete().eq('owner_id', S.tenantId).eq('id', id);
+  if (error) { toast(error.message, true); return false; }
+  await sb.storage.from('photos').remove(paths.filter(Boolean));
+  return true;
 }

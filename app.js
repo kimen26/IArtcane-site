@@ -238,7 +238,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu();
 // `write: true` → écran réservé aux rôles qui écrivent (lecteur redirigé).
 const ROUTES = [
   { re: /^#\/capture/,            tab: 'capture',    view: 'capture',    write: true, load: () => import('./js/views/capture.js') },
-  { re: /^#\/objet\/([^/]+)$/,    tab: 'collection', view: 'objet',      load: () => import('./js/views/objet.js') },
+  { re: /^#\/objet\/([^/]+)$/,    tab: 'collection', view: 'objet',      load: () => import('./js/views/objet/index.js') },
   { re: /^#\/maison/,             view: 'maison',    write: true,        load: () => import('./js/views/maison.js') },
   { re: /^#\/activite/,           view: 'activite',  load: () => import('./js/views/activite.js') },
   { re: /^#\/artiste\/([^/]+)$/,  view: 'artiste',   load: () => import('./js/views/artistes.js'), fn: 'mountDetail' },
@@ -253,16 +253,20 @@ async function route() {
   closeMenu();
   const h = location.hash || '#/';
   const r = ROUTES.find(x => x.re.test(h));
+  // Le module est chargé AVANT d'afficher l'écran : chaque vue attend son propre
+  // CSS (core/css.js) au chargement du module, donc on n'affiche jamais une vue
+  // nue le temps que la feuille arrive (D-041).
   if (!r) {
+    const m = await import('./js/views/collection.js');
     setTab('collection'); show('collection');
-    (await import('./js/views/collection.js')).mount();
+    m.mount();
     return;
   }
   // Gardes d'écriture : capture et maison interdites au lecteur (RLS 0012, UI masquée)
   if (r.write && !canWrite()) { location.replace('#/'); return; }
+  const m = await r.load();
   setTab(r.tab ?? null); // écrans gouvernance : pas des onglets → aucun tab actif
   show(r.view);
-  const m = await r.load();
   const params = (h.match(r.re) ?? []).slice(1).map(decodeURIComponent);
   m[r.fn ?? 'mount'](...params);
 }

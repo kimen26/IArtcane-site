@@ -6,7 +6,13 @@
 import { $, $$, esc, toast, emptyHtml } from '../core/dom.js';
 import { S, canWrite } from '../core/state.js';
 import { auteurMatch, cardHtml, fmtDate, mdToHtml } from '../core/format.js';
-import { sb, signPaths, logEvent, makeThumbBlob, ensureCollection, loadPhotoMap } from '../core/data.js';
+import { sb, signPaths, logEvent, uploadImageWithThumb, deleteStoredPhoto, ensureCollection, loadPhotoMap } from '../core/data.js';
+import { openViewer } from '../core/lightbox.js';
+import { loadViewCss } from '../core/css.js';
+
+// CSS de la vue chargé par la vue (D-041) : aucun <link> dans index.html,
+// donc aucun fichier transverse touché par un chantier sur cet écran.
+await loadViewCss('artistes');
 
 let currentArtisteNom = null;
 let currentArtistePhotos = [];
@@ -144,23 +150,13 @@ async function uploadArtistePhoto(file) {
     const { error: ec } = await sb.from('artistes').insert({ owner_id: S.tenantId, nom, bio_md: '' });
     if (ec) { toast(`Création fiche artiste : ${ec.message}`, true); return; }
   }
-  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
-  const id = crypto.randomUUID();
-  const path = `${S.tenantId}/artistes/${id}.${ext}`;
-  const { error: e1 } = await sb.storage.from('photos').upload(path, file, { contentType: file.type || undefined });
-  if (e1) { toast(`Upload : ${e1.message}`, true); return; }
-  const tb = await makeThumbBlob(file);
-  let thumbPath = null;
-  if (tb) {
-    thumbPath = `${S.tenantId}/artistes/${id}.thumb.jpg`;
-    const { error: et } = await sb.storage.from('photos').upload(thumbPath, tb, { contentType: 'image/jpeg' });
-    if (et) thumbPath = null;
-  }
+  const up = await uploadImageWithThumb(`${S.tenantId}/artistes`, file);
+  if (!up) return;
   const { error: e2 } = await sb.from('artistes_photos').insert({
     owner_id: S.tenantId,
     artiste_nom: nom,
-    storage_path: path,
-    thumb_path: thumbPath,
+    storage_path: up.path,
+    thumb_path: up.thumbPath,
     kind: 'autre',
   });
   if (e2) { toast(e2.message, true); return; }
@@ -174,10 +170,7 @@ async function deleteArtistePhoto(pid) {
   const p = currentArtistePhotos.find(x => String(x.id) === String(pid));
   if (!p) return;
   if (!confirm('Supprimer cette photo de la fiche artiste ?')) return;
-  const { error } = await sb.from('artistes_photos').delete()
-    .eq('owner_id', S.tenantId).eq('id', pid);
-  if (error) { toast(error.message, true); return; }
-  await sb.storage.from('photos').remove([p.storage_path, p.thumb_path].filter(Boolean));
+  if (!await deleteStoredPhoto('artistes_photos', pid, [p.storage_path, p.thumb_path])) return;
   logEvent('artiste_photo_supprimee', { artiste: currentArtisteNom }, null);
   toast('Photo supprimée');
   await loadArtiste(currentArtisteNom);
@@ -187,13 +180,7 @@ async function deleteArtistePhoto(pid) {
 function openArtistePhotoLightbox(pid) {
   const p = currentArtistePhotos.find(x => String(x.id) === String(pid));
   if (!p?.url) return;
-  const lb = document.createElement('div');
-  lb.className = 'lightbox';
-  lb.innerHTML = `<img src="${esc(p.url)}" alt="${esc(p.kind)}" loading="eager">`;
-  const close = () => { lb.remove(); document.body.classList.remove('lb-open'); };
-  lb.addEventListener('click', close);
-  document.body.classList.add('lb-open');
-  document.body.append(lb);
+  openViewer({ src: p.url, alt: `${p.kind} — ${currentArtisteNom ?? 'artiste'}` });
 }
 
 $('#artiste-body').addEventListener('click', async e => {

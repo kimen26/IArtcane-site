@@ -6,7 +6,12 @@ import { $, $$, esc, toast } from '../core/dom.js';
 import { S, canWrite } from '../core/state.js';
 import { plur } from '../core/format.js';
 import { sb, logEvent, queueAnalyse, uploadPhotosFor } from '../core/data.js';
-import { openCamera } from './camera.js';
+import { openCamera } from '../core/camera.js';
+import { loadViewCss } from '../core/css.js';
+
+// CSS de la vue chargé par la vue (D-041) : aucun <link> dans index.html,
+// donc aucun fichier transverse touché par un chantier sur cet écran.
+await loadViewCss('capture');
 
 export function mount() {
   initCapture();

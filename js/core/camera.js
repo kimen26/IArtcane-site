@@ -1,7 +1,8 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// IArtcane — views/camera.js : modale caméra en direct (getUserMedia), module
-// partagé entre la vue Capturer (nouvel objet → capFiles) et la fiche objet
-// (upload direct sur l'objet ouvert).
+// IArtcane — core/camera.js : modale caméra en direct (getUserMedia), brique
+// TRANSVERSE partagée par la vue Capturer (nouvel objet → capFiles) et la fiche
+// objet (upload direct sur l'objet ouvert). Vit dans core/ et non dans views/ :
+// deux vues en dépendent, et « une vue n'importe jamais une autre vue » (D-039).
 // L'input capture="environment" passe la main à l'app photo du téléphone : sur
 // Android le navigateur est souvent tué en arrière-plan pendant le cliché → la
 // page se recharge et la photo se perd (« rien n'arrive »). Le flux getUserMedia
@@ -12,9 +13,9 @@
 // addFiles([file]) ; openCamera('objet', { onClose }) — upload direct et
 // onClose(nbUploadés) à la fermeture (la fiche se recharge / relance l'analyse).
 // ═══════════════════════════════════════════════════════════════════════════
-import { $, toast } from '../core/dom.js';
-import { S } from '../core/state.js';
-import { logEvent, uploadPhotosFor } from '../core/data.js';
+import { $, toast } from './dom.js';
+import { S } from './state.js';
+import { logEvent, uploadPhotosFor } from './data.js';
 
 let camStream = null;
 let camTarget = 'capture'; // 'capture' → addFiles (nouvel objet) · 'objet' → upload direct sur S.currentObjet

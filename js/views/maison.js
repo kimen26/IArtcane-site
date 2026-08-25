@@ -7,6 +7,11 @@
 import { $, $$, esc, toast } from '../core/dom.js';
 import { S } from '../core/state.js';
 import { sb } from '../core/data.js';
+import { loadViewCss } from '../core/css.js';
+
+// CSS de la vue chargé par la vue (D-041) : aucun <link> dans index.html,
+// donc aucun fichier transverse touché par un chantier sur cet écran.
+await loadViewCss('maison');
 
 export function mount() {
   loadMaison();

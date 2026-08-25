@@ -4,37 +4,15 @@
 import { $, esc, toast, emptyHtml } from '../core/dom.js';
 import { S, canWrite } from '../core/state.js';
 import { plur, capFirst, ACT_LABELS, evDetailBits } from '../core/format.js';
-import { sb, ensureCollection } from '../core/data.js';
+import { sb, ensureCollection, enqueueJobs } from '../core/data.js';
+import { loadViewCss } from '../core/css.js';
+
+// CSS de la vue chargé par la vue (D-041) : aucun <link> dans index.html,
+// donc aucun fichier transverse touché par un chantier sur cet écran.
+await loadViewCss('activite');
 
 export function mount() {
   loadActivite();
-}
-
-// Enfile un job par objet en évitant les doublons : on lit d'abord les jobs
-// en_attente (index unique « un seul job en_attente par objet », migration 0011)
-// et on n'insère que les manquants. Insert par lot ; si un 23505 survient quand
-// même (course avec le cron), repli un par un en le tolérant. Les objets
-// effectivement enfilés passent en statut « en_file ».
-async function enqueueJobs(oids, type) {
-  const { data: pending, error: e0 } = await sb.from('jobs').select('objet_id')
-    .eq('owner_id', S.tenantId).eq('statut', 'en_attente');
-  if (e0) { toast(e0.message, true); return 0; }
-  const busy = new Set((pending ?? []).map(j => j.objet_id));
-  const todo = oids.filter(id => !busy.has(id));
-  if (!todo.length) return 0;
-  let ok = todo;
-  const { error } = await sb.from('jobs').insert(todo.map(objet_id => ({ owner_id: S.tenantId, objet_id, type })));
-  if (error) {
-    if (error.code !== '23505') { toast(error.message, true); return 0; }
-    ok = [];
-    for (const objet_id of todo) {
-      const { error: e } = await sb.from('jobs').insert({ owner_id: S.tenantId, objet_id, type });
-      if (!e) ok.push(objet_id);
-      else if (e.code !== '23505') toast(e.message, true);
-    }
-  }
-  if (ok.length) await sb.from('objets').update({ statut: 'en_file' }).eq('owner_id', S.tenantId).in('id', ok);
-  return ok.length;
 }
 
 async function majCatalogue() {

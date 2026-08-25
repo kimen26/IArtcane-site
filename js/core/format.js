@@ -3,25 +3,17 @@
 // Présentation pure (+ cardHtml, composant carte partagé collection/artistes).
 // ═══════════════════════════════════════════════════════════════════════════
 import { esc, norm } from './dom.js';
+import { VARIANTES } from './taxonomie.js';
 import { S } from './state.js';
 
-// Taxonomie canonique v1 (Q15) — la même liste est imposée aux prompts IA
-// (Edge Function identify-photo + runbook cron). catCanon() rabat les variantes
-// du LLM (« ceramiques », « Céramique »…) sur la forme canonique d'affichage.
-const CATS_CANON = {
-  tableau: 'Tableau', peinture: 'Tableau', gravure: 'Gravure / estampe', estampe: 'Gravure / estampe',
-  dessin: 'Dessin', photographie: 'Photographie', photo: 'Photographie', sculpture: 'Sculpture',
-  ceramique: 'Céramique', verrerie: 'Verrerie', verre: 'Verrerie', mobilier: 'Mobilier',
-  montre: 'Montre / horlogerie', horlogerie: 'Montre / horlogerie', bijou: 'Bijou',
-  argenterie: 'Argenterie / métal', metal: 'Argenterie / métal', luminaire: 'Luminaire',
-  textile: 'Textile / tapisserie', tapisserie: 'Textile / tapisserie', livre: 'Livre / document',
-  monnaie: 'Monnaie / médaille', medaille: 'Monnaie / médaille', instrument: 'Instrument',
-  jouet: 'Jouet', curiosite: 'Curiosité', 'art asiatique': 'Art asiatique', 'art tribal': 'Art tribal', autre: 'Autre',
-};
+// Taxonomie canonique v1 (Q15, D-022) — la table de variantes est GÉNÉRÉE
+// depuis prompts/taxonomie.json (source unique, D-041) par infra/build-site-data.py.
+// catCanon() rabat les formes rendues par les LLM (« ceramiques », « Céramique »…)
+// sur la forme canonique d'affichage.
 export function catCanon(c) {
   const k = norm(c).trim().replace(/s$/, '');
   if (!k) return c;
-  return CATS_CANON[k] ?? (String(c).trim().charAt(0).toUpperCase() + String(c).trim().slice(1));
+  return VARIANTES[k] ?? (String(c).trim().charAt(0).toUpperCase() + String(c).trim().slice(1));
 }
 
 // Rattachement objet ↔ fiche artiste : l'auteur saisi par l'IA n'est presque
@@ -39,14 +31,15 @@ export const auteurMatch = (auteur, nom) => {
 export const fmtNum = n => Number(n).toLocaleString('fr-FR');
 export const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('fr-FR') : '—';
 export const plur = (n, s, p) => `${n} ${n > 1 ? p : s}`;
-export const pinSvg = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 21s-7-6.1-7-11a7 7 0 1 1 14 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>';
+// Internes à ce module (consommés par cardHtml ci-dessous) : pas d'API publique.
+const pinSvg = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 21s-7-6.1-7-11a7 7 0 1 1 14 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>';
 export const infoSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg>';
 
 export const STATUTS = {
   capture: 'Capturé', en_file: 'En file', analyse: 'Analyse…', fiche_prete: 'Fiche prête',
   a_completer: 'À compléter', validee: 'Validée', contestee: 'Contestée',
 };
-export const ST_COLOR = {
+const ST_COLOR = {
   capture: '#9A6B1A', en_file: '#2456E0', analyse: '#2456E0', fiche_prete: '#6D4AC8',
   a_completer: '#9A6B1A', validee: '#1E7A46', contestee: '#B3261E',
 };
@@ -66,7 +59,7 @@ export function catEmoji(cat) {
   if (/verre|verrerie|cristal/.test(c)) return '🥃';
   return '🏺';
 }
-export const prixHtml = o => (o.prix_bas != null && o.prix_haut != null)
+const prixHtml = o => (o.prix_bas != null && o.prix_haut != null)
   ? `<span class="price">${fmtNum(o.prix_bas)}–${fmtNum(o.prix_haut)} €</span>`
   : '<span class="price none">à estimer</span>';
 export const isVideo = p => p.kind === 'video' || /\.(mp4|mov|webm)$/i.test(p.storage_path || '');

@@ -1,26 +1,31 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// IArtcane — views/objet.js : fiche produit (galerie, identification, comps,
-// historique, édition, lightbox centrage/recadrage) — territoire autonome (D-039)
+// IArtcane — views/objet/index.js : fiche produit — chargement, rendu et
+// délégation des actions. Point d'entrée de la vue (`mount(id)`), appelé par le
+// routeur de app.js.
+//
+// Territoire découpé en trois (D-041, la fiche dépassait 650 lignes et était le
+// point de conflit n°1 entre chantiers parallèles) :
+//   • index.js   ce fichier — chargement, rendu, actions, localisation, similaires
+//   • photos.js  galerie : suppression, caméra, lightbox (zoom / centrage / recadrage)
+//   • edition.js mode « Corriger » : champs éditables et enregistrement
+//   • etat.js    état partagé des trois (objet O) + hooks de rechargement/rendu
 // ═══════════════════════════════════════════════════════════════════════════
-import { $, esc, norm, toast, emptyHtml } from '../core/dom.js';
-import { S, canWrite } from '../core/state.js';
+import { $, esc, norm, toast, emptyHtml } from '../../core/dom.js';
+import { S, canWrite } from '../../core/state.js';
 import {
   fmtNum, fmtDate, confMarks, confHtml, catEmoji, isVideo, infoSvg,
   STATUTS, ACT_LABELS, evDetailBits, mdToHtml,
-} from '../core/format.js';
-import { sb, signPaths, logEvent, queueAnalyse, makeThumbBlob, uploadPhotosFor } from '../core/data.js';
-import { openCamera } from './camera.js';
+} from '../../core/format.js';
+import { sb, signPaths, logEvent, queueAnalyse, uploadPhotosFor } from '../../core/data.js';
+import { openCamera } from '../../core/camera.js';
+import { loadViewCss } from '../../core/css.js';
+import { O, selPhoto, hooks } from './etat.js';
+import { deletePhoto, onCamClose, openLightbox } from './photos.js';
+import { CHAMPS_EDIT, dlRow, saveCorrections } from './edition.js';
 
-// Champs éditables en mode « Corriger » (chaque diff → événement 'correction' = leçon PMO)
-const CHAMPS_EDIT = [
-  ['titre', 'Titre'], ['categorie', 'Catégorie'], ['technique', 'Technique'],
-  ['periode', 'Période'], ['ecole', 'Région / école'], ['auteur', 'Auteur'],
-  ['marques', 'Marques / poinçons'], ['etat', 'État'],
-  ['prix_bas', 'Prix bas (€)'], ['prix_haut', 'Prix haut (€)'],
-];
-
-let editing = false;
-let currentComps = [], currentFiche = null, currentPhotos = [], currentEvents = [], currentArtiste = null;
+// CSS de la vue chargé par la vue (D-041) : aucun <link> dans index.html,
+// donc aucun fichier transverse touché par un chantier sur cet écran.
+await loadViewCss('objet');
 
 export function mount(id) {
   loadObjet(id);
@@ -35,7 +40,7 @@ async function loadObjet(id) {
     return;
   }
   S.currentObjet = o;
-  editing = false;
+  O.editing = false;
   const [{ data: photos }, { data: comps }, { data: fiches }, { data: events }, { data: artiste }] = await Promise.all([
     sb.from('photos').select('*').eq('owner_id', S.tenantId).eq('objet_id', id).order('created_at'),
     sb.from('comparables').select('*').eq('owner_id', S.tenantId).eq('objet_id', id).order('date_vente', { ascending: false, nullsFirst: false }),
@@ -45,26 +50,13 @@ async function loadObjet(id) {
     o.auteur ? sb.from('artistes').select('*').eq('owner_id', S.tenantId).eq('nom', o.auteur).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   const urlByPath = await signPaths((photos ?? []).flatMap(p => [p.storage_path, p.thumb_path].filter(Boolean)));
-  currentPhotos = (photos ?? []).map(p => ({ ...p, url: urlByPath[p.storage_path], thumbUrl: urlByPath[p.thumb_path] ?? urlByPath[p.storage_path] }));
-  currentComps = comps ?? [];
-  currentFiche = (fiches ?? [])[0] ?? null;
-  currentEvents = events ?? [];
-  currentArtiste = artiste ?? null;
+  O.photos = (photos ?? []).map(p => ({ ...p, url: urlByPath[p.storage_path], thumbUrl: urlByPath[p.thumb_path] ?? urlByPath[p.storage_path] }));
+  O.comps = comps ?? [];
+  O.fiche = (fiches ?? [])[0] ?? null;
+  O.events = events ?? [];
+  O.artiste = artiste ?? null;
   renderObjet();
   loadSimilar(o);
-}
-
-// Suppression d'une photo (fichier storage + ligne) — policy storage delete : migration 0007.
-async function deletePhoto() {
-  const sel = selPhoto();
-  if (!sel || !S.currentObjet) return;
-  if (!confirm('Supprimer cette photo ? (fichier + référence, définitif)')) return;
-  await sb.storage.from('photos').remove([sel.storage_path]); // tolérant : la ligne prime
-  const { error } = await sb.from('photos').delete().eq('owner_id', S.tenantId).eq('id', sel.id);
-  if (error) { toast(error.message, true); return; }
-  logEvent('photo_supprimee', { photo: sel.storage_path });
-  toast('Photo supprimée');
-  await loadObjet(S.currentObjet.id);
 }
 
 // Suppression d'un objet : fichiers storage puis ligne `objets` — les FK
@@ -72,8 +64,8 @@ async function deletePhoto() {
 async function deleteObjet() {
   const o = S.currentObjet;
   if (!o) return;
-  if (!confirm(`Supprimer l'objet #${o.id} ?\n${currentPhotos.length} photo(s), fiche, comparables et historique partent avec — définitif.`)) return;
-  const paths = currentPhotos.map(p => p.storage_path);
+  if (!confirm(`Supprimer l'objet #${o.id} ?\n${O.photos.length} photo(s), fiche, comparables et historique partent avec — définitif.`)) return;
+  const paths = O.photos.map(p => p.storage_path);
   if (paths.length) await sb.storage.from('photos').remove(paths);
   const { error } = await sb.from('objets').delete().eq('owner_id', S.tenantId).eq('id', o.id);
   if (error) { toast(error.message, true); return; }
@@ -83,7 +75,7 @@ async function deleteObjet() {
 
 async function deleteComp(cid) {
   if (!S.currentObjet || !canWrite()) return;
-  const c = currentComps.find(x => String(x.id) === String(cid));
+  const c = O.comps.find(x => String(x.id) === String(cid));
   if (!c) return;
   if (!confirm('Retirer ce comparable de l’estimation ?')) return;
   const { error } = await sb.from('comparables').delete().eq('owner_id', S.tenantId).eq('id', cid);
@@ -93,21 +85,13 @@ async function deleteComp(cid) {
   await loadObjet(S.currentObjet.id);
 }
 
-function dlRow(label, val, editField, type = 'text') {
-  const v = (val ?? '') === '' ? null : String(val);
-  if (editing && editField) {
-    return `<dt>${label}</dt><dd><input id="edit-${editField}" type="${type}" value="${esc(v ?? '')}"></dd>`;
-  }
-  return `<dt>${label}</dt><dd>${v ? esc(v) : '<span class="miss">—</span>'}</dd>`;
-}
-
 function renderObjet() {
   const o = S.currentObjet;
   const marks = confMarks(o);
-  const selIdx = Math.max(0, currentPhotos.findIndex(p => p.sel));
-  const sel = currentPhotos[selIdx];
+  const selIdx = Math.max(0, O.photos.findIndex(p => p.sel));
+  const sel = O.photos[selIdx];
 
-  const gallery = currentPhotos.length ? `
+  const gallery = O.photos.length ? `
     <div class="panel">
       <div class="gallery-main" data-action="zoom" title="Agrandir">
         ${sel && sel.url ? (isVideo(sel) ? `<video src="${esc(sel.url)}" controls></video>` : `<img src="${esc(sel.url)}" alt="photo de l'objet">`) : catEmoji(o.categorie)}
@@ -116,7 +100,7 @@ function renderObjet() {
         ${sel && sel.url ? `<button class="crop-btn del-photo hide-lecteur" data-action="del-photo" title="Supprimer cette photo">🗑</button>` : ''}
       </div>
       <div class="thumbs">
-        ${currentPhotos.map((p, i) => `
+        ${O.photos.map((p, i) => `
           <div class="thumb ${i === selIdx ? 'sel' : ''}" data-action="thumb" data-idx="${i}" title="${esc(p.kind)}" tabindex="0" role="button" aria-label="Photo ${i + 1} — ${esc(p.kind)}">
             ${p.url ? (isVideo(p) ? '🎬' : `<img src="${esc(p.thumbUrl || p.url)}" alt="${esc(p.kind)} — ${esc(o.titre || 'objet')}" loading="lazy" decoding="async">`) : '📷'}
             <span class="kind">${esc(p.kind)}</span>
@@ -132,8 +116,8 @@ function renderObjet() {
   const rebounds = [o.categorie, o.periode, o.ecole].filter(Boolean)
     .map(v => `<button class="rebound" data-action="rebound" data-val="${esc(v)}">${esc(v)}</button>`).join('');
 
-  const identification = editing
-    ? `<dl class="dl editing">
+  const identification = O.editing
+    ? `<dl class="dl O.editing">
         ${CHAMPS_EDIT.map(([f, label]) => dlRow(label, o[f], f, f.startsWith('prix_') ? 'number' : 'text')).join('')}
         <dt>Description</dt><dd><input id="edit-description" value="${esc(o.description ?? '')}"></dd>
        </dl>`
@@ -150,7 +134,7 @@ function renderObjet() {
 
   // Règle d'or : seules les adjudications nourrissent la fourchette — les
   // annonces « en vente » sont du contexte et sont affichées à part (badge ambre).
-  const nVendus = currentComps.filter(c => c.source_type !== 'en_vente').length;
+  const nVendus = O.comps.filter(c => c.source_type !== 'en_vente').length;
   const valeur = (o.prix_bas != null && o.prix_haut != null) ? `
       <div class="value-big">${fmtNum(o.prix_bas)}–${fmtNum(o.prix_haut)} €</div>
       <div class="value-sub">fourchette issue de ${nVendus} adjudication${nVendus > 1 ? 's' : ''} réelle${nVendus > 1 ? 's' : ''} — jamais d'estimation « de mémoire »</div>`
@@ -159,7 +143,7 @@ function renderObjet() {
   // Comparables visuels : cartes avec image du lot. Adjudications d'abord,
   // « en vente » ensuite (tri stable : la date descendante de la requête est
   // conservée à l'intérieur de chaque groupe).
-  const compsSorted = [...currentComps].sort((a, b) =>
+  const compsSorted = [...O.comps].sort((a, b) =>
     (a.source_type === 'en_vente' ? 1 : 0) - (b.source_type === 'en_vente' ? 1 : 0));
   const compsList = compsSorted.length ? `
     <div class="comps-list">
@@ -192,7 +176,7 @@ function renderObjet() {
       }).join('')}
     </div>` : '';
 
-  const actions = editing ? `
+  const actions = O.editing ? `
     <div class="corr-bar">
       ✏️ <b>Mode correction</b> — chaque différence est gravée comme leçon (ground truth).
       Je suis :
@@ -213,17 +197,17 @@ function renderObjet() {
     </div>`;
 
   // Fiche artiste (table `artistes`, migration 0008) — rien affiché si pas de fiche
-  const artistePanel = currentArtiste ? `
+  const artistePanel = O.artiste ? `
     <details class="panel panel-pad acc" open>
-      <summary class="sec-title">🎨 Artiste — ${esc(currentArtiste.nom)}</summary>
-      <div class="md-body">${mdToHtml(currentArtiste.bio_md ?? '')}</div>
-      <a class="link-lot" style="display:inline-block;margin-top:12px" href="#/artiste/${encodeURIComponent(currentArtiste.nom)}">Voir la fiche artiste →</a>
+      <summary class="sec-title">🎨 Artiste — ${esc(O.artiste.nom)}</summary>
+      <div class="md-body">${mdToHtml(O.artiste.bio_md ?? '')}</div>
+      <a class="link-lot" style="display:inline-block;margin-top:12px" href="#/artiste/${encodeURIComponent(O.artiste.nom)}">Voir la fiche artiste →</a>
     </details>` : '';
 
-  const fichePanel = currentFiche ? `
+  const fichePanel = O.fiche ? `
     <details class="panel panel-pad acc">
-      <summary class="sec-title">Fiche IA <span style="font-size:12px;font-family:var(--mono);color:var(--ink-3);font-weight:400">v${currentFiche.version}${currentFiche.modele ? ' · ' + esc(currentFiche.modele) : ''} · ${fmtDate(currentFiche.created_at)}</span></summary>
-      <div class="md-body">${mdToHtml(currentFiche.contenu_md)}</div>
+      <summary class="sec-title">Fiche IA <span style="font-size:12px;font-family:var(--mono);color:var(--ink-3);font-weight:400">v${O.fiche.version}${O.fiche.modele ? ' · ' + esc(O.fiche.modele) : ''} · ${fmtDate(O.fiche.created_at)}</span></summary>
+      <div class="md-body">${mdToHtml(O.fiche.contenu_md)}</div>
     </details>` : `
     <div class="panel panel-pad">
       <div class="sec-title">Fiche IA</div>
@@ -235,7 +219,7 @@ function renderObjet() {
   // Changelog objet (D-025) : qui a fait quoi, quand, avec quel outil —
   // actions du site (photos, corrections, validation…) + passes IA du cron
   // (identification, marché, Lens…), champs avant→après quand dispo.
-  const evRows = currentEvents.map(ev => {
+  const evRows = O.events.map(ev => {
     const bits = evDetailBits(ev.detail ?? {});
     return `<div class="ev-row">
       <span class="ev-date">${fmtDate(ev.created_at)}</span>
@@ -246,7 +230,7 @@ function renderObjet() {
   }).join('');
   const historyPanel = `
     <details class="panel panel-pad acc">
-      <summary class="sec-title">Historique <span style="font-size:12px;font-family:var(--mono);color:var(--ink-3);font-weight:400">${currentEvents.length} événement${currentEvents.length > 1 ? 's' : ''}</span></summary>
+      <summary class="sec-title">Historique <span style="font-size:12px;font-family:var(--mono);color:var(--ink-3);font-weight:400">${O.events.length} événement${O.events.length > 1 ? 's' : ''}</span></summary>
       <div class="ev-list">${evRows || '<div class="value-sub">Aucun événement tracé pour l\'instant.</div>'}</div>
     </details>`;
 
@@ -293,7 +277,7 @@ function renderObjet() {
       <div class="panel panel-pad side-dates">
         <div>Capturé le ${fmtDate(o.created_at)} · ${esc(o.source_capture)}</div>
         <div>Modifié le ${fmtDate(o.updated_at)}</div>
-        <div>${currentPhotos.length} photo${currentPhotos.length > 1 ? 's' : ''}${currentPhotos.length === 0 ? ' — à prendre' : ''}</div>
+        <div>${O.photos.length} photo${O.photos.length > 1 ? 's' : ''}${O.photos.length === 0 ? ' — à prendre' : ''}</div>
       </div>
     </aside>
   </div>`;
@@ -349,17 +333,6 @@ async function loadSimilar(o) {
 }
 
 // ─── Actions de la vue Objet (délégation) ───────────────────────────────────
-const selPhoto = () => currentPhotos.find(p => p.sel) ?? currentPhotos[0];
-
-// Caméra depuis la fiche : les clichés ont été uploadés au fil de l'eau →
-// on relance l'analyse si besoin (même règle que l'ajout par fichier) et on
-// recharge la fiche à la fermeture (hook passé au module caméra partagé).
-function onCamClose(n) {
-  const o = S.currentObjet;
-  if (!o || !n) return;
-  if (['capture', 'a_completer'].includes(o.statut)) queueAnalyse(o.id);
-  loadObjet(o.id);
-}
 
 // Activation clavier des vignettes/cartes non-boutons (div role="button") :
 // Enter/Espace déclenche le même handler que le clic (délégation ci-dessous).
@@ -387,7 +360,7 @@ $('#objet-body').addEventListener('click', async e => {
   const o = S.currentObjet;
 
   if (act === 'thumb') {
-    currentPhotos.forEach((p, i) => { p.sel = i === Number(el.dataset.idx); });
+    O.photos.forEach((p, i) => { p.sel = i === Number(el.dataset.idx); });
     renderObjet();
   }
   else if (act === 'zoom') {
@@ -443,8 +416,8 @@ $('#objet-body').addEventListener('click', async e => {
     toast(`#${o.id} validée ✓ — confiance 4/4 (ground truth)`);
     loadObjet(o.id); S.refreshHeader?.();
   }
-  else if (act === 'corriger') { editing = true; renderObjet(); }
-  else if (act === 'corr-cancel') { editing = false; renderObjet(); }
+  else if (act === 'corriger') { O.editing = true; renderObjet(); }
+  else if (act === 'corr-cancel') { O.editing = false; renderObjet(); }
   else if (act === 'corr-save') { saveCorrections(); }
   else if (act === 'relancer') {
     if (!confirm(`Relancer l'estimation complète de #${o.id} ?\n\nLa passe entière sera rejouée : identification + recherche de comparables. Le cron la traitera au prochain run.`)) return;
@@ -454,38 +427,6 @@ $('#objet-body').addEventListener('click', async e => {
     loadObjet(o.id);
   }
 });
-
-async function saveCorrections() {
-  const o = S.currentObjet;
-  const auteur = $('#corr-qui')?.value ?? 'alain';
-  localStorage.setItem('iartcane-qui', auteur);
-  const updates = {};
-  const rows = [];
-  for (const [champ] of [...CHAMPS_EDIT, ['description', 'Description']]) {
-    const inp = $('#edit-' + champ);
-    if (!inp) continue;
-    let nv = inp.value.trim();
-    const av = o[champ] == null ? '' : String(o[champ]);
-    if (champ.startsWith('prix_')) {
-      nv = nv === '' ? null : Number(nv.replace(',', '.'));
-      if (nv !== null && !Number.isFinite(nv)) { toast(`Prix invalide (${champ})`, true); return; }
-    } else {
-      nv = nv === '' ? null : nv;
-    }
-    if (av !== String(nv ?? '')) {
-      updates[champ] = nv;
-      rows.push({ champ, avant: av || null, apres: nv == null ? null : String(nv) });
-    }
-  }
-  if (!rows.length) { toast('Aucune modification'); editing = false; renderObjet(); return; }
-  updates.statut = 'contestee';
-  const { error } = await sb.from('objets').update(updates).eq('owner_id', S.tenantId).eq('id', o.id);
-  if (error) { toast(error.message, true); return; }
-  // Ground truth tracée dans evenements (corrections absorbée, D-027) — le cron la relit là.
-  logEvent('correction', { champs: Object.fromEntries(rows.map(r => [r.champ, { avant: r.avant, apres: r.apres }])) });
-  toast(`${rows.length} correction${rows.length > 1 ? 's' : ''} gravée${rows.length > 1 ? 's' : ''} — leçons pour l'IA`);
-  loadObjet(o.id);
-}
 
 $('#file-add-photo').addEventListener('change', async e => {
   if (!canWrite()) { e.target.value = ''; return; }
@@ -507,140 +448,7 @@ $('#file-add-photo').addEventListener('change', async e => {
   loadObjet(oid);
 });
 
-// ─── Lightbox ───────────────────────────────────────────────────────────────
-// Lightbox plein écran, 3 modes (règle Yann 2026-08-24 : par défaut l'image
-// prend la place dispo, PAS PLUS — pas d'ascenseurs ; clic image = zoom 100 %).
-//  - null   : agrandissement ajusté à l'écran (clic image = zoom, clic à côté = fermer)
-//  - 'focal': le clic sur l'image définit le point focal de CETTE photo (la boîte
-//             de l'<img> EST l'image entière → calcul exact, pas de letterbox)
-//  - 'cut'  : recadrage RÉEL — cadre à poignées (bords/coins, comme Paint) :
-//             rognage aux pixels natifs, la source est remplacée
-function openLightbox(photo, mode = null) {
-  const lb = document.createElement('div');
-  lb.className = 'lightbox' + (mode ? ` ${mode}` : '');
-  if (mode === 'cut') {
-    lb.innerHTML = `<img src="${esc(photo.url)}" alt="Photo à recadrer — ${esc(S.currentObjet?.titre || 'objet')}">
-      <div class="cut-bar"><span class="cut-hint">Tire les poignées (bords et coins) pour délimiter la zone à garder</span>
-      <button class="btn primary small" data-ok disabled>✂️ Recadrer</button>
-      <button class="btn small" data-cancel>Annuler</button></div>`;
-  } else {
-    lb.innerHTML = isVideo(photo) ? `<video src="${esc(photo.url)}" controls autoplay></video>` : `<img src="${esc(photo.url)}" alt="Photo plein écran — ${esc(S.currentObjet?.titre || 'objet')}">`;
-    if (mode === 'focal') lb.insertAdjacentHTML('beforeend', '<div class="crop-hint">Cliquer au centre de l’objet — centrage de <b>cette photo</b> uniquement · clic à côté = annuler</div>');
-  }
-  const close = () => { lb.remove(); document.body.classList.remove('lb-open'); };
-  document.body.classList.add('lb-open');
-
-  if (mode === 'cut') {
-    const img = lb.querySelector('img');
-    const ok = lb.querySelector('[data-ok]');
-    let sel = { x0: 0, y0: 0, x1: 1, y1: 1 }; // cadre initial = image entière
-    let box = null;
-    let drag = null;
-    const MIN = 0.05; // zone minimale 5 %
-    const toRel = e => {
-      const r = img.getBoundingClientRect();
-      return { x: Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1), y: Math.min(Math.max((e.clientY - r.top) / r.height, 0), 1) };
-    };
-    const H = {
-      nw: (s, p) => ({ ...s, x0: Math.min(p.x, s.x1 - MIN), y0: Math.min(p.y, s.y1 - MIN) }),
-      n:  (s, p) => ({ ...s, y0: Math.min(p.y, s.y1 - MIN) }),
-      ne: (s, p) => ({ ...s, x1: Math.max(p.x, s.x0 + MIN), y0: Math.min(p.y, s.y1 - MIN) }),
-      e:  (s, p) => ({ ...s, x1: Math.max(p.x, s.x0 + MIN) }),
-      se: (s, p) => ({ ...s, x1: Math.max(p.x, s.x0 + MIN), y1: Math.max(p.y, s.y0 + MIN) }),
-      s:  (s, p) => ({ ...s, y1: Math.max(p.y, s.y0 + MIN) }),
-      sw: (s, p) => ({ ...s, x0: Math.min(p.x, s.x1 - MIN), y1: Math.max(p.y, s.y0 + MIN) }),
-      w:  (s, p) => ({ ...s, x0: Math.min(p.x, s.x1 - MIN) }),
-    };
-    const draw = () => {
-      if (!box) {
-        box = document.createElement('div');
-        box.className = 'cut-sel';
-        box.innerHTML = Object.keys(H).map(h => `<i data-h="${h}" class="h-${h}"></i>`).join('');
-        lb.append(box);
-      }
-      const r = img.getBoundingClientRect();
-      box.style.left = `${r.left + sel.x0 * r.width}px`;
-      box.style.top = `${r.top + sel.y0 * r.height}px`;
-      box.style.width = `${(sel.x1 - sel.x0) * r.width}px`;
-      box.style.height = `${(sel.y1 - sel.y0) * r.height}px`;
-    };
-    if (img.complete && img.naturalWidth) draw(); else img.addEventListener('load', draw, { once: true });
-    lb.addEventListener('pointerdown', e => {
-      const h = e.target.dataset?.h;
-      if (!h) return;
-      e.preventDefault(); e.stopPropagation();
-      drag = h;
-    });
-    lb.addEventListener('pointermove', e => {
-      if (!drag) return;
-      sel = H[drag](sel, toRel(e));
-      draw();
-      ok.disabled = false;
-    });
-    lb.addEventListener('pointerup', () => { drag = null; });
-    lb.querySelector('[data-cancel]').addEventListener('click', e => { e.stopPropagation(); close(); });
-    ok.addEventListener('click', async e => {
-      e.stopPropagation();
-      ok.disabled = true; ok.textContent = 'Recadrage…';
-      try {
-        const blob = await (await fetch(photo.url)).blob();
-        const bmp = await createImageBitmap(blob);
-        const sx = Math.round(sel.x0 * bmp.width);
-        const sy = Math.round(sel.y0 * bmp.height);
-        const sw = Math.round((sel.x1 - sel.x0) * bmp.width);
-        const sh = Math.round((sel.y1 - sel.y0) * bmp.height);
-        if (sw < 20 || sh < 20) throw new Error('zone trop petite');
-        const c = document.createElement('canvas');
-        c.width = sw; c.height = sh;                       // pixels natifs : pas de perte
-        c.getContext('2d').drawImage(bmp, sx, sy, sw, sh, 0, 0, sw, sh);
-        const out = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.92));
-        if (!out) throw new Error('encodage impossible');
-        const newPath = photo.storage_path.replace(/[^/]+$/, `${crypto.randomUUID()}.jpg`);
-        const { error: e1 } = await sb.storage.from('photos').upload(newPath, out, { contentType: 'image/jpeg' });
-        if (e1) throw e1;
-        // miniature régénérée depuis la version rognée + centrage remis à zéro
-        const tb = await makeThumbBlob(out);
-        let thumbPath = null;
-        if (tb) {
-          thumbPath = newPath.replace(/\.jpg$/, '.thumb.jpg');
-          const { error: et } = await sb.storage.from('photos').upload(thumbPath, tb, { contentType: 'image/jpeg' });
-          if (et) thumbPath = null;
-        }
-        const { error: e2 } = await sb.from('photos')
-          .update({ storage_path: newPath, thumb_path: thumbPath, focal_x: null, focal_y: null })
-          .eq('owner_id', S.tenantId).eq('id', photo.id);
-        if (e2) throw e2;
-        await sb.storage.from('photos').remove([photo.storage_path, photo.thumb_path].filter(Boolean));
-        close();
-        toast('✓ Photo recadrée — résolution d’origine conservée');
-        logEvent('recadrage', { photo: newPath });
-        await loadObjet(S.currentObjet.id);
-      } catch (err) {
-        toast(`Recadrage échoué : ${err.message ?? err}`, true);
-        ok.disabled = false; ok.textContent = '✂️ Recadrer';
-      }
-    });
-  } else {
-    lb.addEventListener('click', async e => {
-      const img = e.target.closest('img');
-      if (mode !== 'focal') {
-        if (img && !isVideo(photo)) { e.stopPropagation(); lb.classList.toggle('zoomed'); return; }
-        close(); return;
-      }
-      if (!img) { close(); return; }
-      e.stopPropagation();
-      const r = img.getBoundingClientRect();
-      if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) { close(); return; }
-      const fx = Math.round((e.clientX - r.left) / r.width * 100);
-      const fy = Math.round((e.clientY - r.top) / r.height * 100);
-      const { error } = await sb.from('photos').update({ focal_x: fx, focal_y: fy }).eq('owner_id', S.tenantId).eq('id', photo.id);
-      if (error) { toast(error.message, true); close(); return; }
-      photo.focal_x = fx; photo.focal_y = fy;
-      close();
-      renderObjet();
-      toast('✓ Centrage enregistré pour cette photo — la carte de la collection le suivra');
-      logEvent('centrage', { photo: photo.storage_path, fx, fy });
-    });
-  }
-  document.body.append(lb);
-}
+// Branchement des hooks partagés : photos.js et edition.js déclenchent le
+// rechargement/rendu sans importer ce module (pas de cycle d'imports).
+hooks.recharger = loadObjet;
+hooks.rendre = renderObjet;

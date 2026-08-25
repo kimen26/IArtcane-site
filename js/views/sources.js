@@ -3,6 +3,11 @@
 // Miroir structuré de docs/cartographie-sources.md (site/data/sources.json).
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, esc, emptyHtml } from '../core/dom.js';
+import { loadViewCss } from '../core/css.js';
+
+// CSS de la vue chargé par la vue (D-041) : aucun <link> dans index.html,
+// donc aucun fichier transverse touché par un chantier sur cet écran.
+await loadViewCss('sources');
 
 let sourcesCache = null;
 
@@ -20,9 +25,12 @@ async function loadSources() {
     return;
   }
   const s = sourcesCache;
-  const badge = code => (code && s.legende[code])
+  const unBadge = code => (code && s.legende[code])
     ? `<span class="src-badge acc-${esc(code.toLowerCase().replace(/[^a-z0-9]+/g, '-'))}" title="${esc(s.legende[code])}">${esc(code)}</span>`
     : '';
+  // Une source peut cumuler deux modes d'accès (ex. « API/NAV-AUTO » pour RKD) :
+  // un badge par mode, comme dans docs/cartographie-sources.md.
+  const badge = codes => String(codes ?? '').split('/').map(c => unBadge(c.trim())).filter(Boolean).join(' ');
   body.innerHTML = `
     <details class="panel panel-pad acc">
       <summary class="sec-title">Légende des accès</summary>

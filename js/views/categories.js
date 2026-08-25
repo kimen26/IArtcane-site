@@ -5,6 +5,11 @@
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, esc, emptyHtml } from '../core/dom.js';
 import { catEmoji, mdToHtml } from '../core/format.js';
+import { loadViewCss } from '../core/css.js';
+
+// CSS de la vue chargé par la vue (D-041) : aucun <link> dans index.html,
+// donc aucun fichier transverse touché par un chantier sur cet écran.
+await loadViewCss('categories');
 
 let famillesCache = null;
 
