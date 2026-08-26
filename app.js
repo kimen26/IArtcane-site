@@ -176,7 +176,12 @@ S.refreshMenu = () => renderMenu();
 // ROUTEUR (hash) — lazy import des vues (D-039)
 // ═══════════════════════════════════════════════════════════════════════════
 function setTab(name) {
-  $$('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === name));
+  $$('.tab').forEach(t => {
+    const active = t.dataset.view === name;
+    t.classList.toggle('active', active);
+    if (active) t.setAttribute('aria-current', 'page');
+    else t.removeAttribute('aria-current');
+  });
 }
 
 // ─── Menu « gouvernance » de l'en-tête (D-028) ──────────────────────────────
@@ -186,7 +191,6 @@ function setTab(name) {
 const MENU_GOUV = [
   { hash: '#/maison',     icone: '🏠', label: 'Maison',                desc: 'Membres, rôles, nom de la maison', owner: true },
   { hash: '#/activite',   icone: '📋', label: 'Activité',              desc: 'Quoi de neuf : runs IA, mises à jour, actions — et MAJ forcées du catalogue' },
-  { hash: '#/artistes',   icone: '🎨', label: 'Artistes',              desc: 'Fiches artistes créées par le cron lors des passes d\'identification' },
   { hash: '#/sources',    icone: '🔭', label: 'Sources',               desc: 'Référentiels, comparables & corpus — cartographie des accès (D-028)' },
   { hash: '#/categories', icone: '🗂️', label: 'Catégories & familles', desc: 'Taxonomie canonique et prompts d\'identification par famille' },
 ];
@@ -241,8 +245,8 @@ const ROUTES = [
   { re: /^#\/objet\/([^/]+)$/,    tab: 'collection', view: 'objet',      load: () => import('./js/views/objet/index.js') },
   { re: /^#\/maison/,             view: 'maison',    write: true,        load: () => import('./js/views/maison.js') },
   { re: /^#\/activite/,           view: 'activite',  load: () => import('./js/views/activite.js') },
-  { re: /^#\/artiste\/([^/]+)$/,  view: 'artiste',   load: () => import('./js/views/artistes.js'), fn: 'mountDetail' },
-  { re: /^#\/artistes/,           view: 'artistes',  load: () => import('./js/views/artistes.js'), fn: 'mountList' },
+  { re: /^#\/artiste\/([^/]+)$/,  tab: 'artistes',  view: 'artiste',   load: () => import('./js/views/artistes.js'), fn: 'mountDetail' },
+  { re: /^#\/artistes/,           tab: 'artistes',  view: 'artistes',  load: () => import('./js/views/artistes.js'), fn: 'mountList' },
   { re: /^#\/sources/,            view: 'sources',   load: () => import('./js/views/sources.js') },
   { re: /^#\/categories/,         view: 'categories', load: () => import('./js/views/categories.js') },
 ];
@@ -260,20 +264,64 @@ async function route() {
     const m = await import('./js/views/collection.js');
     setTab('collection'); show('collection');
     m.mount();
+    prevView = currentView;
+    currentView = { view: 'collection', tab: 'collection', hash: '#/', label: 'Collection', params: [] };
+    updateBackButtons();
     return;
   }
   // Gardes d'écriture : capture et maison interdites au lecteur (RLS 0012, UI masquée)
   if (r.write && !canWrite()) { location.replace('#/'); return; }
+  const meta = computeViewMeta(r, h);
   const m = await r.load();
   setTab(r.tab ?? null); // écrans gouvernance : pas des onglets → aucun tab actif
   show(r.view);
-  const params = (h.match(r.re) ?? []).slice(1).map(decodeURIComponent);
-  m[r.fn ?? 'mount'](...params);
+  m[r.fn ?? 'mount'](...meta.params);
+  prevView = currentView;
+  currentView = meta;
+  updateBackButtons();
 }
 window.addEventListener('hashchange', route);
 // data-view → hash : ajouter un onglet = une entrée ici + la route ci-dessus.
-const TAB_HASH = { collection: '#/', capture: '#/capture' };
+const TAB_HASH = { collection: '#/', capture: '#/capture', artistes: '#/artistes' };
 $$('.tab').forEach(t => t.addEventListener('click', () => { location.hash = TAB_HASH[t.dataset.view] ?? '#/'; }));
 $('#logo-home').addEventListener('click', () => { location.hash = '#/'; });
-$('#obj-back').addEventListener('click', () => { location.hash = '#/'; });
-$$('.js-back').forEach(b => b.addEventListener('click', () => { location.hash = '#/'; }));
+$('#obj-back').addEventListener('click', () => { location.hash = prevView?.hash ?? '#/'; });
+$$('.js-back').forEach(b => b.addEventListener('click', () => { location.hash = prevView?.hash ?? '#/'; }));
+
+// ─── Fil d'Ariane contextuel (HO-025) ───────────────────────────────────────
+// Mémoire d'une seule vue source : le retour ramène d'où l'on vient, avec
+// fallback Collection sur entrée directe ou lien partagé.
+let currentView = null;
+let prevView = null;
+
+function viewLabel(view, params = []) {
+  switch (view) {
+    case 'collection': return 'Collection';
+    case 'capture':    return 'Capturer';
+    case 'artistes':   return 'Artistes';
+    case 'artiste':    return params[0] || 'Artiste';
+    case 'objet':      return 'Objet';
+    case 'maison':     return 'Maison';
+    case 'activite':   return 'Activité';
+    case 'sources':    return 'Sources';
+    case 'categories': return 'Catégories & familles';
+    default:           return 'Collection';
+  }
+}
+
+function updateBackButtons() {
+  const label = '← ' + (prevView?.label ?? 'Collection');
+  $('#obj-back').textContent = label;
+  $$('.js-back').forEach(b => b.textContent = label);
+}
+
+function computeViewMeta(r, h) {
+  const params = (h.match(r.re) ?? []).slice(1).map(decodeURIComponent);
+  return {
+    view: r.view,
+    tab: r.tab ?? null,
+    hash: h,
+    label: viewLabel(r.view, params),
+    params,
+  };
+}
