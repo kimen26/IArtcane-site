@@ -42,13 +42,14 @@ async function loadObjet(id) {
   }
   S.currentObjet = o;
   O.editing = false;
-  const [{ data: photos }, { data: comps }, { data: fiches }, { data: events }, { data: artiste }] = await Promise.all([
+  const [{ data: photos }, { data: comps }, { data: fiches }, { data: events }, { data: artiste }, { data: jobs }] = await Promise.all([
     sb.from('photos').select('*').eq('owner_id', S.tenantId).eq('objet_id', id).order('created_at'),
     sb.from('comparables').select('*').eq('owner_id', S.tenantId).eq('objet_id', id).order('date_vente', { ascending: false, nullsFirst: false }),
     sb.from('fiches').select('*').eq('owner_id', S.tenantId).eq('objet_id', id).order('version', { ascending: false }).limit(1),
     sb.from('evenements').select('*').eq('owner_id', S.tenantId).eq('objet_id', id).order('created_at', { ascending: false }).limit(50),
     // Fiche artiste (migration 0008) : match exact sur objets.auteur, 0 ligne tolérée
     o.auteur ? sb.from('artistes').select('*').eq('owner_id', S.tenantId).eq('nom', o.auteur).maybeSingle() : Promise.resolve({ data: null }),
+    sb.from('jobs').select('type,statut').eq('owner_id', S.tenantId).eq('objet_id', id).in('statut', ['en_attente','en_cours']),
   ]);
   const compPaths = (comps ?? []).map(c => c.image_path).filter(Boolean);
   const urlByPath = await signPaths([...(photos ?? []).flatMap(p => [p.storage_path, p.thumb_path].filter(Boolean)), ...compPaths]);
@@ -57,6 +58,8 @@ async function loadObjet(id) {
   O.fiche = (fiches ?? [])[0] ?? null;
   O.events = events ?? [];
   O.artiste = artiste ?? null;
+  O.jobs = jobs ?? [];
+  O.pipe = computePipe(O.events, O.jobs);
   renderObjet();
   loadSimilar(o);
 }
@@ -85,6 +88,32 @@ async function deleteComp(cid) {
   logEvent('comparable_supprime', { comparable_id: cid, lot: c.lot, maison: c.maison }, S.currentObjet.id);
   toast('Comparable retiré');
   await loadObjet(S.currentObjet.id);
+}
+
+// Indicateur d'avancement R1/R2/Valorisation (HO-030)
+// Données : événements déjà chargés + jobs en attente/en cours.
+function computePipe(events, jobs) {
+  const last = action => events.find(e => e.action === action)?.created_at ?? null;
+  const pendingAnalyse = jobs.some(j => ['analyse','reanalyse'].includes(j.type) && ['en_attente','en_cours'].includes(j.statut));
+
+  const r1Done = last('identification') !== null;
+  const r2Done = last('lens') !== null;
+  const valoDone = last('passe_marche') !== null;
+
+  return {
+    r1: { state: r1Done ? 'done' : (pendingAnalyse ? 'pending' : 'todo'), date: last('identification') },
+    r2: { state: r2Done ? 'done' : (r1Done && pendingAnalyse ? 'pending' : 'todo'), date: last('lens') },
+    valo: { state: valoDone ? 'done' : 'todo', date: last('passe_marche') },
+  };
+}
+
+function pipeBadge(short, long, { state, date }) {
+  const icon = state === 'done' ? '✓' : (state === 'pending' ? '⏳' : '—');
+  const cls = state === 'done' ? 'pipe-done' : (state === 'pending' ? 'pipe-pending' : 'pipe-todo');
+  const title = date
+    ? `${long} — ${state === 'done' ? 'terminé' : state === 'pending' ? 'en cours / en file' : 'pas encore'} le ${fmtDate(date)}`
+    : `${long} — ${state === 'done' ? 'terminé' : state === 'pending' ? 'en cours / en file' : 'pas encore'}`;
+  return `<span class="pipe-badge ${cls}" role="listitem" title="${esc(title)}">${icon} ${esc(short)}</span>`;
 }
 
 function renderObjet() {
@@ -263,6 +292,13 @@ function renderObjet() {
     ? `<div class="panel panel-pad alert-gentle">📷 Photos à refaire : <span>${esc(o.consigne_humain)}</span></div>`
     : '';
 
+  const pipeBadges = O.pipe ? `
+    <div class="pipe-row" role="list" aria-label="Avancement de l'analyse">
+      ${pipeBadge('R1', 'Identification', O.pipe.r1)}
+      ${pipeBadge('R2', 'Enrichissement', O.pipe.r2)}
+      ${pipeBadge('Valo', 'Valorisation', O.pipe.valo)}
+    </div>` : '';
+
   $('#objet-body').innerHTML = `
   <div class="obj-layout">
     <div class="obj-main">
@@ -303,6 +339,7 @@ function renderObjet() {
         <div style="margin-top:14px;display:flex;align-items:center;gap:10px">
           ${confHtml(marks)}
         </div>
+        ${pipeBadges}
       </div>
       <div class="loc-card" id="loc-card"></div>
       <div class="panel panel-pad side-dates">
@@ -462,12 +499,23 @@ $('#objet-body').addEventListener('click', async e => {
   }
 });
 
+// Purge de la consigne humaine à l'ajout de photos réussi (HO-030).
+async function purgeConsigne(o, oid) {
+  if (!o.consigne_humain) return;
+  const avant = o.consigne_humain;
+  const { error } = await sb.from('objets').update({ consigne_humain: null }).eq('owner_id', S.tenantId).eq('id', oid);
+  if (error) { toast(error.message, true); return; }
+  if (S.currentObjet?.id === oid) S.currentObjet.consigne_humain = null;
+  logEvent('correction', { champ: 'consigne_humain', avant: avant.slice(0, 80), apres: null }, oid);
+}
+
 $('#file-add-photo').addEventListener('change', async e => {
   if (!canWrite()) { e.target.value = ''; return; }
   const files = [...e.target.files];
   e.target.value = '';
   if (!files.length || !S.currentObjet) return;
   const oid = S.currentObjet.id;
+  const o = S.currentObjet;
   const { done, failed } = await uploadPhotosFor(oid, files);
   if (failed.length === 0) {
     if (done > 0) {
@@ -479,11 +527,13 @@ $('#file-add-photo').addEventListener('change', async e => {
       } else {
         toast(`${done} photo${done > 1 ? 's' : ''} ajoutée${done > 1 ? 's' : ''}`);
       }
+      await purgeConsigne(o, oid);
     }
   } else {
     if (done > 0) {
       logEvent('photo_ajoutee', { n: done, echecs: failed.length, via: 'fichier' }, oid);
       if (S.currentObjet.statut !== 'validee') await queueAnalyse(oid);
+      await purgeConsigne(o, oid);
     }
     toast(`${done}/${files.length} photo(s) ajoutée(s) — ${failed.length} en échec (${failed[0].reason}). Réessayez.`, true);
   }

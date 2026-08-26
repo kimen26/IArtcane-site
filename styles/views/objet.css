@@ -163,3 +163,10 @@
   .dl.editing dt{padding-top:0;margin-bottom:-6px}
   .fld-src{font-size:10.5px}
 }
+
+/* HO-030 : indicateur d'avancement R1/R2/Valorisation dans la sidebar */
+.pipe-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.pipe-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:.8125rem;font-weight:600;border:1px solid var(--line);background:var(--surface-2);color:var(--ink-2);white-space:nowrap}
+.pipe-badge.pipe-done{background:var(--green-soft);color:var(--green);border-color:transparent}
+.pipe-badge.pipe-pending{background:var(--amber-soft);color:var(--amber);border-color:transparent}
+.pipe-badge.pipe-todo{background:var(--surface-2);color:var(--ink-3)}
