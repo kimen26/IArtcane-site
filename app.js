@@ -52,7 +52,7 @@ async function enterApp() {
   route();
 }
 
-// ─── Realtime (G-3, D-019) : la passe 0 et les fiches arrivent en direct ────
+// ─── Realtime (G-3, D-019) : la R1 et les fiches arrivent en direct ────
 // Un UPDATE objets du locataire → toast + rafraîchissement de la vue courante.
 // replica identity full (migration 0005) → payload.old permet de ne notifier
 // que les vraies nouveautés (identification qui apparaît, fiche qui devient prête).
@@ -66,7 +66,7 @@ function watchLive() {
       // JAMAIS de rechargement automatique de la vue (règle Yann 2026-08-23 :
       // refresh sur action ou manuel uniquement) — on notifie, point.
       if (!old.categorie && n.categorie) {
-        toast(`🔎 #${n.id} identifié par l'IA : « ${n.titre ?? n.categorie} » (passe 0 — recharge pour voir)`);
+        toast(`🔎 #${n.id} identifié par l'IA : « ${n.titre ?? n.categorie} » (R1 — recharge pour voir)`);
       } else if (old.statut !== 'fiche_prete' && n.statut === 'fiche_prete') {
         toast(`✨ #${n.id} : fiche IA prête — recharge la page pour la voir`);
       }
