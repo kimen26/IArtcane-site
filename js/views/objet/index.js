@@ -468,16 +468,24 @@ $('#file-add-photo').addEventListener('change', async e => {
   e.target.value = '';
   if (!files.length || !S.currentObjet) return;
   const oid = S.currentObjet.id;
-  const n = await uploadPhotosFor(oid, files);
-  if (n > 0) {
-    logEvent('photo_ajoutee', { n, via: 'fichier' }, oid);
-    // Toute nouvelle photo doit rejouer l'analyse, sauf sur une fiche validée (D-042).
-    if (S.currentObjet.statut !== 'validee') {
-      await queueAnalyse(oid);
-      toast(`${n} photo${n > 1 ? 's' : ''} ajoutée${n > 1 ? 's' : ''} — analyse en file`);
-    } else {
-      toast(`${n} photo${n > 1 ? 's' : ''} ajoutée${n > 1 ? 's' : ''}`);
+  const { done, failed } = await uploadPhotosFor(oid, files);
+  if (failed.length === 0) {
+    if (done > 0) {
+      logEvent('photo_ajoutee', { n: done, via: 'fichier' }, oid);
+      // Toute nouvelle photo doit rejouer l'analyse, sauf sur une fiche validée (D-042).
+      if (S.currentObjet.statut !== 'validee') {
+        await queueAnalyse(oid);
+        toast(`${done} photo${done > 1 ? 's' : ''} ajoutée${done > 1 ? 's' : ''} — analyse en file`);
+      } else {
+        toast(`${done} photo${done > 1 ? 's' : ''} ajoutée${done > 1 ? 's' : ''}`);
+      }
     }
+  } else {
+    if (done > 0) {
+      logEvent('photo_ajoutee', { n: done, echecs: failed.length, via: 'fichier' }, oid);
+      if (S.currentObjet.statut !== 'validee') await queueAnalyse(oid);
+    }
+    toast(`${done}/${files.length} photo(s) ajoutée(s) — ${failed.length} en échec (${failed[0].reason}). Réessayez.`, true);
   }
   loadObjet(oid);
 });

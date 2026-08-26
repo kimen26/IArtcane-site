@@ -270,6 +270,15 @@ $$('input[name="cap-mode"]').forEach(r => r.addEventListener('change', () => {
   $('#cap-save').textContent = r.value === 'batch' ? 'Enregistrer les objets' : 'Enregistrer l\'objet';
 }));
 
+let pendingObjetId = null;
+
+function capSaveLabel(mode) {
+  if (mode === 'single' && pendingObjetId && S.capFiles.length) {
+    return `Renvoyer les ${S.capFiles.length} photo(s)`;
+  }
+  return mode === 'batch' ? 'Enregistrer les objets' : 'Enregistrer l\'objet';
+}
+
 $('#cap-save').addEventListener('click', async () => {
   if (!canWrite()) return;
   const mode = $('input[name="cap-mode"]:checked')?.value || 'single';
@@ -278,11 +287,30 @@ $('#cap-save').addEventListener('click', async () => {
   const contenant = $('#cap-contenant').value.trim() || null;
   const commentaire = $('#cap-commentaire').value.trim() || null;
   btn.disabled = true;
-  btn.textContent = mode === 'batch' ? 'Enregistrement des objets…' : 'Enregistrement…';
+  btn.textContent = 'Enregistrement…';
   try {
+    // Retry sur l'objet déjà créé (single uniquement)
+    if (mode === 'single' && pendingObjetId && S.capFiles.length) {
+      const total = S.capFiles.length;
+      const onProgress = (sent, tot) => { btn.textContent = `Envoi photo ${sent + 1}/${tot}…`; };
+      const { done, failed } = await uploadPhotosFor(pendingObjetId, S.capFiles, true, onProgress);
+      S.capFiles = failed.map(({ item }) => item);
+      renderPreviews();
+      if (done > 0) await queueAnalyse(pendingObjetId);
+      if (!S.capFiles.length) {
+        const rid = pendingObjetId;
+        pendingObjetId = null;
+        toast('Photos envoyées — analyse en file');
+        S.refreshHeader?.();
+        location.hash = '#/objet/' + encodeURIComponent(rid);
+      } else {
+        toast(`Objet #${pendingObjetId} enregistré — ${done}/${total} photos envoyées. ${failed.length} en échec : renvoyez-les depuis cet écran.`, true);
+      }
+      return;
+    }
     if (mode === 'batch') {
       if (!S.capFiles.length) { toast('Aucune photo à enregistrer', true); return; }
-      let ok = 0, fails = 0;
+      let ok = 0, fails = 0, sansPhoto = 0;
       const ids = [];
       const files = [...S.capFiles];
       for (const item of files) {
@@ -293,17 +321,18 @@ $('#cap-save').addEventListener('click', async () => {
         });
         if (e1) { fails++; continue; }
         logEvent('capture', { n: 1, zone }, newId);
-        const n = await uploadPhotosFor(newId, [item], true);
-        if (n > 0) {
+        const { done } = await uploadPhotosFor(newId, [item], true);
+        if (done > 0) {
           await queueAnalyse(newId);
         } else {
+          sansPhoto++;
           await sb.from('objets').update({ statut: 'a_completer' }).eq('owner_id', S.tenantId).eq('id', newId);
         }
         ids.push(newId); ok++;
       }
       S.capFiles = [];
       renderPreviews();
-      toast(`${ok} objet${ok > 1 ? 's' : ''} créé${ok > 1 ? 's' : ''}${fails ? ` (${fails} échec)` : ''}`);
+      toast(`${ok} objet${ok > 1 ? 's' : ''} créé${ok > 1 ? 's' : ''}${sansPhoto ? ` (${sansPhoto} sans leur photo — rouvrez leur fiche pour la rajouter)` : ''}${fails ? ` (${fails} échec)` : ''}`);
       S.refreshHeader?.();
       if (ids.length) location.hash = '#/objet/' + encodeURIComponent(ids[0]);
       return;
@@ -323,8 +352,22 @@ $('#cap-save').addEventListener('click', async () => {
     if (e1) throw e1;
     logEvent('capture', { n: S.capFiles.length, zone }, newId);
     if (avecPhotos) {
-      const n = await uploadPhotosFor(newId, S.capFiles, true);
-      if (n > 0) {
+      const total = S.capFiles.length;
+      const onProgress = (sent, tot) => { btn.textContent = `Envoi photo ${sent + 1}/${tot}…`; };
+      const { done, failed } = await uploadPhotosFor(newId, S.capFiles, true, onProgress);
+      if (failed.length > 0) {
+        pendingObjetId = newId;
+        S.capFiles = failed.map(({ item }) => item);
+        renderPreviews();
+        if (done > 0) {
+          await queueAnalyse(newId);
+        } else {
+          await sb.from('objets').update({ statut: 'a_completer' }).eq('owner_id', S.tenantId).eq('id', newId);
+        }
+        toast(`Objet #${newId} enregistré — ${done}/${total} photos envoyées. ${failed.length} en échec : renvoyez-les depuis cet écran.`, true);
+        return;
+      }
+      if (done > 0) {
         await queueAnalyse(newId);
       } else {
         await sb.from('objets').update({ statut: 'a_completer' }).eq('owner_id', S.tenantId).eq('id', newId);
@@ -339,6 +382,6 @@ $('#cap-save').addEventListener('click', async () => {
     toast(err.message ?? String(err), true);
   } finally {
     btn.disabled = false;
-    btn.textContent = mode === 'batch' ? 'Enregistrer les objets' : 'Enregistrer l\'objet';
+    btn.textContent = capSaveLabel(mode);
   }
 });

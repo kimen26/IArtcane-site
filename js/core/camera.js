@@ -74,8 +74,9 @@ $('#camera-shot').addEventListener('click', () => {
     if (!b) { toast('Capture impossible', true); return; }
     const file = new File([b], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
     if (camTarget === 'objet' && S.currentObjet) {
-      const n = await uploadPhotosFor(S.currentObjet.id, [file]);
-      if (n > 0) { camUploaded += n; logEvent('photo_ajoutee', { n, via: 'camera' }); toast('Photo ajoutée à la fiche — tu peux enchaîner ou Terminer'); }
+      const { done, failed } = await uploadPhotosFor(S.currentObjet.id, [file]);
+      if (done > 0) { camUploaded += done; logEvent('photo_ajoutee', { n: done, via: 'camera' }); toast('Photo ajoutée à la fiche — tu peux enchaîner ou Terminer'); }
+      else if (failed.length) { toast(`Photo non envoyée (${failed[0].reason}) — réessaie`, true); }
     } else {
       hooks.addFiles?.([file]);
       toast('Photo ajoutée — enchaîne ou « Enregistrer l\'objet »');
