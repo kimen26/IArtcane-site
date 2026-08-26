@@ -145,15 +145,25 @@ export async function uploadImageWithThumb(dossier, file) {
 
 // Accepte un tableau de File purs (rétro-compat caméra / fiche objet)
 // ou de { file, comment } (capture enrichie HO-013).
-export async function uploadPhotosFor(oid, files, firstIsFace = false) {
-  let done = 0;
-  let first = firstIsFace;
-  for (const item of files) {
+// @param onProgress(sent, total)  appelé avant chaque upload (sent = déjà terminés)
+// @returns { done, failed }        done = photos insérées ; failed = [{ item, reason }]
+export async function uploadPhotosFor(oid, files, firstIsFace = false, onProgress = null) {
+  const valid = files.map(item => {
     const f = item instanceof File ? item : item?.file;
-    const comment = item instanceof File ? null : item?.comment ?? null;
-    if (!f) continue;
+    return { item, f, comment: item instanceof File ? null : item?.comment ?? null };
+  }).filter(({ f }) => f);
+  const total = valid.length;
+  let done = 0;
+  const failed = [];
+  let first = firstIsFace;
+  for (let i = 0; i < valid.length; i++) {
+    const { item, f, comment } = valid[i];
+    if (onProgress) onProgress(done + failed.length, total);
     const up = await uploadImageWithThumb(`${S.tenantId}/${oid}`, f);
-    if (!up) continue;
+    if (!up) {
+      failed.push({ item, reason: 'envoi du fichier impossible (réseau ?)' });
+      continue;
+    }
     const kind = up.video ? 'video' : (first ? 'face' : 'autre');
     first = false;
     const { error } = await sb.from('photos').insert({
@@ -161,9 +171,14 @@ export async function uploadPhotosFor(oid, files, firstIsFace = false) {
       storage_path: up.path, thumb_path: up.thumbPath, kind, source: 'site',
       commentaire: comment,
     });
-    if (error) toast(error.message, true); else done++;
+    if (error) {
+      toast(error.message, true);
+      failed.push({ item, reason: error.message });
+    } else {
+      done++;
+    }
   }
-  return done;
+  return { done, failed };
 }
 
 // Supprime une photo : ligne d'abord (la référence prime), puis les fichiers du
