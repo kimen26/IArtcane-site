@@ -50,9 +50,10 @@ async function loadObjet(id) {
     // Fiche artiste (migration 0008) : match exact sur objets.auteur, 0 ligne tolérée
     o.auteur ? sb.from('artistes').select('*').eq('owner_id', S.tenantId).eq('nom', o.auteur).maybeSingle() : Promise.resolve({ data: null }),
   ]);
-  const urlByPath = await signPaths((photos ?? []).flatMap(p => [p.storage_path, p.thumb_path].filter(Boolean)));
+  const compPaths = (comps ?? []).map(c => c.image_path).filter(Boolean);
+  const urlByPath = await signPaths([...(photos ?? []).flatMap(p => [p.storage_path, p.thumb_path].filter(Boolean)), ...compPaths]);
   O.photos = (photos ?? []).map(p => ({ ...p, url: urlByPath[p.storage_path], thumbUrl: urlByPath[p.thumb_path] ?? urlByPath[p.storage_path] }));
-  O.comps = comps ?? [];
+  O.comps = (comps ?? []).map(c => ({ ...c, imageSrc: c.image_path ? urlByPath[c.image_path] : null }));
   O.fiche = (fiches ?? [])[0] ?? null;
   O.events = events ?? [];
   O.artiste = artiste ?? null;
@@ -160,8 +161,9 @@ function renderObjet() {
     <div class="comps-list">
       ${compsSorted.map(c => {
         const enVente = c.source_type === 'en_vente';
-        const img = c.image_url
-          ? `<img src="${esc(c.image_url)}" alt="${esc(c.lot ?? 'lot comparable')}" loading="lazy" decoding="async" onerror="this.style.display='none'">`
+        const imgSrc = c.imageSrc ?? c.image_url;
+        const img = imgSrc
+          ? `<img src="${esc(imgSrc)}" alt="${esc(c.lot ?? 'lot comparable')}" loading="lazy" decoding="async" onerror="this.style.display='none'">`
           : '<span class="comp-noimg">🖼️</span>';
         const thumb = c.lien
           ? `<a class="comp-thumb" href="${esc(c.lien)}" target="_blank" rel="noopener" title="Voir le lot">${img}</a>`
@@ -176,7 +178,10 @@ function renderObjet() {
             </div>
             <div class="comp-lot">${esc(c.lot ?? '—')}</div>
             <div class="comp-bot">
-              <span class="comp-prix">${c.prix != null ? fmtNum(c.prix) + ' ' + esc(c.devise === 'EUR' ? '€' : c.devise) : '—'}</span>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span class="comp-prix">${c.prix != null ? fmtNum(c.prix) + ' ' + esc(c.devise === 'EUR' ? '€' : c.devise) : '—'}</span>
+                ${c.estimation_bas != null && c.estimation_haut != null ? `<span class="comp-est">est. ${fmtNum(c.estimation_bas)}–${fmtNum(c.estimation_haut)} ${esc(c.devise === 'EUR' ? '€' : c.devise)}</span>` : ''}
+              </div>
               <div style="display:flex;gap:8px;align-items:center">
                 ${c.lien ? `<a class="link-lot" href="${esc(c.lien)}" target="_blank" rel="noopener">Voir le lot ↗</a>` : ''}
                 ${canWrite() ? `<button class="btn small danger" data-action="del-comp" data-cid="${esc(c.id)}">Retirer</button>` : ''}

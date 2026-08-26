@@ -89,6 +89,8 @@
 .comp-lot{font-size:13px;color:var(--ink-2);line-height:1.4}
 .comp-bot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding-top:2px}
 .comp-prix{font-family:var(--mono);font-weight:600;font-size:14px}
+.comp-est{font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.comp-est::before{content:'·';margin-right:6px}
 @media (max-width:640px){
   .comp-card{gap:10px;padding:10px}
   .comp-thumb{width:64px;height:64px}
