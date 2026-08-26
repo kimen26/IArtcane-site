@@ -220,6 +220,14 @@ function renderObjet() {
       <a class="link-lot" style="display:inline-block;margin-top:12px" href="#/artiste/${encodeURIComponent(O.artiste.nom)}">Voir la fiche artiste →</a>
     </details>` : '';
 
+  // Étude de spécialiste (colonne objets.etude, HO-023) — regard d'expert,
+  // distinct de la description factuelle.
+  const etudePanel = o.etude ? `
+    <details class="panel panel-pad acc" open>
+      <summary class="sec-title">Étude de spécialiste</summary>
+      <div class="md-body">${mdToHtml(o.etude)}</div>
+    </details>` : '';
+
   const fichePanel = O.fiche ? `
     <details class="panel panel-pad acc">
       <summary class="sec-title">Fiche IA <span style="font-size:12px;font-family:var(--mono);color:var(--ink-3);font-weight:400">v${O.fiche.version}${O.fiche.modele ? ' · ' + esc(O.fiche.modele) : ''} · ${fmtDate(O.fiche.created_at)}</span></summary>
@@ -268,6 +276,7 @@ function renderObjet() {
         ${identification}
       </details>
       ${artistePanel}
+      ${etudePanel}
       <details class="panel panel-pad acc" open>
         <summary class="sec-title">Vente / estimation</summary>
         ${valeur}
