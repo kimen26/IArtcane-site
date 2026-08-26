@@ -17,7 +17,7 @@ import {
   STATUTS, ACT_LABELS, actorBadge, evDetailBits, mdToHtml,
 } from '../../core/format.js';
 import { SOUS } from '../../core/taxonomie.js';
-import { sb, signPaths, logEvent, queueAnalyse, uploadPhotosFor } from '../../core/data.js';
+import { sb, signPaths, logEvent, queueAnalyse, marquerReanalyse, purgeConsigne, uploadPhotosFor } from '../../core/data.js';
 import { openCamera } from '../../core/camera.js';
 import { loadViewCss } from '../../core/css.js';
 import { O, selPhoto, hooks } from './etat.js';
@@ -59,7 +59,7 @@ async function loadObjet(id) {
   O.events = events ?? [];
   O.artiste = artiste ?? null;
   O.jobs = jobs ?? [];
-  O.pipe = computePipe(O.events, O.jobs);
+  O.pipe = computePipe(O.events, O.jobs, S.currentObjet);
   renderObjet();
   loadSimilar(o);
 }
@@ -91,19 +91,24 @@ async function deleteComp(cid) {
 }
 
 // Indicateur d'avancement R1/R2/Valorisation (HO-030)
-// Données : événements déjà chargés + jobs en attente/en cours.
-function computePipe(events, jobs) {
+// Données : événements déjà chargés + jobs en attente/en cours + marqueur
+// reanalyse_due (D-049). R2 compte TOUTES les actions d'enrichissement réelles
+// (D-051) : la base contient lens, lens R2, grok, gpt, grok R2, gpt R2, llm_appoint.
+const R2_ACTIONS = ['lens', 'lens R2', 'grok', 'gpt', 'grok R2', 'gpt R2', 'llm_appoint'];
+function computePipe(events, jobs, o) {
   const last = action => events.find(e => e.action === action)?.created_at ?? null;
-  const pendingAnalyse = jobs.some(j => ['analyse','reanalyse'].includes(j.type) && ['en_attente','en_cours'].includes(j.statut));
+  const lastR2 = events.find(e => R2_ACTIONS.includes(e.action))?.created_at ?? null;
+  const pendingAnalyse = jobs.some(j => ['analyse','reanalyse'].includes(j.type) && ['en_attente','en_cours'].includes(j.statut))
+    || o?.reanalyse_due === true;
 
   const r1Done = last('identification') !== null;
-  const r2Done = last('lens') !== null;
+  const r2Done = lastR2 !== null;
   const valoDone = last('passe_marche') !== null;
 
   return {
     r1: { state: r1Done ? 'done' : (pendingAnalyse ? 'pending' : 'todo'), date: last('identification') },
-    r2: { state: r2Done ? 'done' : (r1Done && pendingAnalyse ? 'pending' : 'todo'), date: last('lens') },
-    valo: { state: valoDone ? 'done' : 'todo', date: last('passe_marche') },
+    r2: { state: (r1Done && pendingAnalyse) ? 'pending' : (r2Done ? 'done' : 'todo'), date: lastR2 },
+    valo: { state: pendingAnalyse ? 'pending' : (valoDone ? 'done' : 'todo'), date: last('passe_marche') },
   };
 }
 
@@ -499,16 +504,6 @@ $('#objet-body').addEventListener('click', async e => {
   }
 });
 
-// Purge de la consigne humaine à l'ajout de photos réussi (HO-030).
-async function purgeConsigne(o, oid) {
-  if (!o.consigne_humain) return;
-  const avant = o.consigne_humain;
-  const { error } = await sb.from('objets').update({ consigne_humain: null }).eq('owner_id', S.tenantId).eq('id', oid);
-  if (error) { toast(error.message, true); return; }
-  if (S.currentObjet?.id === oid) S.currentObjet.consigne_humain = null;
-  logEvent('correction', { champ: 'consigne_humain', avant: avant.slice(0, 80), apres: null }, oid);
-}
-
 $('#file-add-photo').addEventListener('change', async e => {
   if (!canWrite()) { e.target.value = ''; return; }
   const files = [...e.target.files];
@@ -520,10 +515,10 @@ $('#file-add-photo').addEventListener('change', async e => {
   if (failed.length === 0) {
     if (done > 0) {
       logEvent('photo_ajoutee', { n: done, via: 'fichier' }, oid);
-      // Toute nouvelle photo doit rejouer l'analyse, sauf sur une fiche validée (D-042).
+      // Toute nouvelle photo marque l'objet pour ré-analyse différée, sauf sur une fiche validée (D-049).
       if (S.currentObjet.statut !== 'validee') {
-        await queueAnalyse(oid);
-        toast(`${done} photo${done > 1 ? 's' : ''} ajoutée${done > 1 ? 's' : ''} — analyse en file`);
+        await marquerReanalyse(oid);
+        toast(`${done} photo${done > 1 ? 's' : ''} ajoutée${done > 1 ? 's' : ''} — ré-analyse au prochain run du cron`);
       } else {
         toast(`${done} photo${done > 1 ? 's' : ''} ajoutée${done > 1 ? 's' : ''}`);
       }
@@ -532,7 +527,7 @@ $('#file-add-photo').addEventListener('change', async e => {
   } else {
     if (done > 0) {
       logEvent('photo_ajoutee', { n: done, echecs: failed.length, via: 'fichier' }, oid);
-      if (S.currentObjet.statut !== 'validee') await queueAnalyse(oid);
+      if (S.currentObjet.statut !== 'validee') await marquerReanalyse(oid);
       await purgeConsigne(o, oid);
     }
     toast(`${done}/${files.length} photo(s) ajoutée(s) — ${failed.length} en échec (${failed[0].reason}). Réessayez.`, true);

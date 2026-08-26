@@ -79,6 +79,27 @@ export async function enqueueJobs(oids, type = 'analyse') {
 // Mise en file d'UN objet (relance depuis la fiche) — même règle de dédoublonnage.
 export const queueAnalyse = (oid, type = 'analyse') => enqueueJobs([oid], type);
 
+// Ré-analyse différée (D-049) : correction/photo/crop ne créent plus de job immédiat —
+// l'objet est marqué, le cron créera UN job 'reanalyse' au prochain run (≤ 10 min).
+// La capture (capture.js) et le bouton « Relancer » gardent queueAnalyse (immédiat).
+export async function marquerReanalyse(oid) {
+  const { error } = await sb.from('objets').update({ reanalyse_due: true }).eq('owner_id', S.tenantId).eq('id', oid);
+  if (error) { toast(error.message, true); return false; }
+  return true;
+}
+
+// Purge de la consigne « photos à refaire » dès que de nouvelles photos arrivent
+// (HO-030) — déplacée depuis views/objet/index.js pour être partagée avec le flux
+// caméra (photos.js:onCamClose).
+export async function purgeConsigne(o, oid) {
+  if (!o.consigne_humain) return;
+  const avant = o.consigne_humain;
+  const { error } = await sb.from('objets').update({ consigne_humain: null }).eq('owner_id', S.tenantId).eq('id', oid);
+  if (error) { toast(error.message, true); return; }
+  if (S.currentObjet?.id === oid) S.currentObjet.consigne_humain = null;
+  logEvent('correction', { champ: 'consigne_humain', avant: avant.slice(0, 80), apres: null }, oid);
+}
+
 // Garantit le cache collection (comptages objets par artiste, mini-cartes du
 // détail, digest Activité) sans ré-afficher la vue collection.
 export async function ensureCollection() {

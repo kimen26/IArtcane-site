@@ -7,7 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, esc, toast } from '../../core/dom.js';
 import { S } from '../../core/state.js';
-import { sb, logEvent, queueAnalyse } from '../../core/data.js';
+import { sb, logEvent } from '../../core/data.js';
 import { O, hooks } from './etat.js';
 
 // Champs éditables en mode « Corriger » (chaque diff → événement 'correction' = leçon PMO)
@@ -61,7 +61,7 @@ export async function saveCorrections() {
     }
   }
   if (!rows.length) { toast('Aucune modification'); O.editing = false; hooks.rendre(); return; }
-  updates.statut = 'en_file';
+  updates.reanalyse_due = true;
   const verrous = new Set(o.verrous_humains || []);
   for (const { champ } of rows) verrous.add(champ);
   updates.verrous_humains = Array.from(verrous);
@@ -69,7 +69,6 @@ export async function saveCorrections() {
   if (error) { toast(error.message, true); return; }
   // Ground truth tracée dans evenements (corrections absorbée, D-027) — le cron la relit là.
   logEvent('correction', { champs: Object.fromEntries(rows.map(r => [r.champ, { avant: r.avant, apres: r.apres }])) });
-  await queueAnalyse(o.id, 'reanalyse');
-  toast(`${rows.length} correction${rows.length > 1 ? 's' : ''} gravée${rows.length > 1 ? 's' : ''} — ré-analyse en file, champs corrigés verrouillés`);
+  toast(`${rows.length} correction${rows.length > 1 ? 's' : ''} gravée${rows.length > 1 ? 's' : ''} — ré-analyse au prochain run du cron (≤ 10 min), champs corrigés verrouillés`);
   hooks.recharger(o.id);
 }

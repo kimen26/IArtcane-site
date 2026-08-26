@@ -9,7 +9,7 @@
 import { esc, toast } from '../../core/dom.js';
 import { S } from '../../core/state.js';
 import { isVideo } from '../../core/format.js';
-import { sb, logEvent, queueAnalyse, makeThumbBlob, deleteStoredPhoto } from '../../core/data.js';
+import { sb, logEvent, marquerReanalyse, purgeConsigne, makeThumbBlob, deleteStoredPhoto } from '../../core/data.js';
 import { createOverlay, openViewer } from '../../core/lightbox.js';
 import { selPhoto, hooks } from './etat.js';
 
@@ -25,12 +25,14 @@ export async function deletePhoto() {
 }
 
 // Caméra depuis la fiche : les clichés ont été uploadés au fil de l'eau →
-// toute nouvelle photo relance l'analyse (même règle que l'ajout par fichier),
-// sauf si la fiche est déjà validée (ground truth figée), puis on recharge.
-export function onCamClose(n) {
+// toute nouvelle photo marque l'objet pour ré-analyse différée (D-049, même règle
+// que l'ajout par fichier), sauf fiche validée (ground truth figée), purge la
+// consigne « photos à refaire » le cas échéant, puis on recharge.
+export async function onCamClose(n) {
   const o = S.currentObjet;
   if (!o || !n) return;
-  if (o.statut !== 'validee') queueAnalyse(o.id);
+  if (o.statut !== 'validee') await marquerReanalyse(o.id);
+  await purgeConsigne(o, o.id);
   hooks.recharger(o.id);
 }
 
