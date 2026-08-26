@@ -12,15 +12,19 @@ import { O, hooks } from './etat.js';
 
 // Champs éditables en mode « Corriger » (chaque diff → événement 'correction' = leçon PMO)
 export const CHAMPS_EDIT = [
-  ['titre', 'Titre'], ['categorie', 'Catégorie'], ['technique', 'Technique'],
+  ['titre', 'Titre'], ['categorie', 'Catégorie'], ['sous_categorie', 'Sous-catégorie'], ['technique', 'Technique'],
   ['periode', 'Période'], ['ecole', 'Région / école'], ['auteur', 'Auteur'],
   ['marques', 'Marques / poinçons'], ['etat', 'État'],
   ['prix_bas', 'Prix bas (€)'], ['prix_haut', 'Prix haut (€)'],
 ];
 
-export function dlRow(label, val, editField, type = 'text') {
+export function dlRow(label, val, editField, type = 'text', options = []) {
   const v = (val ?? '') === '' ? null : String(val);
   if (O.editing && editField) {
+    if (type === 'select') {
+      const opts = options.map(opt => `<option value="${esc(opt)}" ${opt === v ? 'selected' : ''}>${esc(opt)}</option>`).join('');
+      return `<dt>${label}</dt><dd><select id="edit-${editField}" ${options.length ? '' : 'disabled'}><option value="">—</option>${opts}</select></dd>`;
+    }
     return `<dt>${label}</dt><dd><input id="edit-${editField}" type="${type}" value="${esc(v ?? '')}"></dd>`;
   }
   return `<dt>${label}</dt><dd>${v ? esc(v) : '<span class="miss">—</span>'}</dd>`;

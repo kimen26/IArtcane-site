@@ -35,7 +35,7 @@ function matchFiltre(o, f) {
   if (f.list === 'chere' && !(o.prix_haut >= 1000)) return false;
   if (f.cats?.length && !f.cats.includes(catCanon(o.categorie))) return false;
   if (f.q) {
-    const hay = norm([o.id, o.titre, o.description, o.categorie, o.auteur, o.periode, o.ecole,
+    const hay = norm([o.id, o.titre, o.description, o.categorie, o.sous_categorie, o.auteur, o.periode, o.ecole,
       o.technique, o.zone, o.contenant, o.position, o.marques].filter(Boolean).join(' '));
     if (!f.q.split(/\s+/).filter(Boolean).every(tok => hay.includes(tok))) return false;
   }

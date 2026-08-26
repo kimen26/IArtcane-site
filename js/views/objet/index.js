@@ -13,9 +13,10 @@
 import { $, esc, norm, toast, emptyHtml } from '../../core/dom.js';
 import { S, canWrite } from '../../core/state.js';
 import {
-  fmtNum, fmtDate, confMarks, confHtml, catEmoji, isVideo, infoSvg,
+  fmtNum, fmtDate, confMarks, confHtml, catCanon, catEmoji, isVideo, infoSvg,
   STATUTS, ACT_LABELS, evDetailBits, mdToHtml,
 } from '../../core/format.js';
+import { SOUS } from '../../core/taxonomie.js';
 import { sb, signPaths, logEvent, queueAnalyse, uploadPhotosFor } from '../../core/data.js';
 import { openCamera } from '../../core/camera.js';
 import { loadViewCss } from '../../core/css.js';
@@ -121,11 +122,17 @@ function renderObjet() {
 
   const identification = O.editing
     ? `<dl class="dl O.editing">
-        ${CHAMPS_EDIT.map(([f, label]) => dlRow(label, o[f], f, f.startsWith('prix_') ? 'number' : 'text')).join('')}
+        ${CHAMPS_EDIT.map(([f, label]) => {
+          if (f === 'sous_categorie') {
+            const opts = SOUS[catCanon(o.categorie)] ?? [];
+            return dlRow(label, o[f], f, 'select', opts);
+          }
+          return dlRow(label, o[f], f, f.startsWith('prix_') ? 'number' : 'text');
+        }).join('')}
         <dt>Description</dt><dd><input id="edit-description" value="${esc(o.description ?? '')}"></dd>
        </dl>`
     : `<dl class="dl">
-        ${dlRow('Catégorie', o.categorie)}
+        ${dlRow('Catégorie', o.sous_categorie ? `${o.categorie} · ${o.sous_categorie}` : o.categorie)}
         ${dlRow('Technique', o.technique)}
         ${dlRow('Période', o.periode)}
         ${dlRow('Région / école', o.ecole)}
