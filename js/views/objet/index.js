@@ -22,7 +22,7 @@ import { openCamera } from '../../core/camera.js';
 import { loadViewCss } from '../../core/css.js';
 import { O, selPhoto, hooks } from './etat.js';
 import { deletePhoto, onCamClose, openLightbox } from './photos.js';
-import { CHAMPS_EDIT, dlRow, saveCorrections } from './edition.js';
+import { CHAMPS_EDIT, dlRow, saveCorrections, srcBadge } from './edition.js';
 
 // CSS de la vue chargé par la vue (D-041) : aucun <link> dans index.html,
 // donc aucun fichier transverse touché par un chantier sur cet écran.
@@ -122,7 +122,7 @@ function renderObjet() {
     .map(v => `<button class="rebound" data-action="rebound" data-val="${esc(v)}">${esc(v)}</button>`).join('');
 
   const identification = O.editing
-    ? `<dl class="dl O.editing">
+    ? `<dl class="dl editing">
         ${CHAMPS_EDIT.map(([f, label]) => {
           if (f === 'sous_categorie') {
             const opts = SOUS[catCanon(o.categorie)] ?? [];
@@ -130,7 +130,8 @@ function renderObjet() {
           }
           return dlRow(label, o[f], f, f.startsWith('prix_') ? 'number' : 'text');
         }).join('')}
-        <dt>Description</dt><dd><input id="edit-description" value="${esc(o.description ?? '')}"></dd>
+        <dt>Description ${srcBadge('description')}</dt><dd><textarea id="edit-description" rows="6">${esc(o.description ?? '')}</textarea></dd>
+        ${o.commentaire ? `<dt>💬 Note <span class="fld-src hum" title="écrit par un humain — l'IA ne reprendra jamais ce champ">🔒 Humain · figé</span></dt><dd class="human-note">${esc(o.commentaire)}</dd>` : ''}
        </dl>`
     : `<dl class="dl">
         ${dlRow('Catégorie', o.sous_categorie ? `${o.categorie} · ${o.sous_categorie}` : o.categorie)}

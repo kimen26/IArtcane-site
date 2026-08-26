@@ -113,3 +113,53 @@
 .human-note{font-size:13.5px;color:var(--ink-2);line-height:1.4;padding:8px 10px;background:var(--blue-softer);border-radius:var(--r-sm);border-left:3px solid var(--blue)}
 .alert-gentle{background:var(--amber-soft);border:1px solid var(--amber);color:var(--ink);border-radius:var(--r-md);font-size:13.5px}
 .alert-gentle span{color:var(--ink-2)}
+
+/* HO-031 : mode correction aéré + badges source humain / IA */
+.dl.editing dd input,
+.dl.editing dd select,
+.dl.editing dd textarea{
+  box-sizing:border-box;
+  width:100%;
+  font-size:16px;
+  padding:10px 12px;
+  border:1px solid var(--line-strong);
+  border-radius:var(--r-sm);
+  background:var(--surface);
+  color:var(--ink);
+  font-family:var(--sans);
+  line-height:1.45;
+}
+.dl.editing dd input:focus,
+.dl.editing dd select:focus,
+.dl.editing dd textarea:focus{
+  outline:none;
+  border-color:var(--blue);
+  background:var(--blue-softer);
+}
+.dl.editing dd textarea{resize:vertical;min-height:120px}
+
+.fld-src{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  font-size:11.5px;
+  font-weight:600;
+  padding:2px 8px;
+  border-radius:999px;
+  white-space:nowrap;
+  vertical-align:middle;
+  margin-left:4px;
+}
+.fld-src.hum{
+  background:var(--amber-soft);
+  color:var(--amber);
+}
+.fld-src.ia{
+  background:var(--blue-softer);
+  color:var(--blue-deep);
+}
+@media (max-width:640px){
+  .dl.editing{grid-template-columns:1fr}
+  .dl.editing dt{padding-top:0;margin-bottom:-6px}
+  .fld-src{font-size:10.5px}
+}

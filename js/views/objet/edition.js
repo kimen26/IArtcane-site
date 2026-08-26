@@ -18,16 +18,24 @@ export const CHAMPS_EDIT = [
   ['prix_bas', 'Prix bas (€)'], ['prix_haut', 'Prix haut (€)'],
 ];
 
+// Badge de source d'un champ en mode édition : humain (verrou) vs IA.
+export function srcBadge(champ) {
+  const verrous = new Set((S.currentObjet?.verrous_humains) || []);
+  const hum = verrous.has(champ);
+  return `<span class="fld-src ${hum ? 'hum' : 'ia'}" title="${hum ? 'écrit par un humain — l\'IA ne reprendra jamais ce champ' : 'généré par l\'IA — repris à la prochaine analyse'}">${hum ? '🔒 Humain · figé' : '🤖 IA · repris à la prochaine analyse'}</span>`;
+}
+
 export function dlRow(label, val, editField, type = 'text', options = []) {
   const v = (val ?? '') === '' ? null : String(val);
   if (O.editing && editField) {
+    const badge = srcBadge(editField);
     if (type === 'select') {
       const opts = options.map(opt => `<option value="${esc(opt)}" ${opt === v ? 'selected' : ''}>${esc(opt)}</option>`).join('');
-      return `<dt>${label}</dt><dd><select id="edit-${editField}" ${options.length ? '' : 'disabled'}><option value="">—</option>${opts}</select></dd>`;
+      return `<dt>${esc(label)} ${badge}</dt><dd><select id="edit-${editField}" ${options.length ? '' : 'disabled'}><option value="">—</option>${opts}</select></dd>`;
     }
-    return `<dt>${label}</dt><dd><input id="edit-${editField}" type="${type}" value="${esc(v ?? '')}"></dd>`;
+    return `<dt>${esc(label)} ${badge}</dt><dd><input id="edit-${editField}" type="${type}" value="${esc(v ?? '')}"></dd>`;
   }
-  return `<dt>${label}</dt><dd>${v ? esc(v) : '<span class="miss">—</span>'}</dd>`;
+  return `<dt>${esc(label)}</dt><dd>${v ? esc(v) : '<span class="miss">—</span>'}</dd>`;
 }
 
 export async function saveCorrections() {
