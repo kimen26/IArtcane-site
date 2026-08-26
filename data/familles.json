@@ -23,6 +23,175 @@
     "Art tribal",
     "Autre"
   ],
+  "sous_categories": {
+    "Tableau": [
+      "Huile",
+      "Aquarelle",
+      "Acrylique",
+      "Gouache",
+      "Pastel",
+      "Fusain",
+      "Tempera",
+      "Technique mixte",
+      "Autre"
+    ],
+    "Gravure / estampe": [
+      "Eau-forte",
+      "Lithographie",
+      "Sérigraphie",
+      "Burin",
+      "Aquatinte",
+      "Xylographie",
+      "Héliogravure",
+      "Autre"
+    ],
+    "Dessin": [
+      "Crayon / graphite",
+      "Encre",
+      "Sanguine",
+      "Lavis",
+      "Autre"
+    ],
+    "Photographie": [
+      "Tirage argentique",
+      "Daguerréotype / ferrotype",
+      "Photo ancienne",
+      "Polaroid",
+      "Autre"
+    ],
+    "Sculpture": [
+      "Bronze",
+      "Marbre",
+      "Terre cuite",
+      "Bois",
+      "Plâtre",
+      "Résine",
+      "Pierre",
+      "Autre"
+    ],
+    "Céramique": [
+      "Porcelaine",
+      "Faïence",
+      "Grès",
+      "Terre cuite",
+      "Émaux / émail",
+      "Barbotine",
+      "Autre"
+    ],
+    "Verrerie": [
+      "Cristal",
+      "Opaline",
+      "Verre soufflé",
+      "Verre pressé",
+      "Pâte de verre",
+      "Autre"
+    ],
+    "Mobilier": [
+      "Siège",
+      "Table",
+      "Commode",
+      "Armoire / buffet",
+      "Secrétaire / bureau",
+      "Lit",
+      "Miroir / psyché",
+      "Autre"
+    ],
+    "Montre / horlogerie": [
+      "Montre bracelet",
+      "Montre gousset",
+      "Pendule",
+      "Horloge de table / cartel",
+      "Comtoise",
+      "Réveil",
+      "Autre"
+    ],
+    "Bijou": [
+      "Bague",
+      "Collier",
+      "Broche",
+      "Bracelet",
+      "Boucles d'oreilles",
+      "Parure",
+      "Autre"
+    ],
+    "Argenterie / métal": [
+      "Argent massif",
+      "Métal argenté",
+      "Étain",
+      "Cuivre / laiton",
+      "Fer forgé",
+      "Bronze d'art (objet)",
+      "Autre"
+    ],
+    "Luminaire": [
+      "Lampe",
+      "Lustre",
+      "Applique",
+      "Bougeoir / chandelier",
+      "Lanterne",
+      "Autre"
+    ],
+    "Textile / tapisserie": [
+      "Tapisserie",
+      "Tapis",
+      "Broderie",
+      "Dentelle",
+      "Costume / tissu",
+      "Autre"
+    ],
+    "Livre / document": [
+      "Livre ancien",
+      "Manuscrit",
+      "Autographe",
+      "Carte",
+      "Affiche",
+      "Autre"
+    ],
+    "Monnaie / médaille": [
+      "Monnaie / pièce",
+      "Médaille",
+      "Jeton",
+      "Décoration",
+      "Autre"
+    ],
+    "Instrument": [
+      "Musique — cordes",
+      "Musique — vent",
+      "Musique — clavier",
+      "Scientifique / optique",
+      "Autre"
+    ],
+    "Jouet": [
+      "Poupée",
+      "Train / voiture",
+      "Jeu",
+      "Ours / peluche",
+      "Figurine / automate",
+      "Autre"
+    ],
+    "Curiosité": [
+      "Taxidermie / naturalia",
+      "Minéral / fossile",
+      "Objet de cabinet ⚠️ CITES",
+      "Autre"
+    ],
+    "Art asiatique": [
+      "Chine",
+      "Japon",
+      "Corée",
+      "Inde / Asie du Sud-Est",
+      "Autre"
+    ],
+    "Art tribal": [
+      "Afrique",
+      "Océanie",
+      "Amérindien / précolombien",
+      "Autre"
+    ],
+    "Autre": [
+      "Autre / à identifier"
+    ]
+  },
   "mapping": {
     "Tableau": "tableau",
     "Gravure / estampe": "gravure-estampe",
