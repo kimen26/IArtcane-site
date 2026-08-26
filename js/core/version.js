@@ -8,4 +8,4 @@
 //
 // Convention de version : AAAA-MM-JJ<lettre>[-hoNNN] — ex. 2026-08-26a-ho014.
 // ═══════════════════════════════════════════════════════════════════════════
-export const VERSION = '2026-08-26g-ho025';
+export const VERSION = '2026-08-26h-ho024';
