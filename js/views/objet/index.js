@@ -97,9 +97,9 @@ function renderObjet() {
     <div class="panel">
       <div class="gallery-main" data-action="zoom" title="Agrandir">
         ${sel && sel.url ? (isVideo(sel) ? `<video src="${esc(sel.url)}" controls></video>` : `<img src="${esc(sel.url)}" alt="photo de l'objet">`) : catEmoji(o.categorie)}
-        ${sel && sel.url && !isVideo(sel) ? `<button class="crop-btn hide-lecteur" data-action="crop-toggle" title="Centrer : choisir le point de la photo sur lequel la carte du listing se centre">🎯 Centrer</button>` : ''}
         ${sel && sel.url && !isVideo(sel) ? `<button class="crop-btn cut-btn hide-lecteur" data-action="cut-photo" title="Recadrer : rogne définitivement la photo (résolution d'origine conservée)">✂️ Recadrer</button>` : ''}
         ${sel && sel.url ? `<button class="crop-btn del-photo hide-lecteur" data-action="del-photo" title="Supprimer cette photo">🗑</button>` : ''}
+        ${sel && sel.url && !isVideo(sel) ? `<button class="crop-btn cover-btn hide-lecteur ${sel.couverture ? 'active' : ''}" data-action="cover-photo" title="Couverture : cette photo illustre l'objet dans la collection">${sel.couverture ? '★ Couverture ✓' : '★ Couverture'}</button>` : ''}
       </div>
       <div class="thumbs">
         ${O.photos.map((p, i) => `
@@ -377,9 +377,9 @@ $('#objet-body').addEventListener('keydown', e => {
 // Actions qui modifient des données — bloquées pour un lecteur (double garde
 // avec la RLS 0012 ; l'UI est déjà masquée via .hide-lecteur).
 const ACTIONS_MUTANTES = new Set([
-  'crop-toggle', 'cut-photo', 'del-photo', 'del-objet', 'add-photo', 'take-photo',
+  'cut-photo', 'del-photo', 'del-objet', 'add-photo', 'take-photo',
   'loc-edit', 'loc-save', 'valider', 'corriger', 'corr-save', 'relancer',
-  'del-comp',
+  'del-comp', 'cover-photo',
 ]);
 
 $('#objet-body').addEventListener('click', async e => {
@@ -398,18 +398,21 @@ $('#objet-body').addEventListener('click', async e => {
     if (!sel?.url) return;
     openLightbox(sel);
   }
-  // Cadrage : la photo s'ouvre en PLEIN ÉCRAN (entière, quitte à être petite —
-  // retour Yann : « pour la cadrer il faut la voir ») et le clic y définit le
-  // point focal de CETTE photo seulement (chaque photo a son cadrage).
-  else if (act === 'crop-toggle') {
-    const sel = selPhoto();
-    if (!sel?.url) return;
-    openLightbox(sel, 'focal');
-  }
   else if (act === 'cut-photo') {
     const sel = selPhoto();
     if (!sel?.url) return;
     openLightbox(sel, 'cut');
+  }
+  else if (act === 'cover-photo') {
+    const sel = selPhoto();
+    if (!sel?.url || sel.couverture || isVideo(sel)) return;
+    await sb.from('photos').update({ couverture: false }).eq('owner_id', S.tenantId).eq('objet_id', o.id);
+    const { error } = await sb.from('photos').update({ couverture: true }).eq('owner_id', S.tenantId).eq('id', sel.id);
+    if (error) { toast(error.message, true); return; }
+    logEvent('couverture', { photo: sel.storage_path });
+    toast('✓ Photo de couverture');
+    S.photoMap = {};
+    await hooks.recharger(o.id);
   }
   else if (act === 'del-photo') { deletePhoto(); }
   else if (act === 'del-objet') { deleteObjet(); }

@@ -80,7 +80,7 @@ export function cardHtml(o) {
     : '<em>non localisé</em>';
   const meta = [catCanon(o.categorie), o.periode, o.ecole].filter(Boolean).map(esc).join(' · ') || '<em>à identifier</em>';
   const visuel = img?.url
-    ? `<img src="${esc(img.url)}" alt="${esc(o.titre || 'Objet de la collection')}" loading="lazy" decoding="async" style="object-position:${img.fx ?? 50}% ${img.fy ?? 50}%">`
+    ? `<img src="${esc(img.url)}" alt="${esc(o.titre || 'Objet de la collection')}" loading="lazy" decoding="async">`
     : catEmoji(o.categorie); // pas de visuel : placeholder emoji (+ badge ▶ si vidéo)
   const badgeVid = img?.vid ? '<span class="card-vid" title="Vidéo" aria-label="Vidéo">▶</span>' : '';
   return `<article class="card" data-oid="${esc(o.id)}" tabindex="0" role="button" aria-label="${esc(o.titre || 'Objet')} — fiche #${esc(o.id)}">
@@ -98,7 +98,7 @@ export function cardHtml(o) {
 // Partagés entre l'historique de la fiche objet et l'écran Activité.
 export const ACT_LABELS = {
   capture: 'Objet capturé', photo_ajoutee: 'Photo ajoutée', photo_supprimee: 'Photo supprimée',
-  recadrage: 'Recadrage', centrage: 'Centrage', localisation: 'Localisation',
+  recadrage: 'Recadrage', centrage: 'Centrage', couverture: 'Photo de couverture', localisation: 'Localisation',
   correction: 'Correction', validation: 'Fiche validée', relance: 'Estimation relancée',
   identification: 'R1 · Identification', passe_marche: 'Valorisation · comparables',
   lens: 'R2 · Google Lens', artiste_maj: 'Fiche artiste', photos_manquantes: 'Photos recommandées',

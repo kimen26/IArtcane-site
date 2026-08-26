@@ -44,7 +44,7 @@
 .cut-sel .h-s{left:50%;bottom:0;cursor:ns-resize}
 .cut-sel .h-sw{left:0;bottom:0;cursor:nesw-resize}
 .cut-sel .h-w{left:0;top:50%;cursor:ew-resize}
-.cut-bar{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;gap:14px;padding:14px;background:rgba(13,27,62,.82);border-top:1px solid rgba(255,255,255,.18)}
+.cut-bar{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;gap:14px;padding:14px;background:rgba(13,27,62,.82);border-top:1px solid rgba(255,255,255,.18);z-index:12}
 
 /* ─── Dictée micro (HO-020) ───────────────────────────────────────────────── */
 .mic-wrap{display:flex;gap:8px;align-items:flex-start;width:100%}

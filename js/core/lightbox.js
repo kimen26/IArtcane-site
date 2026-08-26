@@ -21,7 +21,7 @@ import { esc } from './dom.js';
 export function createOverlay({ className = '', html = '', onClose } = {}) {
   const el = document.createElement('div');
   el.className = 'lightbox' + (className ? ` ${className}` : '');
-  el.innerHTML = html;
+  el.innerHTML = html + `<button class="lb-close" aria-label="Fermer" title="Fermer">✕</button>`;
 
   let ferme = false;
   const close = () => {
@@ -33,6 +33,8 @@ export function createOverlay({ className = '', html = '', onClose } = {}) {
     onClose?.();
   };
   const onKey = e => { if (e.key === 'Escape') close(); };
+
+  el.querySelector('.lb-close').addEventListener('click', e => { e.stopPropagation(); close(); });
 
   document.addEventListener('keydown', onKey);
   document.body.classList.add('lb-open');

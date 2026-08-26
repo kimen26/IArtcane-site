@@ -91,7 +91,7 @@ async function loadArtiste(nom) {
     <div class="art-gal">${oeuvres.map(o => {
       const img = S.photoMap[o.id];
       return `<button class="art-gal-item" data-oid="${esc(o.id)}" title="${esc(o.titre || 'Objet')} — fiche #${esc(o.id)}" aria-label="${esc(o.titre || 'Objet')} — fiche #${esc(o.id)}">
-        <img src="${esc(img.url)}" alt="${esc(o.titre || 'Œuvre de la collection')}" loading="lazy" decoding="async" style="object-position:${img.fx ?? 50}% ${img.fy ?? 50}%">
+        <img src="${esc(img.url)}" alt="${esc(o.titre || 'Œuvre de la collection')}" loading="lazy" decoding="async">
       </button>`;
     }).join('')}</div>` : '';
   const photosPanel = `

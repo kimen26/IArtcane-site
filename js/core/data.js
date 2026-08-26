@@ -87,18 +87,18 @@ export async function ensureCollection() {
   S.collection = data ?? [];
 }
 
-// Remplit S.photoMap : objet_id → { url (miniature d'abord), fx, fy, vid }.
+// Remplit S.photoMap : objet_id → { url (miniature d'abord), vid }.
 export async function loadPhotoMap() {
   S.photoMap = {};
   if (!S.collection.length) return;
-  const { data } = await sb.from('photos').select('objet_id,storage_path,thumb_path,focal_x,focal_y,kind').eq('owner_id', S.tenantId).order('created_at');
+  const { data } = await sb.from('photos').select('objet_id,storage_path,thumb_path,kind,couverture').eq('owner_id', S.tenantId).order('couverture', { ascending: false }).order('created_at');
   const first = {};
   for (const p of data ?? []) if (!first[p.objet_id]) first[p.objet_id] = p;
   const urlByPath = await signPaths(Object.values(first).flatMap(p => [p.storage_path, p.thumb_path].filter(Boolean)));
   for (const [oid, p] of Object.entries(first)) {
     const url = urlByPath[p.thumb_path] ?? urlByPath[p.storage_path]; // miniature d'abord (vitesse)
     // vid : 1re « photo » = vidéo → badge ▶ sur la carte (même sans miniature)
-    S.photoMap[oid] = { url: url ?? null, fx: p.focal_x, fy: p.focal_y, vid: isVideo(p) };
+    S.photoMap[oid] = { url: url ?? null, vid: isVideo(p) };
   }
 }
 

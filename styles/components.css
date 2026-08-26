@@ -200,6 +200,7 @@ body.cam-open .toasts{top:14px;bottom:auto}
 
 /* ─── Lightbox (overlay plein écran) ──────────────────────── */
 .lightbox{position:fixed;inset:0;z-index:150;background:rgba(13,27,62,.88);display:grid;place-items:center;cursor:zoom-out;padding:24px;overflow:hidden}
+.lightbox .lb-close{position:fixed;top:14px;right:14px;z-index:20;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.35);background:rgba(13,27,62,.75);color:#fff;font-size:18px;cursor:pointer}
 .lightbox img,.lightbox video{max-width:calc(100vw - 48px);max-height:calc(100dvh - 48px);border-radius:var(--r-md)}
 .lightbox.zoomed{display:block;overflow:auto;cursor:zoom-out}
 .lightbox.zoomed img,.lightbox.zoomed video{max-width:none;max-height:none}
