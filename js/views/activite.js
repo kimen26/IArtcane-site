@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, esc, toast, emptyHtml } from '../core/dom.js';
 import { S, canWrite } from '../core/state.js';
-import { plur, capFirst, ACT_LABELS, evDetailBits } from '../core/format.js';
+import { plur, capFirst, ACT_LABELS, actorBadge, evDetailBits } from '../core/format.js';
 import { sb, ensureCollection, enqueueJobs } from '../core/data.js';
 import { loadViewCss } from '../core/css.js';
 
@@ -104,11 +104,12 @@ function evRowActivite(ev, titres) {
   const obj = ev.objet_id
     ? `<a class="link-lot" href="#/objet/${encodeURIComponent(ev.objet_id)}">#${esc(ev.objet_id)}${titres[ev.objet_id] ? ' ' + esc(titres[ev.objet_id]) : ''}</a>`
     : '';
+  const bits = [obj, ...evDetailBits(ev.detail ?? {})].filter(Boolean);
   return `<div class="ev-row">
     <span class="ev-date">${h}</span>
     <span class="ev-act">${esc(ACT_LABELS[ev.action] ?? ev.action)}</span>
-    <span class="ev-qui">${esc(ev.acteur ?? '')}</span>
-    <span class="ev-det">${[obj, ...evDetailBits(ev.detail ?? {})].filter(Boolean).join(' · ')}</span>
+    ${actorBadge(ev.acteur ?? '')}
+    <div class="ev-det">${bits.map(b => `<div class="ev-bit">${b}</div>`).join('')}</div>
   </div>`;
 }
 

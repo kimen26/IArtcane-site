@@ -59,14 +59,18 @@
 .value-sub{font-size:13px;color:var(--ink-2);margin-top:2px}
 
 /* Changelog objet (D-025) — accordéon Historique de la fiche */
-.ev-list{margin-top:10px}
-.ev-row{display:grid;grid-template-columns:auto auto auto 1fr;gap:4px 12px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.ev-list{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+.ev-row{display:grid;grid-template-columns:auto auto auto 1fr;gap:4px 12px;align-items:start;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
 .ev-row:last-child{border-bottom:none}
-.ev-date{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);white-space:nowrap}
+.ev-date{font-family:var(--mono);font-size:12px;color:var(--ink-3);white-space:nowrap}
 .ev-act{font-weight:600;white-space:nowrap}
-.ev-qui{color:var(--ink-3);font-size:11.5px;white-space:nowrap}
-.ev-det{color:var(--ink-2);word-break:break-word}
-@media (max-width:640px){.ev-row{grid-template-columns:auto 1fr}.ev-det{grid-column:1/-1}}
+.ev-actor{display:inline-flex;align-items:center;padding:2px 10px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap;background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line)}
+.ev-actor.human{background:var(--green-soft);color:var(--green);border-color:transparent}
+.ev-det{color:var(--ink-2);word-break:break-word;min-width:0}
+.ev-bit+.ev-bit{margin-top:4px}
+.ev-champs{list-style:none;padding:0;margin:4px 0 0;display:flex;flex-direction:column;gap:4px}
+.ev-champs li{padding:4px 8px;background:var(--surface);border-radius:var(--r-sm);border-left:3px solid var(--blue)}
+@media (max-width:640px){.ev-row{grid-template-columns:auto 1fr}.ev-act{grid-column:2}.ev-actor{grid-column:2;justify-self:start}.ev-det{grid-column:1/-1}}
 /* Comparables visuels (migration 0008 : image_url + source_type) — cartes avec
    image du lot ; badge vert = adjudication (entre dans la fourchette), ambre =
    annonce en vente (contexte uniquement, règle d'or). */

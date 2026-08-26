@@ -7,7 +7,11 @@
 .dig-sum{flex:1;min-width:0;color:var(--ink-2)}
 .dig-sum b{color:var(--ink)}
 .dig-count{flex-shrink:0;font-family:var(--mono);font-size:11.5px}
-.dig-row .ev-list{margin-top:0;padding:0 4px 14px 24px}
+.dig-row .ev-list{margin-top:0;padding:0 4px 14px 24px;display:flex;flex-direction:column;gap:6px}
+.dig-row .ev-actor{font-size:11px;padding:1px 8px}
+.dig-row .ev-bit+.ev-bit{margin-top:3px}
+.dig-row .ev-champs{gap:3px;margin-top:3px}
+.dig-row .ev-champs li{padding:3px 6px}
 @media (max-width:640px){
   .dig-row>summary{align-items:flex-start}
   .dig-row .ev-list{padding-left:4px}

@@ -13,8 +13,8 @@
 import { $, esc, norm, toast, emptyHtml } from '../../core/dom.js';
 import { S, canWrite } from '../../core/state.js';
 import {
-  fmtNum, fmtDate, confMarks, confHtml, catCanon, catEmoji, isVideo, infoSvg,
-  STATUTS, ACT_LABELS, evDetailBits, mdToHtml,
+  fmtNum, fmtDate, fmtDateTime, confMarks, confHtml, catCanon, catEmoji, isVideo, infoSvg,
+  STATUTS, ACT_LABELS, actorBadge, evDetailBits, mdToHtml,
 } from '../../core/format.js';
 import { SOUS } from '../../core/taxonomie.js';
 import { sb, signPaths, logEvent, queueAnalyse, uploadPhotosFor } from '../../core/data.js';
@@ -233,10 +233,10 @@ function renderObjet() {
   const evRows = O.events.map(ev => {
     const bits = evDetailBits(ev.detail ?? {});
     return `<div class="ev-row">
-      <span class="ev-date">${fmtDate(ev.created_at)}</span>
+      <span class="ev-date">${fmtDateTime(ev.created_at)}</span>
       <span class="ev-act">${esc(ACT_LABELS[ev.action] ?? ev.action)}</span>
-      <span class="ev-qui">${esc(ev.acteur ?? '')}</span>
-      <span class="ev-det">${bits.join(' · ')}</span>
+      ${actorBadge(ev.acteur ?? '')}
+      <div class="ev-det">${bits.map(b => `<div class="ev-bit">${b}</div>`).join('')}</div>
     </div>`;
   }).join('');
   const historyPanel = `

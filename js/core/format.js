@@ -30,6 +30,12 @@ export const auteurMatch = (auteur, nom) => {
 
 export const fmtNum = n => Number(n).toLocaleString('fr-FR');
 export const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('fr-FR') : '—';
+export const fmtDateTime = iso => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+    + ' · ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+};
 export const plur = (n, s, p) => `${n} ${n > 1 ? p : s}`;
 // Internes à ce module (consommés par cardHtml ci-dessous) : pas d'API publique.
 const pinSvg = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 21s-7-6.1-7-11a7 7 0 1 1 14 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>';
@@ -94,11 +100,18 @@ export const ACT_LABELS = {
   capture: 'Objet capturé', photo_ajoutee: 'Photo ajoutée', photo_supprimee: 'Photo supprimée',
   recadrage: 'Recadrage', centrage: 'Centrage', localisation: 'Localisation',
   correction: 'Correction', validation: 'Fiche validée', relance: 'Estimation relancée',
-  identification: 'Identification IA', passe_marche: 'Recherche de comparables',
-  lens: 'Google Lens (signature)', artiste_maj: 'Fiche artiste', photos_manquantes: 'Photos recommandées',
+  identification: 'R1 · Identification', passe_marche: 'Valorisation · comparables',
+  lens: 'R2 · Google Lens', artiste_maj: 'Fiche artiste', photos_manquantes: 'Photos recommandées',
   artiste_photo_ajoutee: 'Photo artiste ajoutée', artiste_photo_supprimee: 'Photo artiste supprimée',
   comparable_supprime: 'Comparable retiré',
 };
+// Badge acteur : humain distingué visuellement de l'IA (ground truth, invariant 4).
+const HUMAN_ACTORS = new Set(['yann', 'alain']);
+export function actorBadge(actor) {
+  if (!actor) return '<span class="ev-actor">—</span>';
+  const kind = HUMAN_ACTORS.has(actor.toLowerCase()) ? 'human' : 'bot';
+  return `<span class="ev-actor ${kind}">${esc(actor)}</span>`;
+}
 // Détail utile d'un événement (modèle, prompt, comparables, sources, champs
 // avant→après, note) — rendu HTML échappé, partagé fiche objet + Activité.
 export function evDetailBits(d = {}) {
@@ -109,8 +122,9 @@ export function evDetailBits(d = {}) {
   if (d.comps != null) bits.push(d.comps + ' comparable' + (d.comps > 1 ? 's' : ''));
   if (Array.isArray(d.sources) && d.sources.length) bits.push(esc(d.sources.join(', ')));
   if (d.champs && typeof d.champs === 'object') {
-    bits.push(Object.entries(d.champs).map(([c, v]) =>
-      `${esc(c)} : « ${esc(v?.avant ?? '—')} » → « ${esc(v?.apres ?? '—')} »`).join(' · '));
+    const rows = Object.entries(d.champs).map(([c, v]) =>
+      `<li>${esc(c)} : « ${esc(v?.avant ?? '—')} » → « ${esc(v?.apres ?? '—')} »</li>`);
+    bits.push(`<ul class="ev-champs">${rows.join('')}</ul>`);
   }
   if (d.note) bits.push(esc(d.note));
   return bits;
