@@ -15,6 +15,7 @@ export const CHAMPS_EDIT = [
   ['titre', 'Titre'], ['categorie', 'Catégorie'], ['sous_categorie', 'Sous-catégorie'], ['technique', 'Technique'],
   ['periode', 'Période'], ['ecole', 'Région / école'], ['auteur', 'Auteur'],
   ['marques', 'Marques / poinçons'], ['etat', 'État'],
+  ['hauteur_cm', 'Hauteur (cm)'], ['largeur_cm', 'Largeur (cm)'], ['profondeur_cm', 'Profondeur / épaisseur (cm)'],
   ['prix_bas', 'Prix bas (€)'], ['prix_haut', 'Prix haut (€)'],
 ];
 
@@ -49,9 +50,9 @@ export async function saveCorrections() {
     if (!inp) continue;
     let nv = inp.value.trim();
     const av = o[champ] == null ? '' : String(o[champ]);
-    if (champ.startsWith('prix_')) {
+    if (champ.startsWith('prix_') || champ.endsWith('_cm')) {
       nv = nv === '' ? null : Number(nv.replace(',', '.'));
-      if (nv !== null && !Number.isFinite(nv)) { toast(`Prix invalide (${champ})`, true); return; }
+      if (nv !== null && !Number.isFinite(nv)) { toast(`${champ.endsWith('_cm') ? 'Dimensions' : 'Prix'} invalides (${champ})`, true); return; }
     } else {
       nv = nv === '' ? null : nv;
     }

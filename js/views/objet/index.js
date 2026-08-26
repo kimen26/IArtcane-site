@@ -121,6 +121,16 @@ function pipeBadge(short, long, { state, date }) {
   return `<span class="pipe-badge ${cls}" role="listitem" title="${esc(title)}">${icon} ${esc(short)}</span>`;
 }
 
+// Dimensions saisies à la main (D-053) — ligne combinée, valeurs absentes omises.
+// Ex. « H 30 × L 20 cm », « P 2 cm », null si rien → dlRow affiche « — ».
+function fmtDims(o) {
+  const parts = [];
+  if (o.hauteur_cm != null) parts.push(`H ${o.hauteur_cm}`);
+  if (o.largeur_cm != null) parts.push(`L ${o.largeur_cm}`);
+  if (o.profondeur_cm != null) parts.push(`P ${o.profondeur_cm}`);
+  return parts.length ? parts.join(' × ') + ' cm' : null;
+}
+
 function renderObjet() {
   const o = S.currentObjet;
   const marks = confMarks(o);
@@ -162,6 +172,7 @@ function renderObjet() {
             const opts = SOUS[catCanon(o.categorie)] ?? [];
             return dlRow(label, o[f], f, 'select', opts);
           }
+          if (f.endsWith('_cm')) return dlRow(label, o[f], f, 'number');
           return dlRow(label, o[f], f, f.startsWith('prix_') ? 'number' : 'text');
         }).join('')}
         <dt>Description ${srcBadge('description')}</dt><dd><textarea id="edit-description" rows="6">${esc(o.description ?? '')}</textarea></dd>
@@ -175,6 +186,7 @@ function renderObjet() {
         ${dlRow('Auteur', o.auteur)}
         ${dlRow('Marques / poinçons', o.marques)}
         ${dlRow('État', o.etat)}
+        ${dlRow('Dimensions', fmtDims(o), null)}
         ${o.description ? `<dt>Description</dt><dd><em>${esc(o.description)}</em></dd>` : ''}
         ${o.commentaire ? `<dt>💬 Note</dt><dd class="human-note">${esc(o.commentaire)}</dd>` : ''}
       </dl>`;
