@@ -16,3 +16,15 @@
 .art-gal-del:hover{background:var(--red)}
 .art-gal-files{margin-bottom:0}
 body.role-lecteur .art-gal-del{display:none}
+/* Note humaine (HO-029) */
+.human-note{font-size:13.5px;color:var(--ink-2);line-height:1.4;padding:8px 10px;background:var(--blue-softer);border-radius:var(--r-sm);border-left:3px solid var(--blue)}
+/* Dictée micro (HO-029) — copie locale car capture.css n'est pas chargée sur cette vue */
+.mic-wrap{display:flex;gap:8px;align-items:flex-start;width:100%}
+.mic-wrap textarea{flex:1;min-width:0}
+.mic-btn{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;min-width:44px;border:1px solid var(--line-strong);border-radius:var(--r-md);background:var(--surface);font-size:20px;line-height:1;cursor:pointer;transition:background .12s,border-color .12s,transform .12s}
+.mic-btn:hover{background:var(--blue-softer);border-color:var(--blue)}
+.mic-btn:disabled{opacity:.55;cursor:not-allowed;background:var(--surface);border-color:var(--line)}
+.mic-btn.recording{position:relative;background:var(--red-soft);border-color:var(--red);animation:mic-pulse 1.2s ease-in-out infinite}
+.mic-btn.recording::after{content:'';position:absolute;inset:-4px;border-radius:var(--r-md);border:2px solid var(--red);opacity:.5;animation:mic-ring 1.2s ease-out infinite}
+@keyframes mic-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+@keyframes mic-ring{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.25);opacity:0}}

@@ -9,6 +9,7 @@ import { auteurMatch, cardHtml, fmtDate, mdToHtml } from '../core/format.js';
 import { sb, signPaths, logEvent, uploadImageWithThumb, deleteStoredPhoto, ensureCollection, loadPhotoMap } from '../core/data.js';
 import { openViewer } from '../core/lightbox.js';
 import { loadViewCss } from '../core/css.js';
+import { micButton } from './mic.js';
 
 // CSS de la vue chargé par la vue (D-041) : aucun <link> dans index.html,
 // donc aucun fichier transverse touché par un chantier sur cet écran.
@@ -114,6 +115,21 @@ async function loadArtiste(nom) {
       <div class="sec-title">Biographie</div>
       <div class="value-sub">Pas encore de fiche artiste — le cron la crée lors des passes d'identification.</div>
     </div>`;
+  // Note humaine (HO-029) : lecture pour tous, saisie + dictée si rôle en écriture
+  const commentaireRead = a?.commentaire ? `
+    <div class="panel panel-pad">
+      <div class="sec-title">💬 Note</div>
+      <div class="human-note">${esc(a.commentaire)}</div>
+    </div>` : '';
+  const commentaireWrite = canWrite() ? `
+    <div class="panel panel-pad">
+      <div class="sec-title">💬 Note</div>
+      <div class="mic-wrap" id="artiste-commentaire-wrap">
+        <textarea id="artiste-commentaire" rows="4" placeholder="Ajouter une note sur cet artiste…">${esc(a?.commentaire ?? '')}</textarea>
+      </div>
+      <button class="btn primary small" data-action="save-artiste-comment" style="margin-top:10px">Enregistrer la note</button>
+    </div>` : '';
+  const commentairePanel = `${commentaireRead}${commentaireWrite}`;
   // En-tête structuré : nom + badges méta (objets liés, fraîcheur de la fiche)
   body.innerHTML = `
     <div class="art-head">
@@ -126,6 +142,7 @@ async function loadArtiste(nom) {
     ${photosPanel}
     ${galerie ? `<div class="sec-title" style="margin-top:26px">Œuvres de la collection</div>${galerie}` : ''}
     ${bioPanel}
+    ${commentairePanel}
     <div class="sec-title" style="margin-top:26px">Objets de la collection <span style="font-family:var(--mono);font-size:.8125rem;color:var(--ink-3);font-weight:400">${objets.length}</span></div>
     ${objets.length
       ? `<div class="grid">${objets.map(cardHtml).join('')}</div>`
@@ -138,6 +155,14 @@ async function loadArtiste(nom) {
     c.addEventListener('click', go);
     c.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
   });
+  // Injection du bouton de dictée sur la zone de commentaire (HO-029)
+  if (canWrite()) {
+    const ta = $('#artiste-commentaire');
+    if (ta) {
+      const btn = micButton(ta);
+      if (btn) ta.parentElement.appendChild(btn);
+    }
+  }
 }
 
 // ─── Photos attachées à une fiche artiste (portrait, signature, œuvre, fiche) ─
@@ -176,6 +201,23 @@ async function deleteArtistePhoto(pid) {
   await loadArtiste(currentArtisteNom);
 }
 
+async function saveArtisteComment(text) {
+  if (!currentArtisteNom || !canWrite()) return;
+  const nom = currentArtisteNom;
+  const commentaire = text.trim() || null;
+  // La fiche artiste doit exister pour l'update — on la crée si besoin (même pattern que uploadArtistePhoto).
+  const { data: a } = await sb.from('artistes').select('nom').eq('owner_id', S.tenantId).eq('nom', nom).maybeSingle();
+  if (!a) {
+    const { error: ec } = await sb.from('artistes').insert({ owner_id: S.tenantId, nom, bio_md: '' });
+    if (ec) { toast(`Création fiche artiste : ${ec.message}`, true); return; }
+  }
+  const { error } = await sb.from('artistes').update({ commentaire }).eq('owner_id', S.tenantId).eq('nom', nom);
+  if (error) { toast(error.message, true); return; }
+  logEvent('artiste_commentaire', { artiste: nom }, null);
+  toast('✓ Note enregistrée');
+  await loadArtiste(nom);
+}
+
 // ─── Actions de la vue Artiste (délégation) ─────────────────────────────────
 function openArtistePhotoLightbox(pid) {
   const p = currentArtistePhotos.find(x => String(x.id) === String(pid));
@@ -187,7 +229,7 @@ $('#artiste-body').addEventListener('click', async e => {
   const el = e.target.closest('[data-action]');
   if (!el) return;
   const act = el.dataset.action;
-  if ((act === 'add-artiste-photo' || act === 'del-artiste-photo') && !canWrite()) return;
+  if ((act === 'add-artiste-photo' || act === 'del-artiste-photo' || act === 'save-artiste-comment') && !canWrite()) return;
   if (act === 'add-artiste-photo') {
     $('#file-artiste-photo').click();
   } else if (act === 'del-artiste-photo') {
@@ -195,6 +237,8 @@ $('#artiste-body').addEventListener('click', async e => {
     await deleteArtistePhoto(el.dataset.pid);
   } else if (act === 'zoom-artiste-photo') {
     openArtistePhotoLightbox(el.dataset.pid);
+  } else if (act === 'save-artiste-comment') {
+    await saveArtisteComment($('#artiste-commentaire').value);
   }
 });
 
