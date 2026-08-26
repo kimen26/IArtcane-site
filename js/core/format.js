@@ -66,8 +66,8 @@ export function catEmoji(cat) {
   return '🏺';
 }
 const prixHtml = o => (o.prix_bas != null && o.prix_haut != null)
-  ? `<span class="price">${fmtNum(o.prix_bas)}–${fmtNum(o.prix_haut)} €</span>`
-  : '<span class="price none">à estimer</span>';
+  ? `<span class="card-price">${fmtNum(o.prix_bas)}–${fmtNum(o.prix_haut)} €</span>`
+  : '<span class="card-price none">à estimer</span>';
 export const isVideo = p => p.kind === 'video' || /\.(mp4|mov|webm)$/i.test(p.storage_path || '');
 export const capFirst = s => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -84,12 +84,12 @@ export function cardHtml(o) {
     : catEmoji(o.categorie); // pas de visuel : placeholder emoji (+ badge ▶ si vidéo)
   const badgeVid = img?.vid ? '<span class="card-vid" title="Vidéo" aria-label="Vidéo">▶</span>' : '';
   return `<article class="card" data-oid="${esc(o.id)}" tabindex="0" role="button" aria-label="${esc(o.titre || 'Objet')} — fiche #${esc(o.id)}">
-    <div class="card-img">${visuel}<span class="card-id">#${esc(o.id)}</span><span class="card-status" style="background:${ST_COLOR[o.statut] || '#8A94B8'}"></span>${badgeVid}</div>
+    <div class="card-img">${visuel}${prixHtml(o)}<span class="card-id">#${esc(o.id)}</span><span class="card-status" style="background:${ST_COLOR[o.statut] || '#8A94B8'}"></span>${badgeVid}</div>
     <div class="card-body">
       <div class="card-title">${esc(o.titre || 'Sans titre')}</div>
       <div class="card-meta">${meta}</div>
       <div class="card-loc">${pinSvg}${loc}</div>
-      <div class="card-foot">${prixHtml(o)}${confHtml(marks)}</div>
+      <div class="card-foot">${confHtml(marks)}</div>
     </div>
   </article>`;
 }
