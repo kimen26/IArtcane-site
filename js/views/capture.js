@@ -10,14 +10,30 @@ import { sb, logEvent, queueAnalyse, uploadPhotosFor } from '../core/data.js';
 import { openCamera } from '../core/camera.js';
 import { loadViewCss } from '../core/css.js';
 import { createOverlay } from '../core/lightbox.js';
+import { micButton } from './mic.js';
 
 // CSS de la vue chargé par la vue (D-041) : aucun <link> dans index.html,
 // donc aucun fichier transverse touché par un chantier sur cet écran.
 await loadViewCss('capture');
 
 export function mount() {
+  initCapCommentaireMic();
   initCapture();
   if (consumeShareFlag()) receiveSharedPhotos();
+}
+
+// ─── Dictée micro dans le commentaire objet (HO-020) ─────────────────────────
+// Le bouton est injecté dynamiquement pour ne pas toucher à index.html (transverse gelé).
+function initCapCommentaireMic() {
+  const ta = $('#cap-commentaire');
+  if (!ta || ta.dataset.micReady) return;
+  const btn = micButton(ta);
+  if (!btn) return;
+  ta.dataset.micReady = '1';
+  const wrap = document.createElement('div');
+  wrap.className = 'mic-wrap';
+  ta.replaceWith(wrap);
+  wrap.append(ta, btn);
 }
 
 // ─── Web Share Target (D-013) : photos reçues via « Partager avec » Android ─
@@ -132,7 +148,15 @@ function renderPreviews() {
     note.placeholder = 'Note sur cette photo…';
     note.value = item.comment ?? '';
     note.addEventListener('input', () => { item.comment = note.value; });
-    d.append(note);
+    const mic = micButton(note);
+    if (mic) {
+      const wrap = document.createElement('div');
+      wrap.className = 'mic-wrap';
+      wrap.append(note, mic);
+      d.append(wrap);
+    } else {
+      d.append(note);
+    }
     box.append(d);
   });
 }

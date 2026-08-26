@@ -45,4 +45,17 @@
 .cut-sel .h-sw{left:0;bottom:0;cursor:nesw-resize}
 .cut-sel .h-w{left:0;top:50%;cursor:ew-resize}
 .cut-bar{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;gap:14px;padding:14px;background:rgba(13,27,62,.82);border-top:1px solid rgba(255,255,255,.18)}
+
+/* ─── Dictée micro (HO-020) ───────────────────────────────────────────────── */
+.mic-wrap{display:flex;gap:8px;align-items:flex-start;width:100%}
+.mic-wrap textarea{flex:1;min-width:0}
+.mic-btn{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;min-width:44px;border:1px solid var(--line-strong);border-radius:var(--r-md);background:var(--surface);font-size:20px;line-height:1;cursor:pointer;transition:background .12s,border-color .12s,transform .12s}
+.mic-btn:hover{background:var(--blue-softer);border-color:var(--blue)}
+.mic-btn:disabled{opacity:.55;cursor:not-allowed;background:var(--surface);border-color:var(--line)}
+.mic-btn.recording{position:relative;background:var(--red-soft);border-color:var(--red);animation:mic-pulse 1.2s ease-in-out infinite}
+.mic-btn.recording::after{content:'';position:absolute;inset:-4px;border-radius:var(--r-md);border:2px solid var(--red);opacity:.5;animation:mic-ring 1.2s ease-out infinite}
+@keyframes mic-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+@keyframes mic-ring{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.25);opacity:0}}
+.previews .pv .mic-wrap{margin-top:2px}
+.previews .pv .mic-wrap .pv-note{flex:1;min-width:0}
 .cut-hint{color:#fff;font-size:13.5px;opacity:.85}
