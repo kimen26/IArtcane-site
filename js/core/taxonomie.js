@@ -29,6 +29,31 @@ export const CATS_CANON = [
   "Autre"
 ];
 
+/** Formes canoniques de stockage (prompt), même ordre que CATS_CANON — valeur des <select> (D-059). */
+export const CATS_PROMPT = [
+  "tableau",
+  "gravure/estampe",
+  "dessin",
+  "photographie",
+  "sculpture",
+  "céramique",
+  "verrerie",
+  "mobilier",
+  "montre/horlogerie",
+  "bijou",
+  "argenterie/métal",
+  "luminaire",
+  "textile/tapisserie",
+  "livre/document",
+  "monnaie/médaille",
+  "instrument",
+  "jouet",
+  "curiosité",
+  "art asiatique",
+  "art tribal",
+  "autre"
+];
+
 /** Variante normalisée (minuscules, sans accents, singulier) → forme canonique. */
 export const VARIANTES = {
   "tableau": "Tableau",
