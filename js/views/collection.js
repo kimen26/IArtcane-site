@@ -13,6 +13,12 @@ await loadViewCss('collection');
 
 export function mount() {
   loadCollection();
+  // Retour sur la vue (depuis une fiche/artiste ouverte via une proposition) :
+  // la ligne de recherche du bandeau (shell) peut être restée ouverte — rouvrir
+  // les propositions si une saisie est en cours, sinon lever l'atténuation.
+  const ligneOuverte = !$('#page-search-line').classList.contains('hidden');
+  if (ligneOuverte && $('#search').value.trim()) renderSuggest($('#search').value);
+  else $('#view-collection').classList.remove('searching');
 }
 
 async function loadCollection() {
@@ -70,6 +76,10 @@ const saveListes = ls => localStorage.setItem(listesKey(), JSON.stringify(ls));
 // Filtre « libre » actif (hors raccourcis codés en dur) = quelque chose à sauvegarder.
 const filtreActif = () => !!(S.filters.q || S.filters.cats.length || S.filters.prixMin != null || S.filters.prixMax != null);
 
+// Terme brut de la recherche VALIDÉE (libellé de la pastille) — S.filters.q est
+// normalisé (minuscules, sans accents), on garde la saisie pour l'affichage.
+let qValide = '';
+
 // La liste sauvegardée active = celle dont le filtre coïncide exactement avec
 // l'état courant (toute retouche du filtre après application la désactive).
 function listeActive() {
@@ -88,16 +98,19 @@ function syncPrixInputs() {
 
 // Applique une liste sauvegardée : recherche + catégories (legacy) + fourchette prix.
 function applyListe(l) {
-  $('#search').value = l.q ?? '';
-  S.filters.q = norm(l.q ?? '');
+  qValide = l.q ?? '';
+  $('#search').value = qValide;
+  S.filters.q = norm(qValide);
   S.filters.cats = [...(l.cats ?? [])];
   S.filters.prixMin = l.prixMin ?? null;
   S.filters.prixMax = l.prixMax ?? null;
   syncPrixInputs();
+  closeSheet(); // la liste est appliquée depuis la feuille : on la referme
   renderLists(); renderGrid();
 }
 
 function resetFiltre() {
+  qValide = '';
   $('#search').value = '';
   S.filters.q = ''; S.filters.cats = []; S.filters.prixMin = null; S.filters.prixMax = null;
   syncPrixInputs();
@@ -109,6 +122,8 @@ const compteListe = l => S.collection.filter(o => matchFiltre(o, {
   q: norm(l.q || ''), cats: l.cats ?? [], prixMin: l.prixMin ?? null, prixMax: l.prixMax ?? null, list: '',
 })).length;
 
+// Rendu des listes (3 prédéfinies + sauvegardées) — désormais DANS la feuille
+// de filtres (HO-044) : #lists a été déplacé de la toolbar vers #filter-sheet.
 function renderLists() {
   const nLoc = S.collection.filter(o => !o.zone || !o.zone.trim()).length;
   const nVal = S.collection.filter(o => o.statut === 'fiche_prete').length;
@@ -146,9 +161,143 @@ function renderLists() {
   }));
 }
 
+// ─── Recherche : propositions au fil de la frappe (HO-044, état 3) ──────────
+// Simplification tranchée (brief) : la frappe n'alimente QUE les propositions,
+// la grille ne se filtre qu'à la validation (Entrée / « Tout voir »).
+// Surlignage de la saisie : indices lus sur la forme normalisée (norm préserve
+// la longueur pour le français courant), HTML échappé avant injection du <b>.
+function surligne(label, q) {
+  const i = norm(label).indexOf(q);
+  if (i < 0) return esc(label);
+  return esc(label.slice(0, i)) + '<b>' + esc(label.slice(i, i + q.length)) + '</b>' + esc(label.slice(i + q.length));
+}
+
+function renderSuggest(raw) {
+  const box = $('#search-suggest');
+  const vue = $('#view-collection');
+  const q = norm(raw);
+  if (!q) { box.classList.add('hidden'); box.innerHTML = ''; vue.classList.remove('searching'); return; }
+  vue.classList.add('searching'); // grille derrière atténuée (état 3)
+  const artistes = [...new Set(S.collection.map(o => o.auteur).filter(Boolean))]
+    .filter(a => norm(a).includes(q)).slice(0, 4);
+  const objets = S.collection
+    .filter(o => matchFiltre(o, { q, cats: [], prixMin: null, prixMax: null, list: '' }))
+    .slice(0, 5);
+  const sec = (titre, inner) => inner ? `<div class="sug-sec"><div class="sug-title">${titre}</div>${inner}</div>` : '';
+  box.innerHTML = '<div class="sug-head">Propositions</div>'
+    + sec('Artistes', artistes.map(a =>
+      `<button class="sug-artiste" data-artiste="${esc(a)}">${surligne(a, q)}</button>`).join(''))
+    + sec('Objets', objets.map(o => {
+      const ph = S.photoMap[o.id];
+      const img = ph?.url ? `<img src="${esc(ph.url)}" alt="" loading="lazy">` : `<span class="sug-emoji">${catEmoji(o.categorie)}</span>`;
+      return `<button class="sug-objet" data-oid="${esc(o.id)}">${img}<span class="sug-objet-t"><span class="sug-objet-titre">${surligne(o.titre || '(sans titre)', q)}</span><span class="sug-objet-meta">#${esc(o.id)} · ${esc(catCanon(o.categorie) ?? '')}</span></span></button>`;
+    }).join(''))
+    + `<button class="sug-all">Tout voir pour « ${esc(raw.trim())} »</button>`;
+  box.classList.remove('hidden');
+  $$('.sug-artiste', box).forEach(b => b.addEventListener('click', () => {
+    location.hash = '#/artiste/' + encodeURIComponent(b.dataset.artiste);
+  }));
+  $$('.sug-objet', box).forEach(b => b.addEventListener('click', () => {
+    location.hash = '#/objet/' + encodeURIComponent(b.dataset.oid);
+  }));
+  $('.sug-all', box).addEventListener('click', validerRecherche);
+}
+
+// Validation (Entrée / « Tout voir ») : la saisie devient le filtre q, la ligne
+// se referme et le terme apparaît en pastille (état 4).
+function validerRecherche() {
+  const v = $('#search').value.trim();
+  if (!v) return;
+  qValide = v;
+  S.filters.q = norm(v);
+  $('#search-suggest').classList.add('hidden');
+  $('#view-collection').classList.remove('searching');
+  closeSearchLine();
+  renderLists(); renderGrid();
+}
+
+// Réplique de setSearchLine(false) du shell — app.js est hors périmètre HO-044.
+function closeSearchLine() {
+  $('#page-title-line').classList.remove('hidden');
+  $('#page-search-line').classList.add('hidden');
+  $('#btn-search-toggle').setAttribute('aria-expanded', 'false');
+}
+
+// ─── Pastilles des critères actifs (HO-044, état 4) ─────────────────────────
+// Chaque critère actif (recherche validée incluse) = une pastille retirable ;
+// « Tout effacer » réinitialise tout. Le badge de l'entonnoir les compte.
+const LIBELLES_LISTES = { a_localiser: 'À localiser', a_valider: 'Fiches à valider', chere: '≥ 1 000 €' };
+const LOUPE_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>';
+
+function compteCriteres() {
+  const f = S.filters;
+  return (f.q ? 1 : 0) + (f.list ? 1 : 0)
+    + ((f.prixMin != null || f.prixMax != null) ? 1 : 0)
+    + (f.group !== 'categorie' ? 1 : 0);
+}
+
+function renderPills() {
+  const row = $('#pills');
+  const f = S.filters;
+  const pill = (k, inner, label) =>
+    `<button class="pill" data-pill="${k}" aria-label="Retirer le filtre ${esc(label)}">${inner}<span class="pill-x" aria-hidden="true">×</span></button>`;
+  const p = [];
+  if (f.q) p.push(pill('q', LOUPE_SVG + esc(qValide || f.q), `recherche « ${qValide || f.q} »`));
+  if (f.prixMin != null || f.prixMax != null) {
+    const t = f.prixMin != null && f.prixMax != null ? `${f.prixMin}–${f.prixMax} €`
+      : f.prixMin != null ? `≥ ${f.prixMin} €` : `≤ ${f.prixMax} €`;
+    p.push(pill('prix', esc(t), `prix ${t}`));
+  }
+  if (f.list) {
+    const t = LIBELLES_LISTES[f.list] ?? f.list;
+    p.push(pill('list', esc(t), t));
+  }
+  const la = listeActive();
+  if (la) p.push(pill('slist', `🔖 ${esc(la.nom)}`, `liste « ${la.nom} »`));
+  if (f.group !== 'categorie') {
+    const t = f.group === 'zone' ? 'regroupé par lieu' : f.group === 'periode' ? 'regroupé par période' : 'sans regroupement';
+    p.push(pill('group', t, t));
+  }
+  row.classList.toggle('hidden', !p.length);
+  row.innerHTML = p.join('') + (p.length ? '<button class="pills-clear" id="pills-clear">Tout effacer</button>' : '');
+  $$('.pill', row).forEach(b => b.addEventListener('click', () => retirerPastille(b.dataset.pill)));
+  $('#pills-clear')?.addEventListener('click', toutEffacer);
+}
+
+function retirerPastille(k) {
+  const f = S.filters;
+  if (k === 'q') { qValide = ''; f.q = ''; $('#search').value = ''; }
+  else if (k === 'prix') { f.prixMin = null; f.prixMax = null; syncPrixInputs(); }
+  else if (k === 'list') f.list = '';
+  else if (k === 'slist') { f.list = ''; resetFiltre(); return; } // la liste = tout son filtre
+  else if (k === 'group') { f.group = 'categorie'; $('#group-by').value = 'categorie'; }
+  renderLists(); renderGrid();
+}
+
+function toutEffacer() {
+  S.filters.list = '';
+  S.filters.group = 'categorie'; $('#group-by').value = 'categorie';
+  resetFiltre(); // vide q/prix/cats + re-render
+}
+
+// Badge de l'entonnoir (#filters-count, posé par HO-042) = nombre de critères
+// actifs, recherche validée incluse ; les deux entonnoirs passent en état actif.
+function updateFiltresUi() {
+  const n = compteCriteres();
+  const b = $('#filters-count');
+  b.textContent = n || '';
+  b.classList.toggle('hidden', !n);
+  $('#btn-filters').classList.toggle('on', !!n);
+  $('#btn-filters-2').classList.toggle('on', !!n);
+  // Loupe : état actif visible si une recherche est validée (sinon le filtre
+  // serait actif ET invisible — piège de la progressive disclosure)
+  $('#btn-search-toggle').classList.toggle('on', !!S.filters.q);
+  renderPills();
+}
+
 function renderGrid() {
   const body = $('#collection-body');
-  updateFiltersCount();
+  updateFiltresUi();
   const items = S.collection.filter(objMatches);
   if (!S.collection.length) {
     body.innerHTML = emptyHtml('Aucun objet pour l’instant', 'Capture ton premier objet — photo + n° d’étiquette, l’IA fait le reste.');
@@ -159,15 +308,18 @@ function renderGrid() {
     const avecFiltres = filtreActif() || S.filters.list;
     body.innerHTML = emptyHtml('Rien ne correspond', 'Essaie d’autres mots, un n° d’étiquette, un lieu…',
       avecFiltres ? '<button class="btn" id="btn-reset-filtres" style="margin-top:16px">Réinitialiser les filtres</button>' : '');
-    $('#btn-reset-filtres')?.addEventListener('click', () => { S.filters.list = ''; resetFiltre(); });
+    $('#btn-reset-filtres')?.addEventListener('click', () => { S.filters.list = ''; toutEffacer(); });
     return;
   }
   const g = S.filters.group;
-  // Accordéon des rayons (HO-043, design étape 2) : rendu par défaut (regroupement
-  // catégorie, aucun filtre actif). Le mode filtré arrive en HO-044 ; les autres
-  // regroupements (lieu/période/none) gardent le rendu historique.
+  // Accordéon des rayons (HO-043/HO-044, design étape 2) : rendu par défaut
+  // (regroupement catégorie). En mode filtré, les rayons à résultats s'ouvrent
+  // (« 9 sur 12 ») et les rayons vides sont regroupés sous « SANS RÉSULTAT ».
+  // Les autres regroupements (lieu/période/none) gardent le rendu historique.
   if (g === 'categorie' && !filtreActif() && !S.filters.list) {
     renderAccordeon(body, items);
+  } else if (g === 'categorie') {
+    renderAccordeonFiltre(body, items);
   } else if (!g) {
     body.innerHTML = `<div class="grid">${items.map(cardHtml).join('')}</div>`;
   } else {
@@ -256,12 +408,116 @@ function renderAccordeon(body, items) {
   }));
 }
 
-// Recherche (débounce) + filtre prix (même débounce) + regroupement
+// ─── Accordéon en mode filtré (HO-044, état 4) ──────────────────────────────
+// Le filtre porte sur TOUT l'inventaire, volets ouverts ou non : les rayons à
+// résultats s'ouvrent d'eux-mêmes (« 9 sur 12 », pied « Voir les 9 résultats »),
+// les rayons vides sont regroupés en bas sous « SANS RÉSULTAT » à 50 %. La
+// bascule des volets est ici visuelle seulement — l'état persisté (HO-043)
+// n'est pas touché et est restauré quand les pastilles sont retirées.
+function renderAccordeonFiltre(body, items) {
+  const parCat = new Map(); // cat → { total, trouves[] }
+  for (const o of S.collection) {
+    const k = catCanon(o.categorie) || 'Sans catégorie';
+    if (!parCat.has(k)) parCat.set(k, { total: 0, trouves: [] });
+    const g = parCat.get(k);
+    g.total++;
+    if (objMatches(o)) g.trouves.push(o);
+  }
+  const tries = [...parCat.entries()].sort((a, b) => b[1].total - a[1].total || a[0].localeCompare(b[0], 'fr'));
+  const avec = tries.filter(([, g]) => g.trouves.length);
+  const sans = tries.filter(([, g]) => !g.trouves.length);
+  const ligne = `<div class="result-line">${items.length} objet${items.length > 1 ? 's' : ''} dans ${avec.length} rayon${avec.length > 1 ? 's' : ''} sur ${tries.length}</div>`;
+  const paneAvec = ([k, g]) => {
+    const t = g.trouves.length;
+    const apercu = g.trouves.slice(0, 9).map(cardHtml).join('');
+    const pied = (t > 9 || t < g.total)
+      ? `<button class="cat-more" data-cat="${esc(k)}">${t > 1 ? `Voir les ${t} résultats` : 'Voir le résultat'}</button>` : '';
+    return `<section class="cat-pane open" data-cat="${esc(k)}">
+      <button class="cat-head" aria-expanded="true">
+        <span class="cat-chev" aria-hidden="true">▾</span>
+        <span class="cat-name">${esc(k)}</span>
+        <span class="cat-total cat-sur">${t} sur ${g.total}</span>
+      </button>
+      <div class="cat-body"><div class="grid">${apercu}</div>${pied}</div>
+    </section>`;
+  };
+  const paneSans = ([k, g]) => `<section class="cat-pane cat-vide" data-cat="${esc(k)}">
+      <button class="cat-head" aria-expanded="false">
+        <span class="cat-chev" aria-hidden="true">▸</span>
+        <span class="cat-name">${esc(k)}</span>
+        <span class="cat-total">0 sur ${g.total}</span>
+      </button>
+      <div class="cat-body"></div>
+    </section>`;
+  body.innerHTML = ligne + avec.map(paneAvec).join('')
+    + (sans.length ? '<div class="sans-res-title">Sans résultat</div>' + sans.map(paneSans).join('') : '');
+  $$('.cat-head', body).forEach(h => h.addEventListener('click', () => {
+    const p = h.closest('.cat-pane');
+    const open = p.classList.toggle('open');
+    h.setAttribute('aria-expanded', String(open));
+    $('.cat-chev', h).textContent = open ? '▾' : '▸';
+  }));
+  $$('.cat-more', body).forEach(b => b.addEventListener('click', () => {
+    location.hash = '#/rayon/' + encodeURIComponent(b.dataset.cat);
+  }));
+}
+
+// ─── Feuille de filtres (HO-044, entonnoir du bandeau) ─────────────────────
+// Regroupe tous les critères (prix, regroupement, listes, sauvegarde) + export
+// CSV. Fermeture : voile, Échap, croix.
+function openSheet() {
+  $('#sheet-veil').classList.remove('hidden');
+  $('#filter-sheet').classList.remove('hidden');
+  $('#btn-filters').setAttribute('aria-expanded', 'true');
+}
+function closeSheet() {
+  if ($('#filter-sheet').classList.contains('hidden')) return;
+  $('#sheet-veil').classList.add('hidden');
+  $('#filter-sheet').classList.add('hidden');
+  $('#btn-filters').setAttribute('aria-expanded', 'false');
+}
+$('#btn-filters').addEventListener('click', openSheet);
+// #btn-filters-2 (ligne de recherche) délègue déjà à #btn-filters côté shell.
+$('#sheet-veil').addEventListener('click', closeSheet);
+$('#sheet-close').addEventListener('click', closeSheet);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+
+// ─── Recherche : saisie = propositions seulement (débounce 150ms), la grille
+// ne se filtre qu'à la validation (Entrée / « Tout voir ») — brief HO-044 §4.
 let searchTimer;
 $('#search').addEventListener('input', e => {
   clearTimeout(searchTimer);
-  searchTimer = setTimeout(() => { S.filters.q = norm(e.target.value); renderLists(); renderGrid(); }, 150);
+  searchTimer = setTimeout(() => renderSuggest(e.target.value), 150);
 });
+$('#search').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); validerRecherche(); }
+});
+// Loupe : le shell bascule la ligne (app.js) ; si elle s'ouvre avec une saisie
+// en cours, on réaffiche les propositions.
+$('#btn-search-toggle').addEventListener('click', () => {
+  if (!$('#page-search-line').classList.contains('hidden')) renderSuggest($('#search').value);
+});
+// Croix (spec étape 2 §Interactions) : 1er appui = vider le champ SEULEMENT ;
+// 2e appui (champ déjà vide) = refermer la ligne. Le handler du shell (posé en
+// HO-042, app.js hors périmètre) referme toujours la ligne — quand le champ
+// était rempli on la rouvre dans le même dispatch (aucun repaint entre les
+// deux handlers), pour un 1er appui « vider » conforme.
+$('#btn-search-close').addEventListener('click', () => {
+  const avaitSaisie = !!$('#search').value;
+  $('#search').value = '';
+  $('#search-suggest').classList.add('hidden');
+  $('#view-collection').classList.remove('searching');
+  if (avaitSaisie) {
+    $('#page-title-line').classList.add('hidden');
+    $('#page-search-line').classList.remove('hidden');
+    $('#btn-search-toggle').setAttribute('aria-expanded', 'true');
+    $('#search').focus();
+  }
+  // La recherche déjà validée (pastille) n'est pas touchée par la croix.
+});
+
+// Filtre prix (même débounce) + regroupement — les contrôles vivent désormais
+// dans la feuille de filtres (ids conservés).
 for (const [id, key] of [['#prix-min', 'prixMin'], ['#prix-max', 'prixMax']]) {
   $(id).addEventListener('input', e => {
     clearTimeout(searchTimer);
@@ -274,51 +530,16 @@ for (const [id, key] of [['#prix-min', 'prixMin'], ['#prix-max', 'prixMax']]) {
 }
 $('#group-by').addEventListener('change', e => { S.filters.group = e.target.value; renderGrid(); });
 
-// Panneau « Filtres » mobile (progressive disclosure, référentiel §4.1) :
-// la pastille compte les filtres actifs cachés dans le panneau (bornes prix,
-// regroupement ≠ défaut) ; recherche et chips, elles, restent visibles.
-function updateFiltersCount() {
-  const n = (S.filters.prixMin != null) + (S.filters.prixMax != null) + (S.filters.group !== 'categorie');
-  const b = $('#filters-count');
-  b.textContent = n || '';
-  b.classList.toggle('hidden', !n);
-  // Loupe repliée : état actif visible si une recherche est en cours (sinon
-  // le filtre serait caché ET invisible — piège de la progressive disclosure)
-  $('#btn-search-toggle').classList.toggle('on', !!S.filters.q);
-}
-$('#btn-filters').addEventListener('click', () => {
-  const open = $('#filters-panel').classList.toggle('open');
-  $('#btn-filters').setAttribute('aria-expanded', String(open));
-});
-
-// Recherche repliée en loupe (mobile) : tap → la barre se déploie avec
-// autofocus ; « × » efface la recherche en cours puis referme la barre.
-const toolbarEl = () => $('#view-collection .toolbar');
-$('#btn-search-toggle').addEventListener('click', () => {
-  const open = toolbarEl().classList.toggle('search-open');
-  $('#btn-search-toggle').setAttribute('aria-expanded', String(open));
-  if (open) $('#search').focus();
-});
-$('#btn-search-close').addEventListener('click', () => {
-  if ($('#search').value) {
-    $('#search').value = '';
-    S.filters.q = '';
-    renderLists(); renderGrid();
-  }
-  toolbarEl().classList.remove('search-open');
-  $('#btn-search-toggle').setAttribute('aria-expanded', 'false');
-});
-
-// « 💾 Sauvegarder ce filtre » : l'état courant (recherche + chips + prix)
+// « 💾 Sauvegarder ce filtre » : l'état courant (recherche validée + prix)
 // devient une liste nommée, persistée en local pour ce locataire.
 $('#btn-save-filter').addEventListener('click', () => {
-  const nom = prompt('Nom de cette liste :', $('#search').value.trim() || 'Ma liste');
+  const nom = prompt('Nom de cette liste :', qValide || $('#search').value.trim() || 'Ma liste');
   if (!nom?.trim()) return;
   const ls = loadListes();
   ls.push({
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     nom: nom.trim(),
-    q: $('#search').value.trim(),
+    q: qValide || $('#search').value.trim(),
     cats: [...S.filters.cats],
     prixMin: S.filters.prixMin,
     prixMax: S.filters.prixMax,
@@ -342,7 +563,7 @@ $('#btn-csv').addEventListener('click', () => {
     o.technique, o.etat, o.prix_bas, o.prix_haut, o.confiance, STATUTS[o.statut] ?? o.statut,
     o.zone, o.contenant, o.position, o.created_at,
   ].map(csvCell).join(';'));
-  const csv = '\uFEFF' + head.map(csvCell).join(';') + '\r\n' + lignes.join('\r\n');
+  const csv = '﻿' + head.map(csvCell).join(';') + '\r\n' + lignes.join('\r\n');
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
   const a = document.createElement('a');
   a.href = url;
