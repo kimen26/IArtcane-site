@@ -267,7 +267,7 @@ function rendreTiroirAlertes(o) {
   if (!alertes.length) return '';
   const bloquantes = alertes.filter(a => a.bloquant);
   return `
-    <details class="obj-alertes" ${alertes.length ? 'open' : ''}>
+    <details class="obj-alertes">
       <summary class="obj-alertes-summary">
         <span class="obj-alertes-handle"></span>
         <div class="obj-alertes-head">
