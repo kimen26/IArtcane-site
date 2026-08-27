@@ -166,7 +166,9 @@ export async function uploadImageWithThumb(dossier, file) {
 
 // Accepte un tableau de File purs (rétro-compat caméra / fiche objet)
 // ou de { file, comment } (capture enrichie HO-013).
-// @param onProgress(sent, total)  appelé avant chaque upload (sent = déjà terminés)
+// @param onProgress(sent, total)  appelé avant chaque upload (sent = déjà terminés) ;
+//                                 s'il rend false, la boucle s'arrête avant le fichier
+//                                 suivant (annulation douce — l'envoi en cours aboutit)
 // @returns { done, failed }        done = photos insérées ; failed = [{ item, reason }]
 export async function uploadPhotosFor(oid, files, firstIsFace = false, onProgress = null) {
   const valid = files.map(item => {
@@ -179,7 +181,7 @@ export async function uploadPhotosFor(oid, files, firstIsFace = false, onProgres
   let first = firstIsFace;
   for (let i = 0; i < valid.length; i++) {
     const { item, f, comment } = valid[i];
-    if (onProgress) onProgress(done + failed.length, total);
+    if (onProgress && onProgress(done + failed.length, total) === false) break;
     const up = await uploadImageWithThumb(`${S.tenantId}/${oid}`, f);
     if (!up) {
       failed.push({ item, reason: 'envoi du fichier impossible (réseau ?)' });

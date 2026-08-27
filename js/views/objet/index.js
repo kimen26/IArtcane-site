@@ -516,6 +516,37 @@ $('#objet-body').addEventListener('click', async e => {
   }
 });
 
+// Overlay bloquant de progression d'upload (retour terrain Alain/Yann 2026-08-27 :
+// sur mobile en réseau lent, 20-30 s SANS aucun retour visuel → on croit que ça
+// a planté, on quitte, la photo « n'arrive jamais »). L'écran est bloqué le temps
+// de l'envoi ; « Annuler » rend la main immédiatement : le fichier en cours peut
+// encore aboutir, les suivants sont abandonnés (onProgress → false stoppe la
+// boucle d'uploadPhotosFor).
+function uploadOverlay(total) {
+  const el = document.createElement('div');
+  el.className = 'upl-overlay';
+  el.innerHTML = `<div class="upl-card" role="alert" aria-live="polite">
+    <div class="upl-spin" aria-hidden="true"></div>
+    <div class="upl-msg">Envoi des photos — 0/${total}</div>
+    <button class="btn small" data-annuler>Annuler</button>
+  </div>`;
+  document.body.append(el);
+  const ui = {
+    annule: false,
+    progress(sent, tot) {
+      const msg = el.querySelector('.upl-msg');
+      if (msg) msg.textContent = `Envoi des photos — ${sent}/${tot} terminée${sent > 1 ? 's' : ''}`;
+      return ui.annule ? false : undefined;
+    },
+    close() { el.remove(); },
+  };
+  el.querySelector('[data-annuler]').addEventListener('click', () => {
+    ui.annule = true;
+    ui.close(); // rend la main tout de suite : l'envoi en cours finit en tâche de fond
+  });
+  return ui;
+}
+
 $('#file-add-photo').addEventListener('change', async e => {
   if (!canWrite()) { e.target.value = ''; return; }
   const files = [...e.target.files];
@@ -523,26 +554,23 @@ $('#file-add-photo').addEventListener('change', async e => {
   if (!files.length || !S.currentObjet) return;
   const oid = S.currentObjet.id;
   const o = S.currentObjet;
-  const { done, failed } = await uploadPhotosFor(oid, files);
-  if (failed.length === 0) {
-    if (done > 0) {
-      logEvent('photo_ajoutee', { n: done, via: 'fichier' }, oid);
-      // Toute nouvelle photo marque l'objet pour ré-analyse différée, sauf sur une fiche validée (D-049).
-      if (S.currentObjet.statut !== 'validee') {
-        await marquerReanalyse(oid);
-        toast(`${done} photo${done > 1 ? 's' : ''} ajoutée${done > 1 ? 's' : ''} — ré-analyse au prochain run du cron`);
-      } else {
-        toast(`${done} photo${done > 1 ? 's' : ''} ajoutée${done > 1 ? 's' : ''}`);
-      }
-      await purgeConsigne(o, oid);
-    }
-  } else {
-    if (done > 0) {
-      logEvent('photo_ajoutee', { n: done, echecs: failed.length, via: 'fichier' }, oid);
-      if (S.currentObjet.statut !== 'validee') await marquerReanalyse(oid);
-      await purgeConsigne(o, oid);
-    }
+  const ui = uploadOverlay(files.length);
+  const { done, failed } = await uploadPhotosFor(oid, files, false, (sent, total) => ui.progress(sent, total));
+  ui.close();
+  if (done > 0) {
+    logEvent('photo_ajoutee', { n: done, ...(failed.length ? { echecs: failed.length } : {}), via: 'fichier' }, oid);
+    // Toute nouvelle photo marque l'objet pour ré-analyse différée, sauf sur une fiche validée (D-049).
+    if (S.currentObjet.statut !== 'validee') await marquerReanalyse(oid);
+    await purgeConsigne(o, oid);
+  }
+  if (ui.annule) {
+    toast(done ? `Envoi interrompu — ${done}/${files.length} photo(s) ajoutée(s)` : 'Envoi interrompu — aucune photo ajoutée', !done);
+  } else if (failed.length > 0) {
     toast(`${done}/${files.length} photo(s) ajoutée(s) — ${failed.length} en échec (${failed[0].reason}). Réessayez.`, true);
+  } else if (done > 0) {
+    toast(S.currentObjet.statut !== 'validee'
+      ? `${done} photo${done > 1 ? 's' : ''} ajoutée${done > 1 ? 's' : ''} — ré-analyse au prochain run du cron`
+      : `${done} photo${done > 1 ? 's' : ''} ajoutée${done > 1 ? 's' : ''}`);
   }
   loadObjet(oid);
 });
