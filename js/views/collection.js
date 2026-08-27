@@ -298,6 +298,7 @@ function updateFiltresUi() {
 function renderGrid() {
   const body = $('#collection-body');
   updateFiltresUi();
+  syncVoletsToggle(false); // masqué par défaut — seul l'accordéon au repos l'affiche
   const items = S.collection.filter(objMatches);
   if (!S.collection.length) {
     body.innerHTML = emptyHtml('Aucun objet pour l’instant', 'Capture ton premier objet — photo + n° d’étiquette, l’IA fait le reste.');
@@ -318,8 +319,10 @@ function renderGrid() {
   // Les autres regroupements (lieu/période/none) gardent le rendu historique.
   if (g === 'categorie' && !filtreActif() && !S.filters.list) {
     renderAccordeon(body, items);
+    syncVoletsToggle(true);
   } else if (g === 'categorie') {
     renderAccordeonFiltre(body, items);
+    syncVoletsToggle(false);
   } else if (!g) {
     body.innerHTML = `<div class="grid">${items.map(cardHtml).join('')}</div>`;
   } else {
@@ -355,6 +358,32 @@ function loadVolets() {
   try { return JSON.parse(raw) ?? []; } catch { return []; }
 }
 const saveVolets = v => localStorage.setItem(voletsKey(), JSON.stringify(v));
+
+// « Tout ouvrir / Tout fermer » au bout de la ligne de titre (demande Yann) :
+// bascule tous les volets d'un coup, en respectant la persistance — « tout
+// fermé » = [] (état valide, HO-043). Visible uniquement en accordéon au repos
+// (en mode filtré, les volets sont pilotés par les résultats).
+const tousLesRayons = () => [...new Set(S.collection.map(o => catCanon(o.categorie) || 'Sans catégorie'))];
+function syncVoletsToggle(accordeonAuRepos) {
+  const b = $('#volets-toggle');
+  if (!b) return;
+  b.classList.toggle('hidden', !accordeonAuRepos);
+  if (!accordeonAuRepos) return;
+  const cats = tousLesRayons();
+  const persistes = loadVolets();
+  const ouverts = persistes ?? (cats.length ? [cats[0]] : []);
+  const tousOuverts = cats.length > 0 && cats.every(c => ouverts.includes(c));
+  b.textContent = tousOuverts ? 'Tout fermer' : 'Tout ouvrir';
+  b.setAttribute('aria-pressed', String(tousOuverts));
+}
+$('#volets-toggle')?.addEventListener('click', () => {
+  const cats = tousLesRayons();
+  const persistes = loadVolets();
+  const ouverts = persistes ?? (cats.length ? [cats[0]] : []);
+  const tousOuverts = cats.length > 0 && cats.every(c => ouverts.includes(c));
+  saveVolets(tousOuverts ? [] : cats);
+  renderGrid();
+});
 
 // Libellé du pied de volet : « Voir les 12 tableaux » — accord simple (minuscule
 // + « s »), repli robuste pour les rayons composés (« argenterie/métal »…).

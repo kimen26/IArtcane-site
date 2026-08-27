@@ -28,6 +28,11 @@
   .group-title{margin:14px 0 8px;font-size:1.0625rem}
 }
 
+/* ─── « Tout ouvrir / Tout fermer » au bout de la ligne de titre ─── */
+/* Lien texte discret (pattern connu), à droite de « Collection — N objets ». */
+#volets-toggle{margin-left:auto;padding:6px 4px;border:none;background:none;font-size:.6875rem;font-weight:600;color:var(--ink-3);white-space:nowrap;align-self:center}
+#volets-toggle:hover{color:var(--blue)}
+
 /* ─── Recherche : propositions au fil de la frappe (HO-044, état 3) ─── */
 /* Bloc blanc absolu sous la ligne de recherche du bandeau ; #page-subhead est
    en base.css (transverse gelé) — position:relative posé ici, scopé à cet id. */

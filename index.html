@@ -19,9 +19,9 @@
      propre module via core/css.js → un chantier de vue ne touche plus ce fichier.
      Cache-buster ?v= : NE PAS éditer à la main — `node infra/bump-version.mjs <version>`
      écrit ici, dans js/core/version.js et dans sw.js d'un seul coup (L-013). -->
-<link rel="stylesheet" href="styles/tokens.css?v=2026-08-27o-header5">
-<link rel="stylesheet" href="styles/base.css?v=2026-08-27o-header5">
-<link rel="stylesheet" href="styles/components.css?v=2026-08-27o-header5">
+<link rel="stylesheet" href="styles/tokens.css?v=2026-08-27p-volets">
+<link rel="stylesheet" href="styles/base.css?v=2026-08-27p-volets">
+<link rel="stylesheet" href="styles/components.css?v=2026-08-27p-volets">
 </head>
 <body>
 
@@ -52,6 +52,9 @@
     <div class="page-title-line" id="page-title-line">
       <span class="page-title">Collection</span>
       <span class="page-sub" id="page-sub-count"></span>
+      <!-- Bascule tous les volets de l'accordéon d'un coup (vue collection,
+           accordéon au repos seulement — câblé par collection.js) -->
+      <button class="hidden" id="volets-toggle">Tout ouvrir</button>
     </div>
     <div class="page-search-line hidden" id="page-search-line">
       <div class="search">
@@ -255,7 +258,7 @@
   </div>
 </div>
 
-<script src="config.js?v=2026-08-27o-header5"></script>
-<script type="module" src="app.js?v=2026-08-27o-header5"></script>
+<script src="config.js?v=2026-08-27p-volets"></script>
+<script type="module" src="app.js?v=2026-08-27p-volets"></script>
 </body>
 </html>
