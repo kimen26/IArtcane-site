@@ -21,7 +21,7 @@ async function loadMaison() {
   const body = $('#maison-body');
   body.innerHTML = '<div class="skeleton" style="height:220px"></div>';
   const [{ data: t }, { data: membres, error }] = await Promise.all([
-    sb.from('tenants').select('name').eq('owner_id', S.tenantId).maybeSingle(),
+    sb.from('tenants').select('name, couleur').eq('owner_id', S.tenantId).maybeSingle(),
     sb.from('collection_members').select('member_id,role,created_at').eq('owner_id', S.tenantId).order('created_at'),
   ]);
   if (error) { toast(error.message, true); body.innerHTML = ''; return; }
@@ -47,6 +47,12 @@ async function loadMaison() {
       <div class="mbr-form" style="margin-top:12px">
         <input id="maison-name" value="${esc(t?.name ?? '')}" placeholder="PONAIRE…">
         <button class="btn primary" id="maison-rename">Renommer</button>
+      </div>
+      <div class="sec-title" style="margin-top:22px">Couleur du ruban d'estimation</div>
+      <div class="value-sub">Couleur du bandeau de prix sur les cartes — pour toute la maison. Enregistrée au choix.</div>
+      <div class="mbr-form" style="margin-top:12px">
+        <input type="color" id="maison-couleur" value="${esc(t?.couleur || '#35696c')}" aria-label="Couleur du ruban d'estimation">
+        <button class="btn small" id="maison-couleur-defaut">Revenir au défaut</button>
       </div>
     </div>
     <div class="panel panel-pad" style="margin-top:18px">
@@ -79,6 +85,29 @@ async function loadMaison() {
     S.refreshMenu?.();
     S.refreshHeader?.();
     toast(`✓ Maison renommée « ${name} »`);
+  });
+
+  // Couleur du ruban (HO-041) : enregistrement au `change` de l'input color —
+  // input[type=color] garantit le format #rrggbb, pas de parsing libre.
+  // Même pattern upsert que le renommage ; la variable --ruban est appliquée
+  // immédiatement (chaîne vide = propriété retirée → fallback CSS #35696c).
+  $('#maison-couleur').addEventListener('change', async e => {
+    const couleur = e.target.value;
+    const { error: e2 } = await sb.from('tenants').upsert({ owner_id: S.tenantId, couleur });
+    if (e2) { toast(e2.message, true); return; }
+    const mienne = S.mesTenants.find(x => x.id === S.tenantId);
+    if (mienne) mienne.couleur = couleur;
+    document.documentElement.style.setProperty('--ruban', couleur);
+    toast('✓ Couleur du ruban enregistrée');
+  });
+  $('#maison-couleur-defaut').addEventListener('click', async () => {
+    const { error: e } = await sb.from('tenants').upsert({ owner_id: S.tenantId, couleur: null });
+    if (e) { toast(e.message, true); return; }
+    const mienne = S.mesTenants.find(x => x.id === S.tenantId);
+    if (mienne) mienne.couleur = null;
+    document.documentElement.style.setProperty('--ruban', '');
+    $('#maison-couleur').value = '#35696c';
+    toast('✓ Ruban revenu au vert canard par défaut');
   });
 
   $$('.mbr-row', body).forEach(row => {

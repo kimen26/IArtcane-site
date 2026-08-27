@@ -82,11 +82,11 @@ function watchLive() {
 async function resolveTenant() {
   const { data: membres } = await sb.from('collection_members').select('owner_id,role').eq('member_id', S.user.id);
   const ids = [S.user.id, ...(membres ?? []).map(m => m.owner_id)];
-  const { data: noms } = await sb.from('tenants').select('owner_id,name').in('owner_id', ids);
-  const nomDe = id => (noms ?? []).find(t => t.owner_id === id)?.name ?? '';
+  const { data: noms } = await sb.from('tenants').select('owner_id,name,couleur').in('owner_id', ids);
+  const ligneDe = id => (noms ?? []).find(t => t.owner_id === id);
   S.mesTenants = [
-    { id: S.user.id, name: nomDe(S.user.id), role: 'owner' },
-    ...(membres ?? []).map(m => ({ id: m.owner_id, name: nomDe(m.owner_id), role: m.role })),
+    { id: S.user.id, name: ligneDe(S.user.id)?.name ?? '', couleur: ligneDe(S.user.id)?.couleur ?? null, role: 'owner' },
+    ...(membres ?? []).map(m => ({ id: m.owner_id, name: ligneDe(m.owner_id)?.name ?? '', couleur: ligneDe(m.owner_id)?.couleur ?? null, role: m.role })),
   ];
   // Choix persisté si encore valide, sinon la 1re membership (comportement D-015 :
   // un membre/lecteur tombe sur la maison partagée, pas sur sa collection vide),
@@ -98,7 +98,14 @@ async function resolveTenant() {
   S.tenantId = courant.id;
   S.tenantRole = courant.role;
   S.tenantName = courant.name;
+  applyRuban(courant);
   applyRole();
+}
+
+// Couleur du ruban d'estimation, choisie par maison (HO-041) : couleur NULL →
+// chaîne vide = la propriété est retirée, le fallback CSS #35696c reprend.
+function applyRuban(t) {
+  document.documentElement.style.setProperty('--ruban', t?.couleur || '');
 }
 
 // Bascule sur une autre maison (switcher du menu) : persiste le choix et
@@ -110,6 +117,7 @@ function selectTenant(id) {
   S.tenantId = t.id;
   S.tenantRole = t.role;
   S.tenantName = t.name;
+  applyRuban(t);
   applyRole();
   renderMenu();
   loadHeader();
