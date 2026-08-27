@@ -1,4 +1,26 @@
-/* ─── Vue Collection : titres de groupes du listing ───────── */
+/* ─── Vue Collection : accordéon des rayons (HO-043, design étape 2) ─── */
+/* Carte blanche par catégorie ; la grille masonry des cartes objet (HO-040,
+   components.css) est reprise telle quelle à l'intérieur du volet ouvert. */
+.cat-pane{background:var(--surface);border-radius:var(--r-md);box-shadow:var(--shadow);margin-bottom:9px;overflow:hidden}
+.cat-head{display:flex;align-items:center;gap:8px;width:100%;min-height:46px;padding:8px 12px;border:none;background:none;text-align:left;cursor:pointer}
+.cat-chev{color:var(--ink-3);font-size:.75rem;width:14px;flex-shrink:0}
+.cat-name{font-family:var(--serif);font-size:1rem;font-weight:400;color:var(--ink)}
+.cat-pane.open .cat-name{font-size:1.0625rem}
+.cat-total{font-size:.6875rem;color:var(--ink-3)}
+.cat-thumbs{margin-left:auto;display:flex;gap:4px}
+.cat-thumbs img{width:26px;height:26px;border-radius:3px;object-fit:cover;display:block}
+.cat-thumbs .thumb-emoji{width:26px;height:26px;border-radius:3px;display:grid;place-items:center;background:var(--surface-2);font-size:.8125rem}
+.cat-body{display:none;padding:0 11px}
+.cat-pane.open .cat-body{display:block}
+.cat-pane .grid{column-gap:9px}
+.cat-more{display:block;width:100%;margin-top:11px;padding:10px;border:none;border-top:1px solid var(--line-soft);background:none;font-size:.71875rem;font-weight:600;color:var(--blue);cursor:pointer}
+.cat-more:hover{background:var(--blue-softer)}
+/* Mobile : padding de page 11px sur la vue collection (spec étape 2) */
+@media (max-width:640px){
+  main:has(> #view-collection.active){padding:16px 11px 64px}
+}
+
+/* Titres de groupes du rendu historique (regroupement lieu/période/none) */
 .group-title{display:flex;align-items:baseline;gap:10px;margin:26px 0 14px;font-family:var(--serif);font-size:1.1875rem;font-weight:600}
 .group-title .n{font-family:var(--mono);font-size:13px;color:var(--ink-3);font-weight:400}
 .group-title::after{content:"";flex:1;height:1px;background:var(--line)}

@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, $$, esc, norm, toast, emptyHtml } from '../core/dom.js';
 import { S } from '../core/state.js';
-import { catCanon, cardHtml, STATUTS } from '../core/format.js';
+import { catCanon, catEmoji, cardHtml, STATUTS } from '../core/format.js';
 import { sb, loadPhotoMap } from '../core/data.js';
 import { loadViewCss } from '../core/css.js';
 
@@ -22,7 +22,11 @@ async function loadCollection() {
   if (error) { toast(error.message, true); body.innerHTML = ''; return; }
   S.collection = data ?? [];
   await loadPhotoMap();
-  renderChips();
+  // Ligne de titre du bandeau (HO-042) : « N objets · M à estimer » (HO-043)
+  const n = S.collection.length;
+  const m = S.collection.filter(o => o.prix_bas == null).length;
+  const el = $('#page-sub-count');
+  if (el) el.textContent = `${n} objet${n > 1 ? 's' : ''} · ${m} à estimer`;
   renderLists();
   renderGrid();
 }
@@ -49,24 +53,9 @@ function matchFiltre(o, f) {
 }
 const objMatches = o => matchFiltre(o, S.filters);
 
-// Chips catégories multi-cochables (« Tous » = aucune cochée) — une liste
-// sauvegardée peut viser plusieurs catégories canoniques à la fois.
-function renderChips() {
-  const cats = [...new Set(S.collection.map(o => catCanon(o.categorie)).filter(Boolean))]
-    .sort((a, b) => a.localeCompare(b, 'fr'));
-  $('#chips').innerHTML = [`<button class="chip ${S.filters.cats.length === 0 ? 'active' : ''}" data-chip="">Tous</button>`]
-    .concat(cats.map(c => `<button class="chip ${S.filters.cats.includes(c) ? 'active' : ''}" data-chip="${esc(c)}">${esc(c)}</button>`))
-    .join('');
-  $$('#chips .chip').forEach(ch => ch.addEventListener('click', () => {
-    const c = ch.dataset.chip;
-    if (c === '') S.filters.cats = [];
-    else {
-      const i = S.filters.cats.indexOf(c);
-      if (i >= 0) S.filters.cats.splice(i, 1); else S.filters.cats.push(c);
-    }
-    renderChips(); renderLists(); renderGrid();
-  }));
-}
+// Les chips catégories ont disparu avec l'accordéon des rayons (HO-043) — la
+// sélection par catégorie est portée par les volets et le tiroir. `f.cats` reste
+// honoré dans matchFiltre pour les listes sauvegardées existantes.
 
 // ─── Listes sauvegardées (filtres nommés, localStorage par locataire) ───────
 // Une liste = { id, nom, q, cats, prixMin, prixMax } — persistance locale
@@ -97,23 +86,22 @@ function syncPrixInputs() {
   $('#prix-max').value = S.filters.prixMax ?? '';
 }
 
-// Applique une liste sauvegardée : recherche + chips catégories + fourchette prix.
+// Applique une liste sauvegardée : recherche + catégories (legacy) + fourchette prix.
 function applyListe(l) {
   $('#search').value = l.q ?? '';
   S.filters.q = norm(l.q ?? '');
-  if (l.q) toolbarEl().classList.add('search-open'); // recherche active → barre dépliée (sinon filtre invisible)
   S.filters.cats = [...(l.cats ?? [])];
   S.filters.prixMin = l.prixMin ?? null;
   S.filters.prixMax = l.prixMax ?? null;
   syncPrixInputs();
-  renderChips(); renderLists(); renderGrid();
+  renderLists(); renderGrid();
 }
 
 function resetFiltre() {
   $('#search').value = '';
   S.filters.q = ''; S.filters.cats = []; S.filters.prixMin = null; S.filters.prixMax = null;
   syncPrixInputs();
-  renderChips(); renderLists(); renderGrid();
+  renderLists(); renderGrid();
 }
 
 // Compteur d'une liste sauvegardée : son filtre rejoué en « virtuel » sur le cache.
@@ -175,7 +163,12 @@ function renderGrid() {
     return;
   }
   const g = S.filters.group;
-  if (!g) {
+  // Accordéon des rayons (HO-043, design étape 2) : rendu par défaut (regroupement
+  // catégorie, aucun filtre actif). Le mode filtré arrive en HO-044 ; les autres
+  // regroupements (lieu/période/none) gardent le rendu historique.
+  if (g === 'categorie' && !filtreActif() && !S.filters.list) {
+    renderAccordeon(body, items);
+  } else if (!g) {
     body.innerHTML = `<div class="grid">${items.map(cardHtml).join('')}</div>`;
   } else {
     const groups = new Map();
@@ -196,6 +189,71 @@ function renderGrid() {
     // Carte = div focusable (role="button") : Enter/Espace = même navigation que le clic
     c.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
   });
+}
+
+// ─── Accordéon des rayons (HO-043, design handoff étape 2) ─────────────────
+// Une carte blanche par catégorie : volet ouvert = 9 objets + pied « Voir les
+// N … » (→ vue rayon), volet fermé = ligne 46px + 3 vignettes des pièces les
+// mieux estimées. État persisté par locataire ; « jamais enregistré » (clé
+// absente → 1er rayon ouvert) ≠ « tout fermé » (clé = [], état valide).
+const voletsKey = () => `iartcane-volets-${S.tenantId}`;
+function loadVolets() {
+  const raw = localStorage.getItem(voletsKey());
+  if (raw === null) return null;
+  try { return JSON.parse(raw) ?? []; } catch { return []; }
+}
+const saveVolets = v => localStorage.setItem(voletsKey(), JSON.stringify(v));
+
+// Libellé du pied de volet : « Voir les 12 tableaux » — accord simple (minuscule
+// + « s »), repli robuste pour les rayons composés (« argenterie/métal »…).
+function libelleRayon(k, n) {
+  const bas = k.toLowerCase();
+  if (bas.includes('/') || /[sx]$/.test(bas)) return `Voir les ${n} objets · ${k}`;
+  return `Voir les ${n} ${bas}s`;
+}
+
+function renderAccordeon(body, items) {
+  const groupes = new Map();
+  for (const o of items) {
+    const k = catCanon(o.categorie) || 'Sans catégorie';
+    if (!groupes.has(k)) groupes.set(k, []);
+    groupes.get(k).push(o);
+  }
+  const tries = [...groupes.entries()].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'fr'));
+  const persistes = loadVolets();
+  const ouverts = persistes ?? (tries.length ? [tries[0][0]] : []);
+  body.innerHTML = tries.map(([k, arr]) => {
+    const open = ouverts.includes(k);
+    // Vignettes du volet fermé : les 3 pièces les mieux estimées du rayon.
+    const top3 = [...arr].sort((a, b) => (b.prix_haut ?? -1) - (a.prix_haut ?? -1)).slice(0, 3);
+    const thumbs = top3.map(o => {
+      const ph = S.photoMap[o.id];
+      return ph?.url ? `<img src="${esc(ph.url)}" alt="" loading="lazy">` : `<span class="thumb-emoji">${catEmoji(o.categorie)}</span>`;
+    }).join('');
+    const apercu = arr.slice(0, 9).map(cardHtml).join('');
+    const pied = arr.length > 9 ? `<button class="cat-more" data-cat="${esc(k)}">${esc(libelleRayon(k, arr.length))}</button>` : '';
+    return `<section class="cat-pane ${open ? 'open' : ''}" data-cat="${esc(k)}">
+      <button class="cat-head" aria-expanded="${open}">
+        <span class="cat-chev" aria-hidden="true">${open ? '▾' : '▸'}</span>
+        <span class="cat-name">${esc(k)}</span>
+        <span class="cat-total">${arr.length}</span>
+        ${open ? '' : `<span class="cat-thumbs">${thumbs}</span>`}
+      </button>
+      <div class="cat-body"><div class="grid">${apercu}</div>${pied}</div>
+    </section>`;
+  }).join('');
+  $$('.cat-head', body).forEach(h => h.addEventListener('click', () => {
+    const cat = h.closest('.cat-pane').dataset.cat;
+    // Matérialiser l'état affiché avant bascule si rien n'était encore persisté.
+    const courant = loadVolets() ?? ouverts;
+    const i = courant.indexOf(cat);
+    if (i >= 0) courant.splice(i, 1); else courant.push(cat);
+    saveVolets(courant);
+    renderGrid();
+  }));
+  $$('.cat-more', body).forEach(b => b.addEventListener('click', () => {
+    location.hash = '#/rayon/' + encodeURIComponent(b.dataset.cat);
+  }));
 }
 
 // Recherche (débounce) + filtre prix (même débounce) + regroupement

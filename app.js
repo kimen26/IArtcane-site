@@ -323,6 +323,7 @@ $('#btn-filters-2').addEventListener('click', () => $('#btn-filters').click());
 const ROUTES = [
   { re: /^#\/capture/,            tab: 'capture',    view: 'capture',    write: true, load: () => import('./js/views/capture.js') },
   { re: /^#\/objet\/([^/]+)$/,    tab: 'collection', view: 'objet',      load: () => import('./js/views/objet/index.js') },
+  { re: /^#\/rayon\/([^/]+)$/,    tab: 'collection', view: 'rayon',      load: () => import('./js/views/rayon.js') },
   { re: /^#\/maison/,             view: 'maison',    write: true,        load: () => import('./js/views/maison.js') },
   { re: /^#\/activite/,           view: 'activite',  load: () => import('./js/views/activite.js') },
   { re: /^#\/artiste\/([^/]+)$/,  tab: 'artistes',  view: 'artiste',   load: () => import('./js/views/artistes.js'), fn: 'mountDetail' },
@@ -377,6 +378,7 @@ function viewLabel(view, params = []) {
     case 'artistes':   return 'Artistes';
     case 'artiste':    return params[0] || 'Artiste';
     case 'objet':      return 'Objet';
+    case 'rayon':      return params[0] || 'Rayon';
     case 'maison':     return 'Maison';
     case 'activite':   return 'Activité';
     case 'sources':    return 'Sources';
