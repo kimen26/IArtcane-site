@@ -156,7 +156,9 @@ function rendreHub() {
   const auteurHtml = o.auteur
     ? (O.artiste
       ? `<a class="obj-author" href="#/artiste/${encodeURIComponent(O.artiste.nom)}">${esc(o.auteur)}</a>`
-      : `<span class="obj-author">${esc(o.auteur)}</span>`)
+      // Auteur renseigné mais AUCUNE fiche artiste : lecture de signature ou
+      // piste non confirmée — l'indicateur (?) le dit avant la validation humaine.
+      : `<span class="obj-author">${esc(o.auteur)} <span title="Artiste non identifié : pas de fiche artiste — à confirmer (validation humaine)" style="opacity:.55">(?)</span></span>`)
     : '';
 
   return `
