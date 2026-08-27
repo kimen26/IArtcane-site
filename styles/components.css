@@ -133,14 +133,13 @@
 #view-collection .group-title .n{font-family:var(--sans);font-size:.78rem;color:#8b93a6}
 #view-collection .group-title::after{background:#dfe3ec}
 
-/* statuts */
+/* statuts (machine D-057 : nouveau → pre_classe → analyse → a_completer | validee) */
 .st{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 11px;border-radius:999px;white-space:nowrap}
-.st-capture{background:var(--amber-soft);color:var(--amber)}
-.st-en_file,.st-analyse{background:var(--blue-soft);color:var(--blue-deep)}
-.st-fiche_prete{background:var(--violet-soft);color:var(--violet)}
+.st-nouveau{background:var(--amber-soft);color:var(--amber)}
+.st-pre_classe{background:var(--blue-soft);color:var(--blue-deep)}
+.st-analyse{background:var(--violet-soft);color:var(--violet)}
 .st-a_completer{background:var(--amber-soft);color:var(--amber)}
 .st-validee{background:var(--green-soft);color:var(--green)}
-.st-contestee{background:var(--red-soft);color:var(--red)}
 
 /* ─── Panneaux & navigation transverse ────────────────────── */
 .back{display:inline-flex;align-items:center;gap:7px;background:none;border:none;color:var(--ink-2);font-size:.875rem;font-weight:500;margin-bottom:20px;padding:6px 10px 6px 0}

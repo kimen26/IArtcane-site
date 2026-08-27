@@ -46,14 +46,14 @@ export function logEvent(action, detail = {}, oid = S.currentObjet?.id) {
   }).then(({ error }) => { if (error) console.warn('logEvent:', error.message); });
 }
 
-// ─── File d'analyse (règle métier, partagée fiche objet + écran Activité) ────
+// ─── File de jobs (règle métier, partagée fiche objet + écran Activité) ────
 // Enfile un job par objet en évitant les doublons : on lit d'abord les jobs
 // en_attente (index unique partiel jobs_un_en_attente_idx, migration 0011) et on
 // n'insère que les manquants. Insert par lot ; si un 23505 survient quand même
-// (course avec le cron), repli un par un en le tolérant. Les objets réellement
-// enfilés passent au statut « en_file ».
+// (course avec le cron), repli un par un en le tolérant. Les statuts d'objets ne
+// sont PLUS touchés ici (D-057 : les états transitoires se lisent dans `jobs`).
 // @returns {Promise<number>} nombre d'objets effectivement mis en file
-export async function enqueueJobs(oids, type = 'analyse') {
+export async function enqueueJobs(oids, type = 'r2') {
   if (!oids.length) return 0;
   const { data: pending, error: e0 } = await sb.from('jobs').select('objet_id')
     .eq('owner_id', S.tenantId).eq('statut', 'en_attente');
@@ -72,20 +72,32 @@ export async function enqueueJobs(oids, type = 'analyse') {
       else if (e.code !== '23505') toast(e.message, true);
     }
   }
-  if (ok.length) await sb.from('objets').update({ statut: 'en_file' }).eq('owner_id', S.tenantId).in('id', ok);
   return ok.length;
 }
 
-// Mise en file d'UN objet (relance depuis la fiche) — même règle de dédoublonnage.
-export const queueAnalyse = (oid, type = 'analyse') => enqueueJobs([oid], type);
-
-// Ré-analyse différée (D-049) : correction/photo/crop ne créent plus de job immédiat —
-// l'objet est marqué, le cron créera UN job 'reanalyse' au prochain run (≤ 10 min).
-// La capture (capture.js) et le bouton « Relancer » gardent queueAnalyse (immédiat).
-export async function marquerReanalyse(oid) {
-  const { error } = await sb.from('objets').update({ reanalyse_due: true }).eq('owner_id', S.tenantId).eq('id', oid);
-  if (error) { toast(error.message, true); return false; }
-  return true;
+// Lancement manuel des recherches (D-057 — cœur du pipeline militaire) :
+// UN appel à l'edge R1 (live, ~40 s, JWT utilisateur), qui enfile ensuite le
+// job R2 (Lens, cron 2 min). Plus AUCUN recalcul automatique à l'ajout de
+// photos : le recalcul est un acte humain (Enregistrer / « Relancer les
+// recherches »). L'edge elle-même saute la R1 si aucune photo n'a changé.
+// @returns { ok, skip?, certain?, error? }
+export async function lancerRecherches(oid, { force = false } = {}) {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session?.access_token) { toast('Session expirée — reconnecte-toi', true); return { ok: false }; }
+  let res;
+  try {
+    res = await fetch(`${SUPABASE_URL}/functions/v1/identify-photo`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ owner_id: S.tenantId, objet_id: oid, force }),
+    });
+  } catch (e) {
+    toast(`Recherches injoignables : ${e.message ?? e}`, true);
+    return { ok: false };
+  }
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) { toast(body.error ?? `Recherches échouées (HTTP ${res.status})`, true); return { ok: false, ...body }; }
+  return { ok: true, ...body };
 }
 
 // Purge de la consigne « photos à refaire » dès que de nouvelles photos arrivent

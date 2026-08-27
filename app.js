@@ -71,8 +71,8 @@ function watchLive() {
       // refresh sur action ou manuel uniquement) — on notifie, point.
       if (!old.categorie && n.categorie) {
         toast(`🔎 #${n.id} identifié par l'IA : « ${n.titre ?? n.categorie} » (R1 — recharge pour voir)`);
-      } else if (old.statut !== 'fiche_prete' && n.statut === 'fiche_prete') {
-        toast(`✨ #${n.id} : fiche IA prête — recharge la page pour la voir`);
+      } else if (old.statut !== 'analyse' && n.statut === 'analyse') {
+        toast(`✨ #${n.id} analysé (R2) — recharge la page pour voir`);
       }
     })
     .subscribe();

@@ -6,7 +6,7 @@
 import { $, $$, esc, toast } from '../core/dom.js';
 import { S, canWrite } from '../core/state.js';
 import { plur } from '../core/format.js';
-import { sb, logEvent, queueAnalyse, uploadPhotosFor } from '../core/data.js';
+import { sb, logEvent, lancerRecherches, enqueueJobs, uploadPhotosFor } from '../core/data.js';
 import { openCamera } from '../core/camera.js';
 import { loadViewCss } from '../core/css.js';
 import { createOverlay } from '../core/lightbox.js';
@@ -296,11 +296,16 @@ $('#cap-save').addEventListener('click', async () => {
       const { done, failed } = await uploadPhotosFor(pendingObjetId, S.capFiles, true, onProgress);
       S.capFiles = failed.map(({ item }) => item);
       renderPreviews();
-      if (done > 0) await queueAnalyse(pendingObjetId);
       if (!S.capFiles.length) {
         const rid = pendingObjetId;
         pendingObjetId = null;
-        toast('Photos envoyées — analyse en file');
+        if (done > 0) {
+          // D-057 : « Enregistrer » lance la chaîne UNE fois (R1 live → R2 enfilée).
+          btn.textContent = 'Recherche R1 (Kimi)…';
+          const r = await lancerRecherches(rid);
+          if (!r.ok) await enqueueJobs([rid], 'r1'); // repli : le cron fera la R1
+        }
+        toast('Photos envoyées — recherches lancées');
         S.refreshHeader?.();
         location.hash = '#/objet/' + encodeURIComponent(rid);
       } else {
@@ -317,16 +322,16 @@ $('#cap-save').addEventListener('click', async () => {
         const { data: newId, error: e0 } = await sb.rpc('next_objet_id', { p_owner: S.tenantId });
         if (e0 || !newId) { fails++; continue; }
         const { error: e1 } = await sb.from('objets').insert({
-          owner_id: S.tenantId, id: newId, statut: 'en_file', zone, contenant, commentaire, source_capture: 'site',
+          owner_id: S.tenantId, id: newId, statut: 'nouveau', zone, contenant, commentaire, source_capture: 'site',
         });
         if (e1) { fails++; continue; }
         logEvent('capture', { n: 1, zone }, newId);
         const { done } = await uploadPhotosFor(newId, [item], true);
         if (done > 0) {
-          await queueAnalyse(newId);
+          // Batch : la R1 live serait trop longue en rafale → job r1, le cron la fait.
+          await enqueueJobs([newId], 'r1');
         } else {
           sansPhoto++;
-          await sb.from('objets').update({ statut: 'a_completer' }).eq('owner_id', S.tenantId).eq('id', newId);
         }
         ids.push(newId); ok++;
       }
@@ -343,7 +348,7 @@ $('#cap-save').addEventListener('click', async () => {
     const { error: e1 } = await sb.from('objets').insert({
       owner_id: S.tenantId,
       id: newId,
-      statut: avecPhotos ? 'en_file' : 'a_completer',
+      statut: 'nouveau',
       zone,
       contenant,
       commentaire,
@@ -360,22 +365,23 @@ $('#cap-save').addEventListener('click', async () => {
         S.capFiles = failed.map(({ item }) => item);
         renderPreviews();
         if (done > 0) {
-          await queueAnalyse(newId);
-        } else {
-          await sb.from('objets').update({ statut: 'a_completer' }).eq('owner_id', S.tenantId).eq('id', newId);
+          btn.textContent = 'Recherche R1 (Kimi)…';
+          const r = await lancerRecherches(newId);
+          if (!r.ok) await enqueueJobs([newId], 'r1');
         }
         toast(`Objet #${newId} enregistré — ${done}/${total} photos envoyées. ${failed.length} en échec : renvoyez-les depuis cet écran.`, true);
         return;
       }
       if (done > 0) {
-        await queueAnalyse(newId);
-      } else {
-        await sb.from('objets').update({ statut: 'a_completer' }).eq('owner_id', S.tenantId).eq('id', newId);
+        // D-057 : la chaîne part UNE fois, toutes les photos sont déjà là.
+        btn.textContent = 'Recherche R1 (Kimi)…';
+        const r = await lancerRecherches(newId);
+        if (!r.ok) await enqueueJobs([newId], 'r1'); // repli : le cron fera la R1
       }
     }
     S.capFiles = [];
     renderPreviews();
-    toast(`Objet #${newId} enregistré${avecPhotos ? ' — analyse en file' : ''}`);
+    toast(`Objet #${newId} enregistré${avecPhotos ? ' — recherches lancées (R1 · R2 suit)' : ''}`);
     S.refreshHeader?.();
     location.hash = '#/objet/' + encodeURIComponent(newId);
   } catch (err) {

@@ -40,7 +40,7 @@ export const plur = (n, s, p) => `${n} ${n > 1 ? p : s}`;
 export const infoSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg>';
 
 export const STATUTS = {
-  capture: 'Capturé', en_file: 'En file', analyse: 'Analyse en cours', fiche_prete: 'Fiche prête',
+  nouveau: 'Nouveau', pre_classe: 'Pré-classé', analyse: 'Analysé',
   a_completer: 'À compléter', validee: 'Validée',
 };
 // Confiance comptée 0–4 : 4/4 = validée par un humain (ground truth), sinon 1-3 selon l'IA.
@@ -93,9 +93,10 @@ export function cardHtml(o) {
 export const ACT_LABELS = {
   capture: 'Objet capturé', photo_ajoutee: 'Photo ajoutée', photo_supprimee: 'Photo supprimée',
   recadrage: 'Recadrage', centrage: 'Centrage', couverture: 'Photo de couverture', localisation: 'Localisation',
-  correction: 'Correction', validation: 'Fiche validée', relance: 'Estimation relancée',
+  correction: 'Correction', validation: 'Fiche validée', relance: 'Recherches relancées',
   identification: 'R1 · Identification', passe_marche: 'Valorisation · comparables',
-  lens: 'R2 · Google Lens', artiste_maj: 'Fiche artiste', photos_manquantes: 'Photos recommandées',
+  lens: 'R2 · Google Lens', 'lens R2': 'R2 · Google Lens', rewriting: 'R3 · Rewriting',
+  artiste_maj: 'R9 · Fiche artiste', photos_manquantes: 'Photos recommandées',
   artiste_photo_ajoutee: 'Photo artiste ajoutée', artiste_photo_supprimee: 'Photo artiste supprimée',
   comparable_supprime: 'Comparable retiré',
 };

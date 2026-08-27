@@ -17,7 +17,7 @@ import {
   STATUTS, ACT_LABELS, actorBadge, evDetailBits, mdToHtml,
 } from '../../core/format.js';
 import { SOUS } from '../../core/taxonomie.js';
-import { sb, signPaths, logEvent, queueAnalyse, marquerReanalyse, purgeConsigne, uploadPhotosFor } from '../../core/data.js';
+import { sb, signPaths, logEvent, lancerRecherches, purgeConsigne, uploadPhotosFor } from '../../core/data.js';
 import { openCamera } from '../../core/camera.js';
 import { loadViewCss } from '../../core/css.js';
 import { O, selPhoto, hooks } from './etat.js';
@@ -90,25 +90,26 @@ async function deleteComp(cid) {
   await loadObjet(S.currentObjet.id);
 }
 
-// Indicateur d'avancement R1/R2/Valorisation (HO-030)
-// Données : événements déjà chargés + jobs en attente/en cours + marqueur
-// reanalyse_due (D-049). R2 compte TOUTES les actions d'enrichissement réelles
-// (D-051) : la base contient lens, lens R2, grok, gpt, grok R2, gpt R2, llm_appoint.
+// Indicateur d'avancement R1/R2/R3/Valorisation (D-057)
+// Données : événements déjà chargés + jobs en attente/en cours + flag valo_due.
+// R2 compte TOUTES les actions d'enrichissement réelles (D-051) : la base
+// contient lens, lens R2, grok, gpt, grok R2, gpt R2, llm_appoint (hérités).
 const R2_ACTIONS = ['lens', 'lens R2', 'grok', 'gpt', 'grok R2', 'gpt R2', 'llm_appoint'];
 function computePipe(events, jobs, o) {
   const last = action => events.find(e => e.action === action)?.created_at ?? null;
   const lastR2 = events.find(e => R2_ACTIONS.includes(e.action))?.created_at ?? null;
-  const pendingAnalyse = jobs.some(j => ['analyse','reanalyse'].includes(j.type) && ['en_attente','en_cours'].includes(j.statut))
-    || o?.reanalyse_due === true;
+  const pendingJob = types => jobs.some(j => types.includes(j.type) && ['en_attente', 'en_cours'].includes(j.statut));
 
   const r1Done = last('identification') !== null;
   const r2Done = lastR2 !== null;
+  const r3Done = last('rewriting') !== null;
   const valoDone = last('passe_marche') !== null;
 
   return {
-    r1: { state: r1Done ? 'done' : (pendingAnalyse ? 'pending' : 'todo'), date: last('identification') },
-    r2: { state: (r1Done && pendingAnalyse) ? 'pending' : (r2Done ? 'done' : 'todo'), date: lastR2 },
-    valo: { state: pendingAnalyse ? 'pending' : (valoDone ? 'done' : 'todo'), date: last('passe_marche') },
+    r1: { state: r1Done ? 'done' : (pendingJob(['r1']) ? 'pending' : 'todo'), date: last('identification') },
+    r2: { state: pendingJob(['r2', 'r2_force']) ? 'pending' : (r2Done ? 'done' : 'todo'), date: lastR2 },
+    r3: { state: pendingJob(['r3']) ? 'pending' : (r3Done ? 'done' : 'todo'), date: last('rewriting') },
+    valo: { state: (o?.valo_due === true || pendingJob(['valo'])) ? 'pending' : (valoDone ? 'done' : 'todo'), date: last('passe_marche') },
   };
 }
 
@@ -253,7 +254,8 @@ function renderObjet() {
     <div class="actions hide-lecteur">
       <button class="btn primary" data-action="valider" ${o.statut === 'validee' ? 'disabled' : ''}>✓ Valider la fiche</button>
       <button class="btn" data-action="corriger">✏️ Corriger</button>
-      <button class="btn" data-action="relancer">↻ Relancer l'estimation</button>
+      <button class="btn" data-action="relancer">↻ Relancer les recherches</button>
+      ${o.auteur && o.prix_bas == null ? '<button class="btn" data-action="valo" title="Recherche de comparables vendus (batch dédié, ~10 min)">💶 Lancer la valorisation</button>' : ''}
       <button class="btn" data-action="take-photo">📸 Prendre une photo</button>
       <button class="btn" data-action="add-photo">🖼️ Ajouter depuis la galerie</button>
       <button class="btn danger" data-action="del-objet">🗑 Supprimer l'objet</button>
@@ -282,9 +284,9 @@ function renderObjet() {
     </details>` : `
     <div class="panel panel-pad">
       <div class="sec-title">Fiche IA</div>
-      <div class="value-sub">${o.statut === 'en_file' || o.statut === 'analyse'
-        ? '⏳ Analyse en file — le cron la traitera et la fiche apparaîtra ici.'
-        : 'Pas encore de fiche. Ajoute des photos puis relance l\'analyse.'}</div>
+      <div class="value-sub">${O.jobs.length
+        ? '⏳ Recherches en file — le cron les traitera et la fiche apparaîtra ici.'
+        : 'Pas encore de fiche. Ajoute des photos puis « Relancer les recherches ».'}</div>
     </div>`;
 
   // Changelog objet (D-025) : qui a fait quoi, quand, avec quel outil —
@@ -310,10 +312,11 @@ function renderObjet() {
     : '';
 
   const pipeBadges = O.pipe ? `
-    <div class="pipe-row" role="list" aria-label="Avancement de l'analyse">
-      ${pipeBadge('R1', 'Identification', O.pipe.r1)}
-      ${pipeBadge('R2', 'Enrichissement', O.pipe.r2)}
-      ${pipeBadge('Valo', 'Valorisation', O.pipe.valo)}
+    <div class="pipe-row" role="list" aria-label="Avancement des recherches">
+      ${pipeBadge('R1', 'R1 · Identification Kimi', O.pipe.r1)}
+      ${pipeBadge('R2', 'R2 · Recherche artiste (Lens)', O.pipe.r2)}
+      ${pipeBadge('R3', 'R3 · Rewriting', O.pipe.r3)}
+      ${pipeBadge('Valo', 'Valorisation · comparables vendus', O.pipe.valo)}
     </div>` : '';
 
   $('#objet-body').innerHTML = `
@@ -434,7 +437,7 @@ $('#objet-body').addEventListener('keydown', e => {
 const ACTIONS_MUTANTES = new Set([
   'cut-photo', 'del-photo', 'del-objet', 'add-photo', 'take-photo',
   'loc-edit', 'loc-save', 'valider', 'corriger', 'corr-save', 'relancer',
-  'del-comp', 'cover-photo',
+  'del-comp', 'cover-photo', 'valo',
 ]);
 
 $('#objet-body').addEventListener('click', async e => {
@@ -508,10 +511,25 @@ $('#objet-body').addEventListener('click', async e => {
   else if (act === 'corr-cancel') { O.editing = false; renderObjet(); }
   else if (act === 'corr-save') { saveCorrections(); }
   else if (act === 'relancer') {
-    if (!confirm(`Relancer l'estimation complète de #${o.id} ?\n\nLa passe entière sera rejouée : identification + recherche de comparables. Le cron la traitera au prochain run.`)) return;
-    await queueAnalyse(o.id, 'reanalyse');
-    logEvent('relance', {});
-    toast('Estimation relancée — le cron la traitera');
+    if (!confirm(`Relancer les recherches de #${o.id} ?\n\nR1 (Kimi, ~40 s) repart si des photos ont changé, puis R2 (Lens) est enfilée — le cron la prend sous ~2 min.`)) return;
+    el.disabled = true;
+    el.textContent = '⏳ R1 en cours…';
+    const force = o.statut === 'validee';
+    const r = await lancerRecherches(o.id, { force });
+    if (r.ok) {
+      logEvent('relance', { force, certain: r.certain ?? null });
+      toast(r.skip
+        ? `R1 sautée (${r.skip}) — R2 (Lens) en file`
+        : `R1 terminée${r.certain ? ' — auteur certain ✓' : ' — doute : analyse versée à la description'} · R2 (Lens) en file`);
+    }
+    loadObjet(o.id);
+  }
+  else if (act === 'valo') {
+    const { error } = await sb.from('objets').update({ valo_due: true, tentative_valo_at: null })
+      .eq('owner_id', S.tenantId).eq('id', o.id);
+    if (error) { toast(error.message, true); return; }
+    logEvent('relance', { type: 'valorisation' });
+    toast('Valorisation en file — batch dédié (~10 min)');
     loadObjet(o.id);
   }
 });
@@ -559,8 +577,8 @@ $('#file-add-photo').addEventListener('change', async e => {
   ui.close();
   if (done > 0) {
     logEvent('photo_ajoutee', { n: done, ...(failed.length ? { echecs: failed.length } : {}), via: 'fichier' }, oid);
-    // Toute nouvelle photo marque l'objet pour ré-analyse différée, sauf sur une fiche validée (D-049).
-    if (S.currentObjet.statut !== 'validee') await marquerReanalyse(oid);
+    // D-057 : aucune relance automatique — l'humain clique « Relancer les
+    // recherches » quand sa session de photos est terminée.
     await purgeConsigne(o, oid);
   }
   if (ui.annule) {
@@ -569,7 +587,7 @@ $('#file-add-photo').addEventListener('change', async e => {
     toast(`${done}/${files.length} photo(s) ajoutée(s) — ${failed.length} en échec (${failed[0].reason}). Réessayez.`, true);
   } else if (done > 0) {
     toast(S.currentObjet.statut !== 'validee'
-      ? `${done} photo${done > 1 ? 's' : ''} ajoutée${done > 1 ? 's' : ''} — ré-analyse au prochain run du cron`
+      ? `${done} photo${done > 1 ? 's' : ''} ajoutée${done > 1 ? 's' : ''} — « Relancer les recherches » quand tu es prêt`
       : `${done} photo${done > 1 ? 's' : ''} ajoutée${done > 1 ? 's' : ''}`);
   }
   loadObjet(oid);

@@ -41,7 +41,7 @@ async function loadCollection() {
 // renderLists (compteurs des listes sauvegardées, filtres « virtuels »).
 function matchFiltre(o, f) {
   if (f.list === 'a_localiser' && o.zone && o.zone.trim()) return false;
-  if (f.list === 'a_valider' && o.statut !== 'fiche_prete') return false;
+  if (f.list === 'a_valider' && o.statut !== 'analyse') return false;
   if (f.list === 'chere' && !(o.prix_haut >= 1000)) return false;
   if (f.cats?.length && !f.cats.includes(catCanon(o.categorie))) return false;
   if (f.q) {
@@ -126,7 +126,7 @@ const compteListe = l => S.collection.filter(o => matchFiltre(o, {
 // de filtres (HO-044) : #lists a été déplacé de la toolbar vers #filter-sheet.
 function renderLists() {
   const nLoc = S.collection.filter(o => !o.zone || !o.zone.trim()).length;
-  const nVal = S.collection.filter(o => o.statut === 'fiche_prete').length;
+  const nVal = S.collection.filter(o => o.statut === 'analyse').length;
   const nCher = S.collection.filter(o => o.prix_haut >= 1000).length;
   const defs = [
     ['a_localiser', 'var(--amber)', 'À localiser', nLoc],

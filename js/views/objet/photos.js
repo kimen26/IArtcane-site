@@ -9,7 +9,7 @@
 import { esc, toast } from '../../core/dom.js';
 import { S } from '../../core/state.js';
 import { isVideo } from '../../core/format.js';
-import { sb, logEvent, marquerReanalyse, purgeConsigne, makeThumbBlob, deleteStoredPhoto } from '../../core/data.js';
+import { sb, logEvent, purgeConsigne, makeThumbBlob, deleteStoredPhoto } from '../../core/data.js';
 import { createOverlay, openViewer } from '../../core/lightbox.js';
 import { selPhoto, hooks } from './etat.js';
 
@@ -24,15 +24,15 @@ export async function deletePhoto() {
   await hooks.recharger(S.currentObjet.id);
 }
 
-// Caméra depuis la fiche : les clichés ont été uploadés au fil de l'eau →
-// toute nouvelle photo marque l'objet pour ré-analyse différée (D-049, même règle
-// que l'ajout par fichier), sauf fiche validée (ground truth figée), purge la
-// consigne « photos à refaire » le cas échéant, puis on recharge.
+// Caméra depuis la fiche : les clichés ont été uploadés au fil de l'eau → purge
+// de la consigne « photos à refaire » le cas échéant, puis on recharge.
+// D-057 : AUCUN marquage automatique — le recalcul part du bouton
+// « Relancer les recherches », une fois la session de photos terminée.
 export async function onCamClose(n) {
   const o = S.currentObjet;
   if (!o || !n) return;
-  if (o.statut !== 'validee') await marquerReanalyse(o.id);
   await purgeConsigne(o, o.id);
+  if (o.statut !== 'validee') toast(`${n} photo${n > 1 ? 's' : ''} ajoutée${n > 1 ? 's' : ''} — « Relancer les recherches » quand tu es prêt`);
   hooks.recharger(o.id);
 }
 

@@ -62,7 +62,6 @@ export async function saveCorrections() {
     }
   }
   if (!rows.length) { toast('Aucune modification'); O.editing = false; hooks.rendre(); return; }
-  updates.reanalyse_due = true;
   const verrous = new Set(o.verrous_humains || []);
   for (const { champ } of rows) verrous.add(champ);
   updates.verrous_humains = Array.from(verrous);
@@ -70,6 +69,6 @@ export async function saveCorrections() {
   if (error) { toast(error.message, true); return; }
   // Ground truth tracée dans evenements (corrections absorbée, D-027) — le cron la relit là.
   logEvent('correction', { champs: Object.fromEntries(rows.map(r => [r.champ, { avant: r.avant, apres: r.apres }])) });
-  toast(`${rows.length} correction${rows.length > 1 ? 's' : ''} gravée${rows.length > 1 ? 's' : ''} — ré-analyse au prochain run du cron (≤ 10 min), champs corrigés verrouillés`);
+  toast(`${rows.length} correction${rows.length > 1 ? 's' : ''} gravée${rows.length > 1 ? 's' : ''} — champs verrouillés. « Relancer les recherches » pour que l'IA en tienne compte.`);
   hooks.recharger(o.id);
 }

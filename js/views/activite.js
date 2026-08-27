@@ -19,10 +19,10 @@ async function majCatalogue() {
   if (!canWrite()) return;
   await ensureCollection();
   if (!S.collection.length) { toast('Aucun objet dans le catalogue', true); return; }
-  if (!confirm(`Rejouer la passe complète (identification + comparables) sur les ${S.collection.length} objets du catalogue ?\n\nLes objets déjà en file sont ignorés. Le cron traitera ~5 objets par run de 10 min.`)) return;
+  if (!confirm(`Rejouer les recherches (R2 Lens + R3 si artiste) sur les ${S.collection.length} objets du catalogue ?\n\nLes objets déjà en file sont ignorés. Le cron traitera ~5 objets par run de 2 min.`)) return;
   const n = await enqueueJobs(S.collection.map(o => o.id), 'maj');
   toast(n
-    ? `${plur(n, 'objet mis', 'objets mis')} en file — le cron les traitera ~5 par run de 10 min.`
+    ? `${plur(n, 'objet mis', 'objets mis')} en file — le cron les traitera ~5 par run de 2 min.`
     : 'Tous les objets sont déjà en file');
 }
 
@@ -32,15 +32,15 @@ async function majArtistes() {
   const objs = S.collection.filter(o => o.auteur && o.auteur.trim());
   const artistes = [...new Set(objs.map(o => o.auteur))];
   if (!objs.length) { toast('Aucun objet avec un auteur renseigné', true); return; }
-  if (!confirm(`Mettre à jour les fiches des ${plur(artistes.length, 'artiste', 'artistes')} (${plur(objs.length, 'objet concerné', 'objets concernés')}) ?\n\nLe cron traitera ~5 objets par run de 10 min.`)) return;
-  const n = await enqueueJobs(objs.map(o => o.id), 'artiste_maj');
+  if (!confirm(`Mettre à jour les fiches des ${plur(artistes.length, 'artiste', 'artistes')} (${plur(objs.length, 'objet concerné', 'objets concernés')}) ?\n\nLe cron traitera ~5 objets par run de 2 min.`)) return;
+  const n = await enqueueJobs(objs.map(o => o.id), 'r9');
   toast(n
-    ? `${plur(n, 'objet mis', 'objets mis')} en file (${plur(artistes.length, 'artiste', 'artistes')}) — le cron les traitera ~5 par run de 10 min.`
+    ? `${plur(n, 'objet mis', 'objets mis')} en file (${plur(artistes.length, 'artiste', 'artistes')}) — le cron les traitera ~5 par run de 2 min.`
     : 'Ces objets sont déjà tous en file');
 }
 
 // Actions écrites par le cron (vs actions du site) — détermine le groupe du digest.
-const CRON_ACTIONS = new Set(['identification', 'passe_marche', 'lens', 'artiste_maj', 'photos_manquantes']);
+const CRON_ACTIONS = new Set(['identification', 'passe_marche', 'lens', 'lens R2', 'rewriting', 'artiste_maj', 'photos_manquantes']);
 const SITE_PLUR = {
   capture: ['capture', 'captures'],
   photo_ajoutee: ['photo ajoutée', 'photos ajoutées'],
@@ -74,9 +74,11 @@ function resumeCron(list) {
     parts.push(plur(pm.length, 'passe marché', 'passes marché') + (meta ? ` (${meta})` : ''));
   }
   const am = by('artiste_maj');
-  if (am.length) parts.push(plur(am.length, 'fiche artiste mise à jour', 'fiches artistes mises à jour'));
-  const lens = by('lens');
-  if (lens.length) parts.push(plur(lens.length, 'analyse Lens (signature)', 'analyses Lens (signatures)'));
+  if (am.length) parts.push(plur(am.length, 'fiche artiste (R9)', 'fiches artistes (R9)'));
+  const lens = by('lens').length + by('lens R2').length;
+  if (lens) parts.push(plur(lens, 'recherche Lens (R2)', 'recherches Lens (R2)'));
+  const rw = by('rewriting');
+  if (rw.length) parts.push(plur(rw.length, 'rewriting (R3)', 'rewritings (R3)'));
   const ph = by('photos_manquantes');
   if (ph.length) parts.push(plur(ph.length, 'recommandation photos', 'recommandations photos'));
   return parts.join(', ');
