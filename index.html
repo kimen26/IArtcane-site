@@ -19,32 +19,58 @@
      propre module via core/css.js → un chantier de vue ne touche plus ce fichier.
      Cache-buster ?v= : NE PAS éditer à la main — `node infra/bump-version.mjs <version>`
      écrit ici, dans js/core/version.js et dans sw.js d'un seul coup (L-013). -->
-<link rel="stylesheet" href="styles/tokens.css?v=2026-08-27g-upload-overlay">
-<link rel="stylesheet" href="styles/base.css?v=2026-08-27g-upload-overlay">
-<link rel="stylesheet" href="styles/components.css?v=2026-08-27g-upload-overlay">
+<link rel="stylesheet" href="styles/tokens.css?v=2026-08-27h-ho042">
+<link rel="stylesheet" href="styles/base.css?v=2026-08-27h-ho042">
+<link rel="stylesheet" href="styles/components.css?v=2026-08-27h-ho042">
 </head>
 <body>
 
 <header>
   <div class="header-in">
     <div class="menu-gov hidden" id="menu-gov">
-      <button class="menu-btn-icon" id="menu-btn" aria-haspopup="true" aria-expanded="false" aria-label="Menu">☰</button>
-      <div class="menu-panel hidden" id="menu-panel"></div>
+      <button class="menu-btn-icon" id="menu-btn" aria-haspopup="true" aria-expanded="false" aria-label="Menu">
+        <span class="burger" aria-hidden="true"><i></i><i></i><i></i></span>
+      </button>
     </div>
     <div class="logo" id="logo-home" title="Collection">
       <div class="logo-name"><span class="w-i">I</span><img class="logo-glyph" src="assets/logo-glyph.png" alt="ART">cane<img class="logo-mark" src="assets/mark-cygne.svg" alt=""></div>
     </div>
-    <div class="header-counter mono" id="header-counter"></div>
+    <div class="header-actions hidden" id="header-actions">
+      <button class="btn-round" id="btn-search-toggle" aria-expanded="false" aria-label="Rechercher">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      </button>
+      <button class="btn-round" id="btn-filters" aria-expanded="false" aria-label="Filtres">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M3 5h18l-7 8.2V20l-4-2.2v-4.6z"/></svg>
+        <span class="filters-count hidden" id="filters-count"></span>
+      </button>
+    </div>
+  </div>
+  <!-- Ligne de titre / ligne de recherche : visible UNIQUEMENT sur la vue collection
+       (le shell bascule .hidden dans show()). Le compteur est rempli par la vue
+       collection (#page-sub-count). -->
+  <div class="page-subhead hidden" id="page-subhead">
+    <div class="page-title-line" id="page-title-line">
+      <span class="page-title">Collection</span>
+      <span class="page-sub" id="page-sub-count"></span>
+    </div>
+    <div class="page-search-line hidden" id="page-search-line">
+      <div class="search">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="text" id="search" placeholder="« ma peinture allemande », « montre gousset », « carton 33 », « 0125 »…">
+        <button class="search-close" id="btn-search-close" aria-label="Effacer et fermer la recherche">×</button>
+      </div>
+      <button class="btn-square" id="btn-filters-2" aria-label="Filtres">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M3 5h18l-7 8.2V20l-4-2.2v-4.6z"/></svg>
+      </button>
+    </div>
   </div>
 </header>
 
-<nav class="tabs hidden" id="tabs">
-  <div class="tabs-in">
-    <button class="tab active" data-view="collection">Collection<span class="count" id="tab-count"></span></button>
-    <button class="tab hide-lecteur" data-view="capture">Capturer</button>
-    <button class="tab" data-view="artistes">Artistes</button>
-  </div>
-</nav>
+<!-- Tiroir de navigation (HO-042, design étape 2) : glisse depuis la gauche.
+     Contenu rendu par renderMenu() dans app.js. L'id "menu-panel" est conservé :
+     tout le câblage historique (closeMenu, data-hash/data-tenant/logout) marche. -->
+<div class="drawer-veil" id="drawer-veil"></div>
+<aside class="drawer" id="menu-panel" aria-label="Navigation"></aside>
 
 <main>
 
@@ -65,21 +91,9 @@
 
   <!-- ═══════════ VUE COLLECTION ═══════════ -->
   <section class="view" id="view-collection">
+    <!-- Recherche et entonnoir ont déménagé dans le bandeau (HO-042) — la toolbar
+         ne porte plus que le panneau de filtres (feuille dédiée en HO-044). -->
     <div class="toolbar">
-      <div class="search">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        <input type="text" id="search" placeholder="« ma peinture allemande », « montre gousset », « carton 33 », « 0125 »…">
-        <button class="search-close" id="btn-search-close" aria-label="Effacer et fermer la recherche">×</button>
-      </div>
-      <!-- Mobile uniquement (< 640 px) : le secondaire part dans le panneau
-           repliable ci-dessous ; sur desktop #btn-filters est masqué et
-           .filters-panel est en display:contents (toolbar inline inchangée). -->
-      <button class="btn" id="btn-filters" aria-expanded="false" aria-controls="filters-panel">Filtres <span class="filters-count hidden" id="filters-count"></span><span class="filters-chev" aria-hidden="true">▾</span></button>
-      <!-- Mobile uniquement : la recherche repliée en loupe (progressive
-           disclosure) ; tap → la barre se déploie avec autofocus. -->
-      <button class="btn btn-icon" id="btn-search-toggle" aria-expanded="false" aria-label="Rechercher">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      </button>
       <div class="filters-panel" id="filters-panel">
         <select class="select" id="group-by">
           <option value="categorie">Regrouper : catégorie</option>
@@ -214,7 +228,7 @@
 <input type="file" id="file-add-photo" accept="image/*,video/*" multiple class="hidden">
 <input type="file" id="file-artiste-photo" accept="image/*" multiple class="hidden">
 
-<script src="config.js?v=2026-08-27g-upload-overlay"></script>
-<script type="module" src="app.js?v=2026-08-27g-upload-overlay"></script>
+<script src="config.js?v=2026-08-27h-ho042"></script>
+<script type="module" src="app.js?v=2026-08-27h-ho042"></script>
 </body>
 </html>

@@ -7,7 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, $$, esc, toast } from './js/core/dom.js';
 import { S, canWrite } from './js/core/state.js';
-import { fmtNum } from './js/core/format.js';
+import { catCanon, catEmoji } from './js/core/format.js';
 import { sb } from './js/core/data.js';
 
 // ─── Service worker (D-013) : shell offline + réception « Partager avec » ───
@@ -30,12 +30,17 @@ sb.auth.onAuthStateChange((event, session) => {
 function show(view) {
   $$('.view').forEach(v => v.classList.remove('active'));
   $('#view-' + view).classList.add('active');
+  // Ligne de titre/recherche et actions (loupe/entonnoir) = outils de la collection
+  // (HO-042) — masqués sur tous les autres écrans.
+  const isColl = view === 'collection';
+  $('#page-subhead').classList.toggle('hidden', !isColl);
+  $('#header-actions').classList.toggle('hidden', !isColl || !S.user);
   window.scrollTo({ top: 0 });
 }
 function showLogin() {
-  $('#tabs').classList.add('hidden');
   $('#menu-gov').classList.add('hidden');
-  $('#header-counter').textContent = '';
+  $('#header-actions').classList.add('hidden');
+  $('#page-subhead').classList.add('hidden');
   document.body.classList.remove('role-lecteur');
   // Réarmer le realtime : à la prochaine connexion (autre tenant possible),
   // watchLive() doit recréer le canal avec le bon filtre owner_id.
@@ -43,7 +48,6 @@ function showLogin() {
   show('login');
 }
 async function enterApp() {
-  $('#tabs').classList.remove('hidden');
   $('#menu-gov').classList.remove('hidden');
   await resolveTenant();
   renderMenu();
@@ -165,15 +169,13 @@ async function loadProfile() {
 }
 
 async function loadHeader() {
-  const [{ count }, { data: next }] = await Promise.all([
+  const [{ count }, { count: nArtistes }] = await Promise.all([
     sb.from('objets').select('*', { count: 'exact', head: true }).eq('owner_id', S.tenantId),
-    sb.rpc('peek_objet_id', { p_owner: S.tenantId }),
+    sb.from('artistes').select('*', { count: 'exact', head: true }).eq('owner_id', S.tenantId),
   ]);
-  const n = count ?? 0;
-  const label = S.tenantName ? `${esc(S.tenantName)} · ` : (S.tenantId !== S.user.id ? 'catalogue partagé · ' : '');
-  const badgeRO = canWrite() ? '' : '<span class="badge-ro">lecture seule</span>';
-  $('#header-counter').innerHTML = `${label}<b>${fmtNum(n)}</b> objet${n > 1 ? 's' : ''} · prochain n° <b>${next ?? '—'}</b> ${badgeRO}`;
-  $('#tab-count').textContent = n;
+  S.objetsCount = count ?? 0;
+  S.artistesCount = nArtistes ?? 0;
+  renderMenu(); // le tiroir affiche les comptes (HO-042)
 }
 
 // Hooks transverses : les vues rafraîchissent en-tête/menu sans importer le shell.
@@ -183,58 +185,104 @@ S.refreshMenu = () => renderMenu();
 // ═══════════════════════════════════════════════════════════════════════════
 // ROUTEUR (hash) — lazy import des vues (D-039)
 // ═══════════════════════════════════════════════════════════════════════════
-function setTab(name) {
-  $$('.tab').forEach(t => {
-    const active = t.dataset.view === name;
-    t.classList.toggle('active', active);
-    if (active) t.setAttribute('aria-current', 'page');
-    else t.removeAttribute('aria-current');
-  });
-}
 
-// ─── Menu « gouvernance » de l'en-tête (D-028) ──────────────────────────────
-// Zones transverses de l'app. Ajouter une entrée = une ligne ici + une route
-// dans ROUTES + une <section class="view"> dans index.html + un module js/views/.
-// `owner: true` → entrée réservée aux admins (owner + membre admin).
+// ─── Tiroir de navigation (HO-042, design handoff étape 2) ──────────────────
+// Remplace le menu déroulant ☰ (D-028) : panneau glissant 280px — frise
+// d'avancement, CTA capture, entrées Maison/Artistes/Collection (+ rayons en
+// second niveau), pied Activité/Sources/Catégories, profil + déconnexion.
 const MENU_GOUV = [
-  { hash: '#/maison',     icone: '🏠', label: 'Maison',                desc: 'Membres, rôles, nom de la maison', owner: true },
-  { hash: '#/activite',   icone: '📋', label: 'Activité',              desc: 'Quoi de neuf : runs IA, mises à jour, actions — et MAJ forcées du catalogue' },
-  { hash: '#/sources',    icone: '🔭', label: 'Sources',               desc: 'Référentiels, comparables & corpus — cartographie des accès (D-028)' },
-  { hash: '#/categories', icone: '🗂️', label: 'Catégories & familles', desc: 'Taxonomie canonique et prompts d\'identification par famille' },
+  { hash: '#/activite',   label: 'Activité' },
+  { hash: '#/sources',    label: 'Sources' },
+  { hash: '#/categories', label: 'Catégories & familles' },
 ];
-const closeMenu = () => {
-  $('#menu-panel').classList.add('hidden');
+const drawerEl = () => $('#menu-panel');
+const veilEl = () => $('#drawer-veil');
+function openMenu() {
+  renderMenu(); // contenu frais (comptes, frise) à chaque ouverture
+  drawerEl().classList.add('open');
+  veilEl().classList.add('open');
+  $('#menu-btn').setAttribute('aria-expanded', 'true');
+}
+function closeMenu() {
+  drawerEl().classList.remove('open');
+  veilEl().classList.remove('open');
   $('#menu-btn').setAttribute('aria-expanded', 'false');
-};
-// Rendu dépendant du contexte : bloc profil (nom + email + déconnexion) en
-// tête, switcher multi-locataires (si > 1 maison), entrées filtrées selon le
-// rôle (Maison = owner + admin).
+}
+// Frise d'avancement : calculée depuis le cache collection s'il est chargé
+// (découpage disjoint : sans photo → à estimer (prix_bas null) → estimées).
+function friseHtml() {
+  if (!S.collection?.length || !S.photoMap) return '';
+  const total = S.collection.length;
+  const sansPhoto = S.collection.filter(o => !S.photoMap[o.id]).length;
+  const aEstimer = S.collection.filter(o => S.photoMap[o.id] && o.prix_bas == null).length;
+  const ok = total - sansPhoto - aEstimer;
+  const pct = n => (n / total * 100).toFixed(1) + '%';
+  return `<div class="frise" role="img" aria-label="${ok} fiches estimées, ${aEstimer} à estimer, ${sansPhoto} sans photo">
+    <span class="frise-ok" style="width:${pct(ok)}"></span><span class="frise-todo" style="width:${pct(aEstimer)}"></span><span class="frise-nophoto" style="width:${pct(sansPhoto)}"></span>
+  </div>
+  <div class="frise-legende">
+    <span><i class="dot frise-ok"></i>${ok} estimée${ok > 1 ? 's' : ''}</span>
+    <span><i class="dot frise-todo"></i>${aEstimer} à estimer</span>
+    <span><i class="dot frise-nophoto"></i>${sansPhoto} sans photo</span>
+  </div>`;
+}
+// Rayons du second niveau « Collection » : catégories canoniques présentes dans
+// le cache, vignette = 1re photo du rayon (emoji en repli). Cible #/rayon/<cat>
+// (route ajoutée en HO-043 — le routeur retombe sur la collection en attendant).
+function rayonsHtml() {
+  if (!S.collection?.length) return '';
+  const parCat = new Map();
+  for (const o of S.collection) {
+    const c = catCanon(o.categorie);
+    if (!c) continue;
+    if (!parCat.has(c)) parCat.set(c, []);
+    parCat.get(c).push(o);
+  }
+  const lignes = [...parCat.entries()].sort((a, b) => a[0].localeCompare(b[0], 'fr')).map(([c, arr]) => {
+    const ph = arr.map(o => S.photoMap?.[o.id]).find(p => p?.url);
+    const visuel = ph ? `<img src="${esc(ph.url)}" alt="" loading="lazy">` : `<span class="rayon-emoji">${catEmoji(c)}</span>`;
+    return `<button class="drawer-rayon" data-hash="#/rayon/${encodeURIComponent(c)}"><span class="rayon-thumb">${visuel}</span><span class="rayon-nom">${esc(c)}</span><span class="rayon-n">${arr.length}</span></button>`;
+  }).join('');
+  return `<div class="drawer-sub">${lignes}</div>`;
+}
+// Rendu dépendant du contexte : frise + comptes (données chargées), switcher
+// multi-locataires (si > 1 maison), entrées filtrées selon le rôle (Maison =
+// owner + admin), profil + déconnexion en pied.
 function renderMenu() {
-  const items = MENU_GOUV.filter(e => !e.owner || canWrite());
-  const profil = `
-    <div class="menu-user">
-      <span class="menu-user-name">${esc(profileName || '…')}</span>
-      ${S.user?.email && S.user.email !== profileName ? `<span class="menu-user-mail">${esc(S.user.email)}</span>` : ''}
-    </div>
-    <button class="menu-item" data-action="logout"><span class="menu-ico">⎋</span><span><span class="menu-label">Se déconnecter</span><span class="menu-desc">La collection reste synchronisée — reconnexion par lien magique</span></span></button>
-    <div class="menu-sep"></div>`;
+  const badgeRO = canWrite() ? '' : '<span class="badge-ro">lecture seule</span>';
   const switcher = S.mesTenants.length > 1 ? `
     <div class="menu-sec">Maison</div>
-    ${S.mesTenants.map(t => `<button class="menu-item menu-tenant ${t.id === S.tenantId ? 'current' : ''}" data-tenant="${esc(t.id)}">
-      <span class="menu-ico">${t.id === S.tenantId ? '✓' : ''}</span>
-      <span><span class="menu-label">${esc(t.name || 'Ma collection')}</span><span class="menu-desc">${esc(t.role)}</span></span>
-    </button>`).join('')}
-    <div class="menu-sep"></div>` : '';
-  $('#menu-panel').innerHTML = profil + switcher + items.map(e =>
-    `<button class="menu-item" data-hash="${esc(e.hash)}"><span class="menu-ico">${e.icone}</span><span><span class="menu-label">${esc(e.label)}</span><span class="menu-desc">${esc(e.desc)}</span></span></button>`
-  ).join('');
+    ${S.mesTenants.map(t => `<button class="drawer-item menu-tenant ${t.id === S.tenantId ? 'current' : ''}" data-tenant="${esc(t.id)}">
+      <span class="tenant-check">${t.id === S.tenantId ? '✓' : ''}</span>
+      <span class="drawer-label">${esc(t.name || 'Ma collection')}</span><span class="drawer-meta">${esc(t.role)}</span>
+    </button>`).join('')}` : '';
+  drawerEl().innerHTML = `
+    <div class="drawer-head">
+      <div class="logo-name drawer-logo"><span class="w-i">I</span><img class="logo-glyph" src="assets/logo-glyph.png" alt="ART">cane<img class="logo-mark" src="assets/mark-cygne.svg" alt=""></div>
+      ${friseHtml()}
+      ${switcher}
+    </div>
+    <button class="btn primary drawer-cta hide-lecteur" data-hash="#/capture">+ Capturer un objet</button>
+    <nav class="drawer-nav">
+      ${canWrite() ? '<button class="drawer-item" data-hash="#/maison"><span class="drawer-label">Maison</span></button>' : ''}
+      <button class="drawer-item" data-hash="#/artistes"><span class="drawer-label">Artistes</span><span class="drawer-n">${S.artistesCount ?? ''}</span></button>
+      <button class="drawer-item current" data-hash="#/"><span class="drawer-label"><b>Collection</b></span><span class="drawer-n">${S.objetsCount ?? ''}</span></button>
+      ${rayonsHtml()}
+    </nav>
+    <div class="drawer-foot">
+      ${MENU_GOUV.map(e => `<button class="drawer-foot-item" data-hash="${esc(e.hash)}">${esc(e.label)}</button>`).join('')}
+      <div class="drawer-user">
+        <span class="menu-user-name">${esc(profileName || '…')}${badgeRO}</span>
+        ${S.user?.email && S.user.email !== profileName ? `<span class="menu-user-mail">${esc(S.user.email)}</span>` : ''}
+        <button class="drawer-foot-item" data-action="logout">Se déconnecter</button>
+      </div>
+    </div>`;
 }
 $('#menu-btn').addEventListener('click', e => {
   e.stopPropagation();
-  const opened = !$('#menu-panel').classList.toggle('hidden');
-  $('#menu-btn').setAttribute('aria-expanded', String(opened));
+  drawerEl().classList.contains('open') ? closeMenu() : openMenu();
 });
-$('#menu-panel').addEventListener('click', async e => {
+drawerEl().addEventListener('click', async e => {
   const out = e.target.closest('[data-action="logout"]');
   if (out) { closeMenu(); await sb.auth.signOut(); location.hash = ''; return; }
   const t = e.target.closest('[data-tenant]');
@@ -242,8 +290,32 @@ $('#menu-panel').addEventListener('click', async e => {
   const b = e.target.closest('[data-hash]');
   if (b) { closeMenu(); location.hash = b.dataset.hash; }
 });
-document.addEventListener('click', e => { if (!$('#menu-gov').contains(e.target)) closeMenu(); });
+veilEl().addEventListener('click', closeMenu);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+// Swipe gauche sur le tiroir = fermeture (design étape 2).
+let touchX0 = null;
+drawerEl().addEventListener('touchstart', e => { touchX0 = e.touches[0].clientX; }, { passive: true });
+drawerEl().addEventListener('touchend', e => {
+  if (touchX0 != null && e.changedTouches[0].clientX - touchX0 < -50) closeMenu();
+  touchX0 = null;
+}, { passive: true });
+
+// ─── Bandeau : loupe / entonnoir (HO-042 — la recherche détaillée arrive en HO-044)
+// La loupe bascule ligne de titre ↔ ligne de recherche ; la vue collection écoute
+// aussi ce bouton (classe search-open résiduelle, sans effet) — les deux coexistent.
+function setSearchLine(open) {
+  $('#page-title-line').classList.toggle('hidden', open);
+  $('#page-search-line').classList.toggle('hidden', !open);
+  $('#btn-search-toggle').setAttribute('aria-expanded', String(open));
+  if (open) $('#search').focus();
+}
+$('#btn-search-toggle').addEventListener('click', () => {
+  setSearchLine($('#page-search-line').classList.contains('hidden'));
+});
+// La croix (bindée par la vue collection pour vider le champ) referme aussi la ligne.
+$('#btn-search-close').addEventListener('click', () => setSearchLine(false));
+// L'entonnoir de la ligne de recherche délègue à celui du bandeau (même panneau).
+$('#btn-filters-2').addEventListener('click', () => $('#btn-filters').click());
 
 // Registre des routes : ajouter un écran = 1 entrée ici + 1 module js/views/
 // (export `mount`, ou le nom donné via fn) + 1 <section class="view">.
@@ -270,7 +342,7 @@ async function route() {
   // nue le temps que la feuille arrive (D-041).
   if (!r) {
     const m = await import('./js/views/collection.js');
-    setTab('collection'); show('collection');
+    show('collection');
     m.mount();
     prevView = currentView;
     currentView = { view: 'collection', tab: 'collection', hash: '#/', label: 'Collection', params: [] };
@@ -281,7 +353,6 @@ async function route() {
   if (r.write && !canWrite()) { location.replace('#/'); return; }
   const meta = computeViewMeta(r, h);
   const m = await r.load();
-  setTab(r.tab ?? null); // écrans gouvernance : pas des onglets → aucun tab actif
   show(r.view);
   m[r.fn ?? 'mount'](...meta.params);
   prevView = currentView;
@@ -289,9 +360,6 @@ async function route() {
   updateBackButtons();
 }
 window.addEventListener('hashchange', route);
-// data-view → hash : ajouter un onglet = une entrée ici + la route ci-dessus.
-const TAB_HASH = { collection: '#/', capture: '#/capture', artistes: '#/artistes' };
-$$('.tab').forEach(t => t.addEventListener('click', () => { location.hash = TAB_HASH[t.dataset.view] ?? '#/'; }));
 $('#logo-home').addEventListener('click', () => { location.hash = '#/'; });
 $('#obj-back').addEventListener('click', () => { location.hash = prevView?.hash ?? '#/'; });
 $$('.js-back').forEach(b => b.addEventListener('click', () => { location.hash = prevView?.hash ?? '#/'; }));

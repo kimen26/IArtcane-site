@@ -27,31 +27,17 @@
 .ls-del:hover{color:var(--red);background:var(--red-soft)}
 /* Panneau « Filtres » (progressive disclosure, référentiel §4.1) : desktop =
    inline (display:contents → la toolbar est strictement inchangée), mobile =
-   panneau repliable sous la recherche, ouvert par le bouton « Filtres ·N ». */
-#btn-filters{display:none}
+   panneau repliable ouvert par l'entonnoir du bandeau (#btn-filters, HO-042).
+   La recherche et l'entonnoir vivent dans le bandeau depuis HO-042 (base.css) ;
+   la feuille de filtres dédiée arrive en HO-044. */
 .filters-panel{display:contents}
 .filters-count{min-width:20px;min-height:20px;padding:0 6px;border-radius:999px;background:var(--blue);color:#fff;font-family:var(--mono);font-size:.75rem;font-weight:600;display:inline-grid;place-items:center}
-.filters-chev{font-size:.75em;color:var(--ink-3);transition:transform .15s}
-#btn-filters[aria-expanded="true"] .filters-chev{transform:rotate(180deg)}
-/* Recherche repliée en loupe (mobile uniquement — desktop : barre visible) */
-#btn-search-toggle,.search-close{display:none}
-.btn-icon{padding:10px;min-width:44px;justify-content:center}
-/* Mobile : chrome replié — « Filtres ·N » + loupe sur une ligne, la recherche
-   ne réapparaît que dépliée (.search-open) ; chips et listes sauvegardées en
-   une rangée scrollable, marges resserrées (objectif : ≥ 2 cartes visibles
-   sans scroll à 375 px, police agrandie). */
+/* Mobile : chrome replié — chips et listes sauvegardées en une rangée
+   scrollable, marges resserrées (objectif : ≥ 2 cartes visibles sans scroll
+   à 375 px, police agrandie). */
 @media (max-width:640px){
   main{padding:16px 14px 64px}
   .toolbar{gap:8px;margin-bottom:10px}
-  .search{min-width:0}
-  #btn-filters{display:inline-flex;flex-shrink:0;min-height:44px}
-  #btn-search-toggle{display:inline-flex;flex-shrink:0;min-height:44px}
-  #btn-search-toggle.on{color:var(--blue);border-color:var(--blue);background:var(--blue-softer)}
-  .toolbar:not(.search-open) .search{display:none}
-  .toolbar.search-open .search{flex:1 1 100%;order:-1;min-width:0}
-  .toolbar.search-open .search input{padding-right:40px}
-  .toolbar.search-open .search-close{display:grid;place-items:center;position:absolute;right:8px;top:50%;transform:translateY(-50%);width:32px;height:32px;border:none;border-radius:50%;background:none;color:var(--ink-3);font-size:1.25rem;line-height:1}
-  .toolbar.search-open .search-close:hover{color:var(--red);background:var(--red-soft)}
   .filters-panel{display:none;flex-direction:column;gap:10px;flex:1 1 100%;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px;box-shadow:var(--shadow)}
   .filters-panel.open{display:flex}
   .filters-panel .select{width:100%}
