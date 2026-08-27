@@ -37,17 +37,11 @@ export const fmtDateTime = iso => {
     + ' · ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 };
 export const plur = (n, s, p) => `${n} ${n > 1 ? p : s}`;
-// Internes à ce module (consommés par cardHtml ci-dessous) : pas d'API publique.
-const pinSvg = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 21s-7-6.1-7-11a7 7 0 1 1 14 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>';
 export const infoSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg>';
 
 export const STATUTS = {
   capture: 'Capturé', en_file: 'En file', analyse: 'Analyse en cours', fiche_prete: 'Fiche prête',
   a_completer: 'À compléter', validee: 'Validée',
-};
-const ST_COLOR = {
-  capture: '#9A6B1A', en_file: '#2456E0', analyse: '#2456E0', fiche_prete: '#6D4AC8',
-  a_completer: '#9A6B1A', validee: '#1E7A46',
 };
 // Confiance comptée 0–4 : 4/4 = validée par un humain (ground truth), sinon 1-3 selon l'IA.
 export const confMarks = o => o.statut === 'validee' ? 4 : ({ haute: 3, moyenne: 2, basse: 1 }[o.confiance] ?? 0);
@@ -65,31 +59,31 @@ export function catEmoji(cat) {
   if (/verre|verrerie|cristal/.test(c)) return '🥃';
   return '🏺';
 }
-const prixHtml = o => (o.prix_bas != null && o.prix_haut != null)
-  ? `<span class="card-price">${fmtNum(o.prix_bas)}–${fmtNum(o.prix_haut)} €</span>`
-  : '<span class="card-price none">à estimer</span>';
 export const isVideo = p => p.kind === 'video' || /\.(mp4|mov|webm)$/i.test(p.storage_path || '');
 export const capFirst = s => s.charAt(0).toUpperCase() + s.slice(1);
 
 // ─── Carte objet (composant partagé : listing collection + objets d'un artiste) ─
+// Design handoff « Carte objet - retenue » (HO-040) : mosaïque au ratio natif,
+// n° d'inventaire vertical sur voile, estimation en ruban diagonal (si prix_bas),
+// titre + artiste seuls sous l'image. La classe .obj scope les styles
+// (components.css) pour ne pas toucher aux cartes artistes (artistes.js), qui
+// réutilisent les classes .card/.grid historiques.
 export function cardHtml(o) {
   const img = S.photoMap[o.id];
-  const marks = confMarks(o);
-  const loc = (o.zone || o.contenant)
-    ? esc([o.zone, o.contenant].filter(Boolean).join(' / '))
-    : '<em>non localisé</em>';
-  const meta = [catCanon(o.categorie), o.periode, o.ecole].filter(Boolean).map(esc).join(' · ') || '<em>à identifier</em>';
   const visuel = img?.url
     ? `<img src="${esc(img.url)}" alt="${esc(o.titre || 'Objet de la collection')}" loading="lazy" decoding="async">`
-    : catEmoji(o.categorie); // pas de visuel : placeholder emoji (+ badge ▶ si vidéo)
+    : `<span class="card-noimg">${catEmoji(o.categorie)}</span>`; // pas de visuel : placeholder emoji ratio 1/1 (+ badge ▶ si vidéo)
   const badgeVid = img?.vid ? '<span class="card-vid" title="Vidéo" aria-label="Vidéo">▶</span>' : '';
-  return `<article class="card" data-oid="${esc(o.id)}" tabindex="0" role="button" aria-label="${esc(o.titre || 'Objet')} — fiche #${esc(o.id)}">
-    <div class="card-img">${visuel}${prixHtml(o)}<span class="card-id">#${esc(o.id)}</span><span class="card-status" style="background:${ST_COLOR[o.statut] || '#8A94B8'}"></span>${badgeVid}</div>
+  // Ruban estimation : uniquement si prix_bas renseigné — « min–max € » (tiret
+  // demi-cadratin, espace insécable avant €) ou « min € » si min == max.
+  const ruban = o.prix_bas != null
+    ? `<span class="card-ribbon">${fmtNum(o.prix_bas)}${o.prix_haut != null && o.prix_haut !== o.prix_bas ? '–' + fmtNum(o.prix_haut) : ''}&nbsp;€</span>`
+    : '';
+  return `<article class="card obj" data-oid="${esc(o.id)}" tabindex="0" role="button" aria-label="${esc(o.titre || 'Objet')} — fiche #${esc(o.id)}">
+    <div class="card-img">${visuel}<span class="card-veil"></span><span class="card-id">#${esc(o.id)}</span>${ruban}${badgeVid}</div>
     <div class="card-body">
       <div class="card-title">${esc(o.titre || 'Sans titre')}</div>
-      <div class="card-meta">${meta}</div>
-      <div class="card-loc">${pinSvg}${loc}</div>
-      <div class="card-foot">${confHtml(marks)}</div>
+      <div class="card-artist">${esc(o.auteur?.trim() || 'Non identifié')}</div>
     </div>
   </article>`;
 }
