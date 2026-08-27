@@ -15,9 +15,9 @@
 .cat-pane .grid{column-gap:9px}
 .cat-more{display:block;width:100%;margin-top:11px;padding:10px;border:none;border-top:1px solid var(--line-soft);background:none;font-size:.71875rem;font-weight:600;color:var(--blue);cursor:pointer}
 .cat-more:hover{background:var(--blue-softer)}
-/* Mobile : padding de page 11px sur la vue collection (spec étape 2) */
+/* Mobile : padding de page 11px sur la vue collection (spec étape 2), haut resserré */
 @media (max-width:640px){
-  main:has(> #view-collection.active){padding:16px 11px 64px}
+  main:has(> #view-collection.active){padding:10px 11px 64px}
 }
 
 /* Titres de groupes du rendu historique (regroupement lieu/période/none) */

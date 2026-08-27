@@ -15,7 +15,7 @@ header{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:
 /* Mobile (maquette étape 2 : bords 11-14px, bandeau bas ~50px) : le logo
    récupère la place à gauche, les actions rondes vont au plus près du bord. */
 @media (max-width:640px){
-  .header-in{padding:0 11px;min-height:50px;gap:10px}
+  .header-in{padding:0 11px;min-height:46px;gap:10px}
   .menu-btn-icon{width:40px}
   .logo-name{font-size:1.1875rem}
 }
@@ -87,6 +87,9 @@ header{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:
 
 /* ─── Ligne de titre / ligne de recherche (HO-042, vue collection) ── */
 .page-subhead{max-width:1240px;margin:0 auto;padding:8px 24px}
+/* Le `.page-title` partagé (components.css) porte margin-bottom:18px pour les
+   titres de section des autres vues — neutralisé ici, le bandeau reste compact. */
+.page-subhead .page-title{margin-bottom:0}
 .page-title-line{display:flex;align-items:baseline;gap:10px}
 .page-title{font-family:var(--serif);font-size:1.0625rem;color:var(--ink)}
 .page-sub{font-size:.6875rem;color:var(--ink-3)}
@@ -97,7 +100,7 @@ header{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:
 .page-search-line .search-close{display:grid;place-items:center;position:absolute;right:8px;top:50%;transform:translateY(-50%);width:32px;height:32px;border:none;border-radius:50%;background:none;color:var(--ink-3);font-size:1.25rem;line-height:1}
 .page-search-line .search-close:hover{color:var(--red);background:var(--red-soft)}
 .page-search-line .search input{padding-right:40px}
-@media (max-width:640px){.page-subhead{padding:6px 11px}}
+@media (max-width:640px){.page-subhead{padding:5px 11px}}
 
 main{max-width:1240px;margin:0 auto;padding:28px 24px 80px}
 .view{display:none}
