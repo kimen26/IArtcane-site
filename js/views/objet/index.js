@@ -17,7 +17,7 @@ import {
   STATUTS, ACT_LABELS, actorBadge, evDetailBits, mdToHtml,
 } from '../../core/format.js';
 import { SOUS } from '../../core/taxonomie.js';
-import { sb, signPaths, logEvent, lancerRecherches, purgeConsigne, uploadPhotosFor } from '../../core/data.js';
+import { sb, signPaths, logEvent, lancerRecherches, enqueueJobs, purgeConsigne, uploadPhotosFor } from '../../core/data.js';
 import { openCamera } from '../../core/camera.js';
 import { loadViewCss } from '../../core/css.js';
 import { O, selPhoto, hooks } from './etat.js';
@@ -521,6 +521,10 @@ $('#objet-body').addEventListener('click', async e => {
       toast(r.skip
         ? `R1 sautée (${r.skip}) — R2 (Lens) en file`
         : `R1 terminée${r.certain ? ' — auteur certain ✓' : ' — doute : analyse versée à la description'} · R2 (Lens) en file`);
+    } else if (r.reseau) {
+      // Edge injoignable (crash worker, hors-ligne…) : repli cron, comme à la capture.
+      const n = await enqueueJobs([o.id], 'r1');
+      if (n) toast('R1 en file — le cron la prend sous ~2 min');
     }
     loadObjet(o.id);
   }

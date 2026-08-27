@@ -93,7 +93,7 @@ export async function lancerRecherches(oid, { force = false } = {}) {
     });
   } catch (e) {
     toast(`Recherches injoignables : ${e.message ?? e}`, true);
-    return { ok: false };
+    return { ok: false, reseau: true };
   }
   const body = await res.json().catch(() => ({}));
   if (!res.ok) { toast(body.error ?? `Recherches échouées (HTTP ${res.status})`, true); return { ok: false, ...body }; }
