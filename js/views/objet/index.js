@@ -151,6 +151,14 @@ function renderObjet() {
 
 // ─── Hub ───────────────────────────────────────────────────────────────────
 
+// Titre base = « quoi — qui » (HO-026), déjà repris par la ligne auteur : on
+// masque ce suffixe à l'affichage seulement (o.titre n'est jamais réécrit).
+function titreSansAuteur(titre, auteur) {
+  if (!titre || !auteur) return titre;
+  const t = titre.trim(), suf = `— ${auteur}`.trim().toLowerCase();
+  return t.toLowerCase().endsWith(suf) ? t.slice(0, t.length - suf.length).replace(/[\s—]+$/, '').trim() : titre;
+}
+
 function rendreHub() {
   const o = S.currentObjet;
   const cover = O.photos.find(p => p.couverture) ?? O.photos[0];
@@ -171,6 +179,7 @@ function rendreHub() {
       // piste non confirmée — l'indicateur (?) le dit avant la validation humaine.
       : `<span class="obj-author">${esc(o.auteur)} <span title="Artiste non identifié : pas de fiche artiste — à confirmer (validation humaine)" style="opacity:.55">(?)</span></span>`)
     : '';
+  const titreAffiche = titreSansAuteur(o.titre, o.auteur);
 
   return `
   <div class="obj-hub">
@@ -183,7 +192,7 @@ function rendreHub() {
         <span class="obj-nav-meta">#${esc(o.id)}${esc(posMeta)}</span>
       </div>
       <div class="obj-photo-band-voile-bottom">
-        <h1 class="obj-title">${esc(o.titre || 'Sans titre')}</h1>
+        <h1 class="obj-title">${esc(titreAffiche || 'Sans titre')}</h1>
         ${auteurHtml}
       </div>
       ${rendreRuban(o)}

@@ -48,13 +48,21 @@
   padding-bottom:92px; /* espace pour la barre d'actions fixe */
 }
 
-/* Bandeau photo pleine largeur (en-tête 3c, HO-092) */
+/* Bandeau photo pleine largeur (en-tête 3c, HO-092 ; bord à bord + cadrage desktop, HO-093) */
 .obj-photo-band{
   position:relative;
   height:248px;
   background:var(--ink);
   cursor:pointer;
   clip-path:inset(0 0 -1px 0);
+  margin:-28px -24px 0;   /* annule le padding haut et latéral de main (base.css:107) */
+}
+@media (min-width:641px){
+  .obj-photo-band{
+    max-width:720px;
+    margin-inline:auto;
+    height:320px;
+  }
 }
 .obj-photo-band img{
   display:block;
