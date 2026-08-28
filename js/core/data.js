@@ -170,7 +170,7 @@ const MOYEN_PX = 2048; // zoom plein écran, envoi LLM
 // Génère une variante JPEG bornée à `maxPx` sur son plus grand côté.
 // Ne grossit jamais une image plus petite que la borne (s = min(1, …)).
 // NULL si échec : l'affichage se replie sur la variante supérieure.
-async function makeVariantBlob(blob, maxPx, qualite) {
+export async function makeVariantBlob(blob, maxPx, qualite) {
   try {
     const bmp = await createImageBitmap(blob);
     const s = Math.min(1, maxPx / Math.max(bmp.width, bmp.height));

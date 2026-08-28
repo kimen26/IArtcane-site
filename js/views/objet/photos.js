@@ -6,11 +6,14 @@ import { enregistrer, withBusy } from '../../core/feedback.js';
 import { S } from '../../core/state.js';
 import { isVideo } from '../../core/format.js';
 import { loadViewCss } from '../../core/css.js';
-import { sb, logEvent, deleteStoredPhoto, makeThumbBlob } from '../../core/data.js';
+import { sb, logEvent, deleteStoredPhoto, makeVariantBlob, signPaths } from '../../core/data.js';
 import { openCamera } from '../../core/camera.js';
 import { createOverlay, openViewer } from '../../core/lightbox.js';
 import { micButton } from '../mic.js';
 import { O, hooks } from './etat.js';
+
+// Bornes des 3 variantes régénérées après crop (valeurs HO-089, non exportées).
+const MINI_PX = 160, THUMB_PX = 480, MOYEN_PX = 2048;
 
 await loadViewCss('objet-photos');
 
@@ -566,15 +569,18 @@ async function persisterOrdre(photos, nouvelOrdre) {
 
 // ─── Lightbox / recadrage ───────────────────────────────────────────────────
 
-function openLightbox(photo, mode = null) {
+async function openLightbox(photo, mode = null) {
   const titre = S.currentObjet?.titre || 'objet';
   if (!mode) {
     openViewer({ src: photo.url, alt: `Photo plein écran — ${titre}`, video: isVideo(photo) });
     return;
   }
+  // Le geste porte sur la brute, pas sur l'affichage courant (HO-091).
+  const bruteUrl = (await signPaths([photo.storage_path]))[photo.storage_path];
+  if (!bruteUrl) return toast('Impossible de charger la brute pour le recadrage', true);
   const { el: lb, close } = createOverlay({
     className: 'cut',
-    html: `<img src="${esc(photo.url)}" alt="Photo à recadrer — ${esc(titre)}">
+    html: `<img src="${esc(bruteUrl)}" alt="Photo à recadrer — ${esc(titre)}">
       <div class="cut-bar"><span class="cut-hint">Tire les poignées (bords et coins) pour délimiter la zone à garder</span>
       <button class="btn primary small" data-ok disabled>✂️ Recadrer</button>
       <button class="btn small" data-cancel>Annuler</button></div>`,
@@ -633,36 +639,34 @@ function openLightbox(photo, mode = null) {
     ok.disabled = true; ok.textContent = 'Recadrage…';
     try {
       await withBusy(async () => {
-        const blob = await (await fetch(photo.url)).blob();
+        const blob = await (await fetch(bruteUrl)).blob();
         const bmp = await createImageBitmap(blob);
-        const sx = Math.round(sel.x0 * bmp.width);
-        const sy = Math.round(sel.y0 * bmp.height);
-        const sw = Math.round((sel.x1 - sel.x0) * bmp.width);
-        const sh = Math.round((sel.y1 - sel.y0) * bmp.height);
+        const sx = Math.round(sel.x0 * bmp.width), sy = Math.round(sel.y0 * bmp.height);
+        const sw = Math.round((sel.x1 - sel.x0) * bmp.width), sh = Math.round((sel.y1 - sel.y0) * bmp.height);
         if (sw < 20 || sh < 20) throw new Error('zone trop petite');
         const c = document.createElement('canvas');
         c.width = sw; c.height = sh;
         c.getContext('2d').drawImage(bmp, sx, sy, sw, sh, 0, 0, sw, sh);
         const out = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.92));
         if (!out) throw new Error('encodage impossible');
-        const newPath = photo.storage_path.replace(/[^/]+$/, `${crypto.randomUUID()}.jpg`);
-        const { error: e1 } = await sb.storage.from('photos').upload(newPath, out, { contentType: 'image/jpeg' });
+        // storage_path (la brute) n'est JAMAIS réécrit ni supprimé (Yann, HO-091) — crop_path devient l'image de travail.
+        const base = photo.storage_path.replace(/\.[^./]+$/, '').replace(/[^/]+$/, crypto.randomUUID());
+        const cropPath = `${base}.crop.jpg`, paths = { crop_path: cropPath };
+        const { error: e1 } = await sb.storage.from('photos').upload(cropPath, out, { contentType: 'image/jpeg' });
         if (e1) throw e1;
-        const tb = await makeThumbBlob(out);
-        let thumbPath = null;
-        if (tb) {
-          thumbPath = newPath.replace(/\.jpg$/, '.thumb.jpg');
-          const { error: et } = await sb.storage.from('photos').upload(thumbPath, tb, { contentType: 'image/jpeg' });
-          if (et) thumbPath = null;
+        const bornes = [['mini_path', MINI_PX, 0.75], ['thumb_path', THUMB_PX, 0.8], ['moyen_path', MOYEN_PX, 0.85]];
+        for (const [col, px, q] of bornes) {
+          const vb = await makeVariantBlob(out, px, q);
+          const p = vb && `${base}.${col.replace('_path', '')}.jpg`;
+          paths[col] = p && !(await sb.storage.from('photos').upload(p, vb, { contentType: 'image/jpeg' })).error ? p : null;
         }
-        const { error: e2 } = await sb.from('photos')
-          .update({ storage_path: newPath, thumb_path: thumbPath })
-          .eq('owner_id', S.tenantId).eq('id', photo.id);
+        const { error: e2 } = await sb.from('photos').update(paths).eq('owner_id', S.tenantId).eq('id', photo.id);
         if (e2) throw e2;
-        await sb.storage.from('photos').remove([photo.storage_path, photo.thumb_path].filter(Boolean));
+        const anciennes = [photo.crop_path, photo.mini_path, photo.thumb_path, photo.moyen_path].filter(Boolean);
+        if (anciennes.length) await sb.storage.from('photos').remove(anciennes);
         close();
-        toast('✓ Photo recadrée — résolution d’origine conservée');
-        logEvent('recadrage', { photo: newPath });
+        toast('✓ Photo recadrée — l’original est conservé');
+        logEvent('recadrage', { photo: cropPath });
         await hooks.recharger(S.currentObjet.id);
       }, { titre: 'Recadrage de la photo…' });
     } catch (err) {
