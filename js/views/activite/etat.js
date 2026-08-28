@@ -264,12 +264,14 @@ export async function majArtistes() {
   if (!objs.length) { toast('Aucun objet avec un auteur renseigné', true); return; }
   if (!confirm(`Mettre à jour les fiches des ${plur(artistes.length, 'artiste', 'artistes')} (${plur(objs.length, 'objet concerné', 'objets concernés')}) ?\n\nLe cron traitera ~5 objets par run de 2 min.`)) return;
 
+  // Pas d'« Annuler » : enqueueJobs fait UN insert en lot, il n'y a aucun point
+  // d'interruption — le bouton ne pourrait rien arrêter, et un bouton qui ne
+  // fait rien est pire que pas de bouton. L'overlay reste utile pour l'attente.
   let enfiles = 0;
-  const { annule } = await withBusy(async () => { enfiles = await enqueueJobs(objs.map(o => o.id), 'r9'); },
-    { titre: 'Mise en file des fiches artistes…', annulable: true },
+  await withBusy(async () => { enfiles = await enqueueJobs(objs.map(o => o.id), 'r9'); },
+    { titre: 'Mise en file des fiches artistes…', annulable: false },
   );
 
-  if (annule) { toast(`${plur(enfiles, 'objet mis', 'objets mis')} en file avant annulation.`); return; }
   toast(enfiles
     ? `${plur(enfiles, 'objet mis', 'objets mis')} en file (${plur(artistes.length, 'artiste', 'artistes')}) — le cron les traitera ~5 par run de 2 min.`
     : 'Ces objets sont déjà tous en file');
@@ -279,12 +281,12 @@ export async function majArtistes() {
 export async function lancerFileAttente(liste) {
   if (!canWrite() || !liste.length) return;
 
+  // Pas d'« Annuler » : un seul insert en lot, aucun point d'interruption (cf. majArtistes).
   let enfiles = 0;
-  const { annule } = await withBusy(async () => { enfiles = await enqueueJobs(liste.map(o => o.id), 'valo'); },
-    { titre: 'Mise en file des estimations…', annulable: true },
+  await withBusy(async () => { enfiles = await enqueueJobs(liste.map(o => o.id), 'valo'); },
+    { titre: 'Mise en file des estimations…', annulable: false },
   );
 
-  if (annule) { toast(`${plur(enfiles, 'objet mis', 'objets mis')} en file avant annulation.`); return; }
   toast(enfiles
     ? `${plur(enfiles, 'objet mis', 'objets mis')} en file pour estimation — le cron les traitera ~5 par run de 2 min.`
     : 'Ces objets sont déjà tous en file');
