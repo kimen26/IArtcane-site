@@ -562,20 +562,31 @@ async function openLightbox(photo, mode = null) {
     openViewer({ src: photo.url, alt: `Photo plein écran — ${titre}`, video: isVideo(photo) });
     return;
   }
-  // Le geste porte sur la brute, pas sur l'affichage courant (HO-091).
-  // La rotation reste une métadonnée CSS : la brute n'est jamais pivotée sur le disque.
+  // Le geste porte sur la brute, pas sur l'affichage courant (HO-091). Redressée
+  // dans un canvas DÈS L'OUVERTURE (pas de transform CSS) : sélection et rendu
+  // vivent dans le même repère à toute rotation — un rotate() CSS gardait une
+  // boîte de layout non pivotée, d'où un désalignement à 90°/270° (HO-094).
   const bruteUrl = (await signPaths([photo.storage_path]))[photo.storage_path];
   if (!bruteUrl) return toast('Impossible de charger la brute pour le recadrage', true);
   const rotation = photo.rotation || 0;
+  const bmp = await createImageBitmap(await (await fetch(bruteUrl)).blob());
+  const swap = rotation === 90 || rotation === 270;
+  const dw = swap ? bmp.height : bmp.width, dh = swap ? bmp.width : bmp.height;
+  const straight = document.createElement('canvas');
+  straight.width = dw; straight.height = dh; straight.className = 'cut-canvas';
+  const sctx = straight.getContext('2d');
+  sctx.translate(dw / 2, dh / 2); sctx.rotate(rotation * Math.PI / 180);
+  sctx.drawImage(bmp, -bmp.width / 2, -bmp.height / 2);
+
   const { el: lb, close } = createOverlay({
     className: 'cut',
-    html: `<img src="${esc(bruteUrl)}" style="transform: rotate(${rotation}deg)" alt="Photo à recadrer — ${esc(titre)}">
-      <div class="cut-bar"><span class="cut-hint">Tire les poignées (bords et coins) pour délimiter la zone à garder</span>
+    html: `<div class="cut-bar"><span class="cut-hint">Tire les poignées (bords et coins) pour délimiter la zone à garder</span>
       <button class="btn primary small" data-ok disabled>✂️ Recadrer</button>
       <button class="btn small" data-cancel>Annuler</button></div>`,
   });
+  lb.prepend(straight);
 
-  const img = lb.querySelector('img');
+  const img = straight;
   const ok = lb.querySelector('[data-ok]');
   let sel = { x0: 0, y0: 0, x1: 1, y1: 1 };
   let box = null;
@@ -608,7 +619,7 @@ async function openLightbox(photo, mode = null) {
     box.style.width = `${(sel.x1 - sel.x0) * r.width}px`;
     box.style.height = `${(sel.y1 - sel.y0) * r.height}px`;
   };
-  if (img.complete && img.naturalWidth) draw(); else img.addEventListener('load', draw, { once: true });
+  draw();
   lb.addEventListener('pointerdown', e => {
     const h = e.target.dataset?.h;
     if (!h) return;
@@ -628,17 +639,7 @@ async function openLightbox(photo, mode = null) {
     ok.disabled = true; ok.textContent = 'Recadrage…';
     try {
       await withBusy(async () => {
-        const blob = await (await fetch(bruteUrl)).blob();
-        const bmp = await createImageBitmap(blob);
-        // Redresser la brute avant découpe : la sélection porte sur l'image telle que
-        // vue à l'écran (pivotée), jamais sur la brute non pivotée (HO-094).
-        const swap = rotation === 90 || rotation === 270;
-        const dw = swap ? bmp.height : bmp.width, dh = swap ? bmp.width : bmp.height;
-        const straight = document.createElement('canvas');
-        straight.width = dw; straight.height = dh;
-        const sctx = straight.getContext('2d');
-        sctx.translate(dw / 2, dh / 2); sctx.rotate(rotation * Math.PI / 180);
-        sctx.drawImage(bmp, -bmp.width / 2, -bmp.height / 2);
+        // straight est déjà la brute redressée (même repère que sel) — pas de refetch.
         const sx = Math.round(sel.x0 * dw), sy = Math.round(sel.y0 * dh);
         const sw = Math.round((sel.x1 - sel.x0) * dw), sh = Math.round((sel.y1 - sel.y0) * dh);
         if (sw < 20 || sh < 20) throw new Error('zone trop petite');

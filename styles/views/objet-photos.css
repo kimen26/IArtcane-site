@@ -512,6 +512,9 @@
    valeurs : les poignées de 44px viennent d'un retour d'Alain (HO-027). */
 .lightbox.cut { cursor: default; }
 .lightbox.cut img { max-height: calc(100dvh - 132px); }
+/* Le canvas redressé (HO-094) remplace l'<img> dans l'éditeur : components.css
+   (gelé) ne borne que img/video, donc on répète la borne pour lui. */
+.lightbox.cut .cut-canvas { display: block; max-width: calc(100vw - 48px); max-height: calc(100dvh - 132px); border-radius: var(--r-md); }
 .cut-sel {
   position: fixed;
   border: 2px dashed #fff;
