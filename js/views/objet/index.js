@@ -308,10 +308,13 @@ function calculerAlertes(o) {
   if (o.prix_bas == null || nVendus === 0) {
     alertes.push({ bloquant: false, ecran: 'ventes', focus: null, titre: 'Pas encore de comparable vendu exploitable', sous: `${O.comps.filter(c => !c.exclu).length} vente${O.comps.filter(c => !c.exclu).length > 1 ? 's' : ''} relevée${O.comps.filter(c => !c.exclu).length > 1 ? 's' : ''}` });
   }
-  const photosAction = O.photos.filter(p => p.remarque_statut === 'en_attente' || p.kind === 'autre');
-  if (photosAction.length) {
-    const remarques = photosAction.filter(p => p.remarque_statut === 'en_attente').length;
-    alertes.push({ bloquant: remarques > 0, ecran: 'photos', focus: null, titre: `${photosAction.length} photo${photosAction.length > 1 ? 's' : ''} demandent une action`, sous: remarques ? `${remarques} remarque${remarques > 1 ? 's' : ''} en attente` : `${photosAction.length} sans tag pertinent` });
+  const remarques = O.photos.filter(p => p.remarque_statut === 'en_attente').length;
+  if (remarques) {
+    alertes.push({ bloquant: true, ecran: 'photos', focus: null, titre: `${remarques} remarque${remarques > 1 ? 's' : ''} photo en attente`, sous: 'des vues sont à reprendre' });
+  }
+  const nonTaguees = O.photos.filter(p => p.kind === 'autre').length;
+  if (nonTaguees) {
+    alertes.push({ bloquant: false, ecran: 'photos', focus: null, titre: `${nonTaguees} photo${nonTaguees > 1 ? 's' : ''} sans tag`, sous: 'taguer ce que montre chaque photo (signature, revers…) — ça guide l’analyse' });
   }
   return alertes;
 }
