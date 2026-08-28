@@ -632,13 +632,6 @@
 }
 .disclaimer svg{flex:0 0 auto;margin-top:2px}
 
-/* Overlay de progression d'upload (conservé HO-032) */
-.upl-overlay{position:fixed;inset:0;z-index:180;background:rgba(13,27,62,.55);display:grid;place-items:center;backdrop-filter:blur(2px)}
-.upl-card{display:flex;flex-direction:column;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:28px 34px;box-shadow:0 12px 40px rgba(13,27,62,.35);max-width:82vw;text-align:center}
-.upl-msg{font-weight:600;color:var(--ink)}
-.upl-spin{width:34px;height:34px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--blue);animation:upl-rot .8s linear infinite}
-@keyframes upl-rot{to{transform:rotate(360deg)}}
-
 /* Zoom texte 200 % : pas de hauteur fixe sur les zones de texte */
 @media (max-width:339px){
   .obj-thumb{width:80px}

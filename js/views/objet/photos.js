@@ -2,6 +2,7 @@
 // IArtcane — views/objet/photos.js : écran Photos de la fiche (HO-047).
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, esc, toast } from '../../core/dom.js';
+import { enregistrer, withBusy } from '../../core/feedback.js';
 import { S } from '../../core/state.js';
 import { isVideo } from '../../core/format.js';
 import { loadViewCss } from '../../core/css.js';
@@ -346,9 +347,10 @@ async function basculerCouverture() {
     couverture: ph.id === p.id,
   }));
   for (const u of updates) {
-    await sb.from('photos').update({ couverture: u.couverture }).eq('owner_id', S.tenantId).eq('id', u.id);
+    if (!await enregistrer(() => sb.from('photos').update({ couverture: u.couverture }).eq('owner_id', S.tenantId).eq('id', u.id), 'Photo de couverture', { silencieuxSiOk: true })) return;
   }
   O.photos.forEach(ph => { ph.couverture = ph.id === p.id; });
+  toast('✓ Photo de couverture enregistré');
   logEvent('couverture', { photo: p.storage_path });
   hooks.rendre();
 }
@@ -358,8 +360,7 @@ async function rotaterPhoto() {
   const o = S.currentObjet;
   if (!p || !o) return;
   const rotation = ((p.rotation || 0) + 90) % 360;
-  const { error } = await sb.from('photos').update({ rotation }).eq('owner_id', S.tenantId).eq('id', p.id);
-  if (error) { toast(error.message, true); return; }
+  if (!await enregistrer(() => sb.from('photos').update({ rotation }).eq('owner_id', S.tenantId).eq('id', p.id), 'Rotation')) return;
   p.rotation = rotation;
   logEvent('rotation', { photo: p.storage_path, deg: rotation });
   hooks.rendre();
@@ -369,8 +370,7 @@ async function changerTag(kind) {
   const p = photoCourante();
   const o = S.currentObjet;
   if (!p || !o || p.kind === kind) return;
-  const { error } = await sb.from('photos').update({ kind }).eq('owner_id', S.tenantId).eq('id', p.id);
-  if (error) { toast(error.message, true); return; }
+  if (!await enregistrer(() => sb.from('photos').update({ kind }).eq('owner_id', S.tenantId).eq('id', p.id), 'Tag de la photo')) return;
   p.kind = kind;
   logEvent('tag_photo', { photo: p.storage_path, kind });
   hooks.rendre();
@@ -381,8 +381,7 @@ async function sauverCommentaire(texte) {
   const o = S.currentObjet;
   if (!p || !o) return;
   const commentaire = texte.trim() || null;
-  const { error } = await sb.from('photos').update({ commentaire }).eq('owner_id', S.tenantId).eq('id', p.id);
-  if (error) { toast(error.message, true); return; }
+  if (!await enregistrer(() => sb.from('photos').update({ commentaire }).eq('owner_id', S.tenantId).eq('id', p.id), 'Commentaire de la photo', { silencieuxSiOk: false })) return;
   p.commentaire = commentaire;
   logEvent('commentaire_photo', { photo: p.storage_path });
 }
@@ -391,8 +390,7 @@ async function refuserRemarque() {
   const p = photoCourante();
   const o = S.currentObjet;
   if (!p || !o) return;
-  const { error } = await sb.from('photos').update({ remarque_statut: 'refusee' }).eq('owner_id', S.tenantId).eq('id', p.id);
-  if (error) { toast(error.message, true); return; }
+  if (!await enregistrer(() => sb.from('photos').update({ remarque_statut: 'refusee' }).eq('owner_id', S.tenantId).eq('id', p.id), 'Remarque écartée')) return;
   p.remarque_statut = 'refusee';
   logEvent('remarque_refusee', { photo: p.storage_path });
   hooks.rendre();
@@ -413,8 +411,7 @@ async function declarerVueAbsente(idx) {
   const declaree_par = localStorage.getItem('iartcane-qui') ?? 'alain';
   const updated = [...vues];
   updated[idx] = { ...v, statut: 'absente', declaree_par, declaree_at: new Date().toISOString() };
-  const { error } = await sb.from('objets').update({ vues_manquantes: updated }).eq('owner_id', S.tenantId).eq('id', o.id);
-  if (error) { toast(error.message, true); return; }
+  if (!await enregistrer(() => sb.from('objets').update({ vues_manquantes: updated }).eq('owner_id', S.tenantId).eq('id', o.id), 'Vue signalée absente')) return;
   o.vues_manquantes = updated;
   logEvent('vue_absente', { vue: v.vue });
   hooks.rendre();
@@ -428,8 +425,7 @@ async function annulerVueAbsente(idx) {
   if (!v) return;
   const updated = [...vues];
   updated[idx] = { ...v, statut: 'a_faire', declaree_par: null, declaree_at: null };
-  const { error } = await sb.from('objets').update({ vues_manquantes: updated }).eq('owner_id', S.tenantId).eq('id', o.id);
-  if (error) { toast(error.message, true); return; }
+  if (!await enregistrer(() => sb.from('objets').update({ vues_manquantes: updated }).eq('owner_id', S.tenantId).eq('id', o.id), 'Vue rétablie')) return;
   o.vues_manquantes = updated;
   logEvent('vue_absente_annulee', { vue: v.vue });
   hooks.rendre();
@@ -558,12 +554,13 @@ async function persisterOrdre(photos, nouvelOrdre) {
   if (!o) return;
   const updates = photos.map((p, i) => ({ id: p.id, ordre: nouvelOrdre[i] }));
   for (const u of updates) {
-    await sb.from('photos').update({ ordre: u.ordre }).eq('owner_id', S.tenantId).eq('id', u.id);
+    if (!await enregistrer(() => sb.from('photos').update({ ordre: u.ordre }).eq('owner_id', S.tenantId).eq('id', u.id), 'Ordre des photos', { silencieuxSiOk: true })) return;
   }
   O.photos.forEach(p => {
     const u = updates.find(u => u.id === p.id);
     if (u) p.ordre = u.ordre;
   });
+  toast('✓ Ordre des photos enregistré');
   logEvent('ordre_photos', { n: updates.length });
 }
 
@@ -635,37 +632,39 @@ function openLightbox(photo, mode = null) {
     e.stopPropagation();
     ok.disabled = true; ok.textContent = 'Recadrage…';
     try {
-      const blob = await (await fetch(photo.url)).blob();
-      const bmp = await createImageBitmap(blob);
-      const sx = Math.round(sel.x0 * bmp.width);
-      const sy = Math.round(sel.y0 * bmp.height);
-      const sw = Math.round((sel.x1 - sel.x0) * bmp.width);
-      const sh = Math.round((sel.y1 - sel.y0) * bmp.height);
-      if (sw < 20 || sh < 20) throw new Error('zone trop petite');
-      const c = document.createElement('canvas');
-      c.width = sw; c.height = sh;
-      c.getContext('2d').drawImage(bmp, sx, sy, sw, sh, 0, 0, sw, sh);
-      const out = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.92));
-      if (!out) throw new Error('encodage impossible');
-      const newPath = photo.storage_path.replace(/[^/]+$/, `${crypto.randomUUID()}.jpg`);
-      const { error: e1 } = await sb.storage.from('photos').upload(newPath, out, { contentType: 'image/jpeg' });
-      if (e1) throw e1;
-      const tb = await makeThumbBlob(out);
-      let thumbPath = null;
-      if (tb) {
-        thumbPath = newPath.replace(/\.jpg$/, '.thumb.jpg');
-        const { error: et } = await sb.storage.from('photos').upload(thumbPath, tb, { contentType: 'image/jpeg' });
-        if (et) thumbPath = null;
-      }
-      const { error: e2 } = await sb.from('photos')
-        .update({ storage_path: newPath, thumb_path: thumbPath })
-        .eq('owner_id', S.tenantId).eq('id', photo.id);
-      if (e2) throw e2;
-      await sb.storage.from('photos').remove([photo.storage_path, photo.thumb_path].filter(Boolean));
-      close();
-      toast('✓ Photo recadrée — résolution d’origine conservée');
-      logEvent('recadrage', { photo: newPath });
-      await hooks.recharger(S.currentObjet.id);
+      await withBusy(async () => {
+        const blob = await (await fetch(photo.url)).blob();
+        const bmp = await createImageBitmap(blob);
+        const sx = Math.round(sel.x0 * bmp.width);
+        const sy = Math.round(sel.y0 * bmp.height);
+        const sw = Math.round((sel.x1 - sel.x0) * bmp.width);
+        const sh = Math.round((sel.y1 - sel.y0) * bmp.height);
+        if (sw < 20 || sh < 20) throw new Error('zone trop petite');
+        const c = document.createElement('canvas');
+        c.width = sw; c.height = sh;
+        c.getContext('2d').drawImage(bmp, sx, sy, sw, sh, 0, 0, sw, sh);
+        const out = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.92));
+        if (!out) throw new Error('encodage impossible');
+        const newPath = photo.storage_path.replace(/[^/]+$/, `${crypto.randomUUID()}.jpg`);
+        const { error: e1 } = await sb.storage.from('photos').upload(newPath, out, { contentType: 'image/jpeg' });
+        if (e1) throw e1;
+        const tb = await makeThumbBlob(out);
+        let thumbPath = null;
+        if (tb) {
+          thumbPath = newPath.replace(/\.jpg$/, '.thumb.jpg');
+          const { error: et } = await sb.storage.from('photos').upload(thumbPath, tb, { contentType: 'image/jpeg' });
+          if (et) thumbPath = null;
+        }
+        const { error: e2 } = await sb.from('photos')
+          .update({ storage_path: newPath, thumb_path: thumbPath })
+          .eq('owner_id', S.tenantId).eq('id', photo.id);
+        if (e2) throw e2;
+        await sb.storage.from('photos').remove([photo.storage_path, photo.thumb_path].filter(Boolean));
+        close();
+        toast('✓ Photo recadrée — résolution d’origine conservée');
+        logEvent('recadrage', { photo: newPath });
+        await hooks.recharger(S.currentObjet.id);
+      }, { titre: 'Recadrage de la photo…' });
     } catch (err) {
       toast(`Recadrage échoué : ${err.message ?? err}`, true);
       ok.disabled = false; ok.textContent = '✂️ Recadrer';

@@ -13,13 +13,15 @@
 //   • etat.js           état partagé + helpers validation
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, esc, toast, emptyHtml } from '../../core/dom.js';
+import { enregistrer, withBusy } from '../../core/feedback.js';
 import { S, canWrite } from '../../core/state.js';
 import {
   fmtNum, fmtDate, catCanon, catEmoji, infoSvg, STATUTS,
 } from '../../core/format.js';
-import { sb, signPaths, logEvent, lancerRecherches, enqueueJobs, purgeConsigne, uploadPhotosFor } from '../../core/data.js';
+import { sb, signPaths, logEvent, lancerRecherches, enqueueJobs } from '../../core/data.js';
 import { loadViewCss } from '../../core/css.js';
 import { O, hooks, CHAMPS_VALIDABLES, estValide, toggleValidation } from './etat.js';
+import { brancherUploads } from './uploads.js';
 
 await loadViewCss('objet');
 
@@ -65,10 +67,12 @@ async function deleteObjet() {
   const o = S.currentObjet;
   if (!o) return;
   if (!confirm(`Supprimer l'objet #${o.id} ?\n${O.photos.length} photo(s), fiche, comparables et historique partent avec — définitif.`)) return;
-  const paths = O.photos.map(p => p.storage_path);
-  if (paths.length) await sb.storage.from('photos').remove(paths);
-  const { error } = await sb.from('objets').delete().eq('owner_id', S.tenantId).eq('id', o.id);
-  if (error) { toast(error.message, true); return; }
+  const { annule } = await withBusy(async () => {
+    const paths = O.photos.map(p => p.storage_path);
+    if (paths.length) await sb.storage.from('photos').remove(paths);
+    if (!await enregistrer(() => sb.from('objets').delete().eq('owner_id', S.tenantId).eq('id', o.id), 'Objet supprimé', { silencieuxSiOk: true })) throw new Error('suppression échouée');
+  }, { titre: 'Suppression de l\'objet…', annulable: false });
+  if (annule) return;
   toast(`Objet #${o.id} supprimé`);
   location.hash = '#/';
 }
@@ -384,8 +388,7 @@ $('#objet-body').addEventListener('click', async e => {
     await toggleValidation(el.dataset.champ);
   }
   else if (act === 'valider') {
-    const { error } = await sb.from('objets').update({ statut: 'validee' }).eq('owner_id', S.tenantId).eq('id', o.id);
-    if (error) { toast(error.message, true); return; }
+    if (!await enregistrer(() => sb.from('objets').update({ statut: 'validee' }).eq('owner_id', S.tenantId).eq('id', o.id), 'Fiche validée', { silencieuxSiOk: true })) return;
     logEvent('validation', { note: 'confiance 4/4 (ground truth)' });
     toast(`#${o.id} validée ✓ — confiance 4/4 (ground truth)`);
     loadObjet(o.id);
@@ -395,72 +398,36 @@ $('#objet-body').addEventListener('click', async e => {
     if (!confirm(`Relancer les recherches de #${o.id} ?\n\nR1 (Kimi, ~40 s) repart si des photos ont changé, puis R2 (Lens) est enfilée — le cron la prend sous ~2 min.`)) return;
     el.disabled = true;
     const force = o.statut === 'validee';
-    const r = await lancerRecherches(o.id, { force });
-    if (r.ok) {
+    // lancerRecherches est un fetch unique, non interruptible en cours de route
+    // (pas de callback de progression comme uploadPhotosFor) : withBusy attend
+    // sa fin réelle avant de résoudre, même après un clic Annuler. On agit donc
+    // sur l'annulation via ctx.estAnnule() polé DANS fn, sans attendre le fetch.
+    const { valeur: r, annule } = await withBusy(async ({ estAnnule }) => {
+      const promesse = lancerRecherches(o.id, { force });
+      while (!estAnnule()) {
+        const gagnant = await Promise.race([promesse, new Promise(res => setTimeout(() => res('poll'), 150))]);
+        if (gagnant !== 'poll') return gagnant;
+      }
+      const n = await enqueueJobs([o.id], 'r1');
+      if (n) toast('Recherche remise en file — le cron la reprend sous ~2 min.');
+      return null;
+    }, { titre: 'Recherche R1 en cours…', seuilLent: 20000 });
+    if (!annule && r?.ok) {
       logEvent('relance', { force, certain: r.certain ?? null });
       toast(r.skip
         ? `R1 sautée (${r.skip}) — R2 (Lens) en file`
         : `R1 terminée${r.certain ? ' — auteur certain ✓' : ' — doute : analyse versée à la description'} · R2 (Lens) en file`);
-    } else if (r.reseau) {
+    } else if (!annule && r?.reseau) {
       const n = await enqueueJobs([o.id], 'r1');
       if (n) toast('R1 en file — le cron la prend sous ~2 min');
     }
+    el.disabled = false;
     loadObjet(o.id);
   }
   else if (act === 'del-objet') { deleteObjet(); }
 });
 
-// Overlay bloquant de progression d'upload (HO-032).
-function uploadOverlay(total) {
-  const el = document.createElement('div');
-  el.className = 'upl-overlay';
-  el.innerHTML = `<div class="upl-card" role="alert" aria-live="polite">
-    <div class="upl-spin" aria-hidden="true"></div>
-    <div class="upl-msg">Envoi des photos — 0/${total}</div>
-    <button class="btn small" data-annuler>Annuler</button>
-  </div>`;
-  document.body.append(el);
-  const ui = {
-    annule: false,
-    progress(sent, tot) {
-      const msg = el.querySelector('.upl-msg');
-      if (msg) msg.textContent = `Envoi des photos — ${sent}/${tot} terminée${sent > 1 ? 's' : ''}`;
-      return ui.annule ? false : undefined;
-    },
-    close() { el.remove(); },
-  };
-  el.querySelector('[data-annuler]').addEventListener('click', () => {
-    ui.annule = true;
-    ui.close();
-  });
-  return ui;
-}
-
-$('#file-add-photo').addEventListener('change', async e => {
-  if (!canWrite()) { e.target.value = ''; return; }
-  const files = [...e.target.files];
-  e.target.value = '';
-  if (!files.length || !S.currentObjet) return;
-  const oid = S.currentObjet.id;
-  const o = S.currentObjet;
-  const ui = uploadOverlay(files.length);
-  const { done, failed } = await uploadPhotosFor(oid, files, false, (sent, total) => ui.progress(sent, total));
-  ui.close();
-  if (done > 0) {
-    logEvent('photo_ajoutee', { n: done, ...(failed.length ? { echecs: failed.length } : {}), via: 'fichier' }, oid);
-    await purgeConsigne(o, oid);
-  }
-  if (ui.annule) {
-    toast(done ? `Envoi interrompu — ${done}/${files.length} photo(s) ajoutée(s)` : 'Envoi interrompu — aucune photo ajoutée', !done);
-  } else if (failed.length > 0) {
-    toast(`${done}/${files.length} photo(s) ajoutée(s) — ${failed.length} en échec (${failed[0].reason}). Réessayez.`, true);
-  } else if (done > 0) {
-    toast(S.currentObjet.statut !== 'validee'
-      ? `${done} photo${done > 1 ? 's' : ''} ajoutée${done > 1 ? 's' : ''} — « Relancer les recherches » quand tu es prêt`
-      : `${done} photo${done > 1 ? 's' : ''} ajoutée${done > 1 ? 's' : ''}`);
-  }
-  loadObjet(oid);
-});
+brancherUploads(loadObjet);
 
 // Branchement des hooks partagés.
 hooks.recharger = loadObjet;
