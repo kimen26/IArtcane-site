@@ -10,7 +10,7 @@ import { esc, toast } from '../../core/dom.js';
 import { S } from '../../core/state.js';
 import { sb, logEvent } from '../../core/data.js';
 import { catCanon } from '../../core/format.js';
-import { SOUS } from '../../core/taxonomie.js';
+import { SOUS, CATS_CANON, CATS_PROMPT } from '../../core/taxonomie.js';
 import { openCamera } from '../../core/camera.js';
 import { O, hooks, pastilleHtml, toggleValidation, estValide } from './etat.js';
 
@@ -124,19 +124,33 @@ function fieldHtml(champ, o, opts = {}) {
 
 // ─── Champs individuels ─────────────────────────────────────────────────────
 
+// Catégorie stockée = forme prompt (CATS_PROMPT, D-059) ; l'UI affiche la forme
+// canonique (CATS_CANON). Rabat n'importe quelle forme (prompt, display, variante
+// LLM) sur la paire { prompt, display } ; hors liste = conservé tel quel.
+function canonPair(c) {
+  if (!c) return { prompt: '', display: '' };
+  const i = CATS_PROMPT.indexOf(c);
+  if (i >= 0) return { prompt: c, display: CATS_CANON[i] };
+  const display = catCanon(c);
+  const j = CATS_CANON.indexOf(display);
+  if (j >= 0) return { prompt: CATS_PROMPT[j], display };
+  return { prompt: c, display: c };
+}
+
 function categorieFieldHtml(o) {
-  const cat = catCanon(o.categorie);
-  const cats = Array.from(new Set([...Object.keys(SOUS), cat].filter(Boolean)));
-  const sous = SOUS[cat] ?? [];
+  const cur = canonPair(o.categorie);
+  const options = CATS_PROMPT.map((p, i) => ({ valeur: p, label: CATS_CANON[i] }));
+  if (cur.prompt && !CATS_PROMPT.includes(cur.prompt)) options.push({ valeur: cur.prompt, label: cur.prompt });
+  const sous = SOUS[cur.display] ?? [];
   const sousVal = o.sous_categorie ?? '';
   return `
     <div class="obj-id-field" data-champ="categorie">
       <div class="obj-field-label obj-id-label">${esc(LABELS.categorie)}</div>
       <div class="obj-id-cat-row">
         <div class="obj-id-input-wrap obj-id-cat-wrap">
-          <select class="obj-input obj-id-cat" data-champ="categorie" data-initial="${esc(cat)}">
+          <select class="obj-input obj-id-cat" data-champ="categorie" data-initial="${esc(cur.prompt)}">
             <option value="">—</option>
-            ${cats.map(c => `<option value="${esc(c)}" ${c === cat ? 'selected' : ''}>${esc(c)}</option>`).join('')}
+            ${options.map(c => `<option value="${esc(c.valeur)}" ${c.valeur === cur.prompt ? 'selected' : ''}>${esc(c.label)}</option>`).join('')}
           </select>
         </div>
         <div class="obj-id-input-wrap obj-id-sous-wrap">
@@ -381,7 +395,7 @@ async function toggleAuteurInconnu(el, checked) {
 }
 
 function updateSousCategories(el, cat) {
-  const sous = SOUS[cat] ?? [];
+  const sous = SOUS[canonPair(cat).display] ?? [];
   const sel = el.querySelector('select[data-champ="sous_categorie"]');
   if (!sel) return;
   sel.innerHTML = '<option value="">—</option>' + sous.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
