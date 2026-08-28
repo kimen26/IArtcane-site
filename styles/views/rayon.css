@@ -1,2 +1,8 @@
 /* ─── Vue Rayon : un rayon en plein écran (HO-043) ───────── */
-.rayon-n-titre{font-family:var(--mono);font-size:.8125rem;color:var(--ink-3);font-weight:400}
+/* Le titre plein écran d'un rayon reprend le gabarit de titre de groupe du
+   listing (22px maigre + compteur, maquette « Carte objet - retenue » l. 23-24).
+   La règle équivalente de components.css est scopée #view-collection et ne
+   descend pas jusqu'ici : on la refait, scopée #view-rayon. */
+#view-rayon .sec-title{font-weight:400;font-size:1.375rem;color:#16233f}
+#view-rayon .sec-title::after{background:#dfe3ec}
+.rayon-n-titre{font-family:var(--sans);font-size:.78rem;color:#8b93a6;font-weight:400}

@@ -2,7 +2,7 @@
 /* Carte blanche par catégorie ; la grille masonry des cartes objet (HO-040,
    components.css) est reprise telle quelle à l'intérieur du volet ouvert. */
 .cat-pane{background:var(--surface);border-radius:var(--r-md);box-shadow:var(--shadow);margin-bottom:9px;overflow:hidden}
-.cat-head{display:flex;align-items:center;gap:8px;width:100%;min-height:46px;padding:8px 12px;border:none;background:none;text-align:left;cursor:pointer}
+.cat-head{display:flex;align-items:center;gap:10px;width:100%;min-height:46px;padding:12px 12px 10px;border:none;background:none;text-align:left;cursor:pointer}
 .cat-chev{color:var(--ink-3);font-size:.75rem;width:14px;flex-shrink:0}
 .cat-name{font-family:var(--serif);font-size:1rem;font-weight:400;color:var(--ink)}
 .cat-pane.open .cat-name{font-size:1.0625rem}
@@ -13,11 +13,11 @@
 .cat-body{display:none;padding:0 11px}
 .cat-pane.open .cat-body{display:block}
 .cat-pane .grid{column-gap:9px}
-.cat-more{display:block;width:100%;margin-top:11px;padding:10px;border:none;border-top:1px solid var(--line-soft);background:none;font-size:.71875rem;font-weight:600;color:var(--blue);cursor:pointer}
+.cat-more{display:block;width:100%;margin-top:11px;padding:9px 0 2px;border:none;border-top:1px solid var(--line-soft);background:none;font-size:.71875rem;font-weight:600;color:var(--blue);cursor:pointer}
 .cat-more:hover{background:var(--blue-softer)}
 /* Mobile : padding de page 11px sur la vue collection (spec étape 2), haut resserré */
 @media (max-width:640px){
-  main:has(> #view-collection.active){padding:10px 11px 64px}
+  main:has(> #view-collection.active){padding:11px 11px 64px}
 }
 
 /* Titres de groupes du rendu historique (regroupement lieu/période/none) */
@@ -37,32 +37,32 @@
 /* Bloc blanc absolu sous la ligne de recherche du bandeau ; #page-subhead est
    en base.css (transverse gelé) — position:relative posé ici, scopé à cet id. */
 #page-subhead{position:relative}
-.search-suggest{position:absolute;left:24px;right:24px;top:100%;z-index:60;background:var(--surface);border-radius:var(--r-md);box-shadow:var(--shadow-hover);padding:10px 12px 12px;max-height:60vh;overflow:auto}
+.search-suggest{position:absolute;left:24px;right:24px;top:100%;z-index:60;background:var(--surface);border-radius:var(--r-md);box-shadow:var(--shadow-hover);padding:10px 0 12px;max-height:60vh;overflow:auto}
 @media (max-width:640px){.search-suggest{left:11px;right:11px}}
-.sug-head{font-size:.625rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+.sug-head{font-size:.625rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
 .sug-sec + .sug-sec{margin-top:8px}
 .sug-title{font-size:.625rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:4px 0 2px}
-.sug-artiste{display:block;width:100%;text-align:left;padding:8px 6px;border:none;background:none;font-size:.875rem;color:var(--ink);cursor:pointer;border-radius:7px}
+.sug-artiste{display:block;width:100%;text-align:left;padding:9px 15px;border:none;background:none;font-size:.8125rem;color:var(--ink);cursor:pointer;border-radius:7px}
 .sug-artiste:hover{background:var(--blue-softer)}
-.sug-objet{display:flex;align-items:center;gap:9px;width:100%;padding:6px;border:none;background:none;text-align:left;cursor:pointer;border-radius:7px}
+.sug-objet{display:flex;align-items:center;gap:11px;width:100%;padding:9px 15px;border:none;background:none;text-align:left;cursor:pointer;border-radius:7px}
 .sug-objet:hover{background:var(--blue-softer)}
 .sug-objet img{width:32px;height:32px;border-radius:4px;object-fit:cover;flex-shrink:0}
 .sug-emoji{width:32px;height:32px;border-radius:4px;display:grid;place-items:center;background:var(--surface-2);flex-shrink:0}
 .sug-objet-t{min-width:0;display:flex;flex-direction:column}
 .sug-objet-titre{font-size:.8125rem;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sug-objet-meta{font-size:.6875rem;color:var(--ink-3)}
-.sug-all{display:block;width:100%;margin-top:8px;padding:9px;border:none;border-top:1px solid var(--line-soft);background:none;font-size:.75rem;font-weight:600;color:var(--blue);cursor:pointer;text-align:center}
+.sug-all{display:block;width:100%;margin-top:8px;padding:9px 15px;border:none;border-top:1px solid var(--line-soft);background:none;font-size:.8125rem;font-weight:600;color:var(--blue);cursor:pointer;text-align:center}
 .sug-all:hover{background:var(--blue-softer)}
 /* Grille atténuée pendant la frappe (état 3) */
 .searching #collection-body{opacity:.35}
 
 /* ─── Pastilles des critères actifs (HO-044, état 4) ─── */
 .pills{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
-.pill{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:none;border-radius:7px;background:var(--blue-soft);color:var(--blue-deep);font-size:.75rem;font-weight:600;white-space:nowrap;cursor:pointer}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border:none;border-radius:7px;background:var(--blue-soft);color:var(--blue-deep);font-size:.6875rem;font-weight:600;white-space:nowrap;cursor:pointer}
 .pill svg{flex-shrink:0}
 .pill .pill-x{font-size:.875rem;line-height:1;opacity:.7}
 .pill:hover .pill-x{opacity:1}
-.pills-clear{margin-left:auto;padding:7px 4px;border:none;background:none;font-size:.75rem;font-weight:600;color:var(--ink-3);cursor:pointer;white-space:nowrap}
+.pills-clear{margin-left:auto;padding:7px 4px;border:none;background:none;font-size:.6875rem;font-weight:600;color:var(--ink-3);cursor:pointer;white-space:nowrap}
 .pills-clear:hover{color:var(--red)}
 
 /* ─── Ligne de résultat + accordéon en mode filtré (HO-044, état 4) ─── */
