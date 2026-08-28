@@ -293,7 +293,7 @@ select.obj-input{
   min-height:44px;
 }
 
-@media (max-width:373px){
+@media (max-width:339px){
   .obj-id-cat-row{ flex-direction:column; align-items:stretch; }
   .obj-id-dims{ flex-direction:column; }
 }

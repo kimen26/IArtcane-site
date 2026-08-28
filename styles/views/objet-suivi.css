@@ -600,7 +600,7 @@ button,input,select,textarea,a{min-height:0}
 .tech-summary{
   min-height:44px;
 }
-@media (max-width:373px){
+@media (max-width:339px){
   .fork-inputs{gap:6px}
   .fork-num{font-size:1.125rem}
   .pipe-grid{grid-template-columns:1fr}

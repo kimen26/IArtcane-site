@@ -493,7 +493,7 @@
 }
 
 /* ─── Responsive zoom / petits écrans ─── */
-@media (max-width:373px){
+@media (max-width:339px){
   .photos-grid{grid-template-columns:repeat(2, 1fr)}
   .photos-viewer{min-height:180px}
   .photos-viewer img,

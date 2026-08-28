@@ -640,7 +640,7 @@
 @keyframes upl-rot{to{transform:rotate(360deg)}}
 
 /* Zoom texte 200 % : pas de hauteur fixe sur les zones de texte */
-@media (max-width:373px){
+@media (max-width:339px){
   .obj-thumb{width:80px}
   .obj-thumb img{width:80px}
   .obj-id-grid{grid-template-columns:1fr}
