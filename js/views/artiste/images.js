@@ -1,13 +1,15 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // IArtcane — views/artiste/images.js : écran Images de la fiche artiste (3b).
 // ═══════════════════════════════════════════════════════════════════════════
-import { $, esc, toast } from '../../core/dom.js';
+import { $, esc } from '../../core/dom.js';
 import { S, canWrite } from '../../core/state.js';
 import { loadViewCss } from '../../core/css.js';
-import { sb, logEvent, uploadImageWithThumb, deleteStoredPhoto, makeThumbBlob } from '../../core/data.js';
+import { sb, logEvent, deleteStoredPhoto, makeThumbBlob } from '../../core/data.js';
+import { toast, enregistrer, withBusy } from '../../core/feedback.js';
 import { createOverlay } from '../../core/lightbox.js';
 import { micButton } from '../mic.js';
 import { A, hooks } from './etat.js';
+import { insererArtistePhoto } from './uploads.js';
 
 await loadViewCss('artistes');
 
@@ -46,17 +48,9 @@ fileInput.addEventListener('change', async e => {
   const files = [...e.target.files];
   e.target.value = '';
   if (!files.length || !A.nom) return;
-  const up = await uploadImageWithThumb(`${S.tenantId}/artistes`, files[0]);
-  if (!up) return;
-  const { data: rows, error } = await sb.from('artistes_photos').insert({
-    owner_id: S.tenantId,
-    artiste_nom: A.nom,
-    storage_path: up.path,
-    thumb_path: up.thumbPath,
-    zone: null,
-  }).select('id');
-  if (error) { toast(error.message, true); return; }
-  logEvent('artiste_image_ajoutee', { artiste: A.nom, image: up.path }, null);
+  const id = await insererArtistePhoto(files[0], null);
+  if (!id) return;
+  logEvent('artiste_image_ajoutee', { artiste: A.nom, image: files[0].name }, null);
   toast('Image ajoutée');
   await hooks.recharger(A.nom);
   A.ecran = 'images';
@@ -355,8 +349,7 @@ async function pivoterImage() {
   const p = imageCourante();
   if (!p) return;
   const rotation = ((p.rotation || 0) + 90) % 360;
-  const { error } = await sb.from('artistes_photos').update({ rotation }).eq('owner_id', S.tenantId).eq('id', p.id);
-  if (error) { toast(error.message, true); return; }
+  if (!await enregistrer(() => sb.from('artistes_photos').update({ rotation }).eq('owner_id', S.tenantId).eq('id', p.id), 'Rotation')) return;
   p.rotation = rotation;
   logEvent('artiste_image_rotation', { image: p.storage_path, deg: rotation });
   hooks.rendre();
@@ -369,8 +362,7 @@ async function changerZone(zone) {
   if (p.zone === valeur) return;
   const updates = { zone: valeur };
   if (valeur !== 'signature') updates.objet_id = null;
-  const { error } = await sb.from('artistes_photos').update(updates).eq('owner_id', S.tenantId).eq('id', p.id);
-  if (error) { toast(error.message, true); return; }
+  if (!await enregistrer(() => sb.from('artistes_photos').update(updates).eq('owner_id', S.tenantId).eq('id', p.id), "Zone de l'image")) return;
   Object.assign(p, updates);
   logEvent('artiste_image_zone', { zone: valeur, objet_id: p.objet_id });
   hooks.rendre();
@@ -381,8 +373,7 @@ async function changerObjetSource(objetId) {
   if (!p || p.zone !== 'signature') return;
   const valeur = objetId || null;
   if (p.objet_id === valeur) return;
-  const { error } = await sb.from('artistes_photos').update({ objet_id: valeur }).eq('owner_id', S.tenantId).eq('id', p.id);
-  if (error) { toast(error.message, true); return; }
+  if (!await enregistrer(() => sb.from('artistes_photos').update({ objet_id: valeur }).eq('owner_id', S.tenantId).eq('id', p.id), 'Objet source')) return;
   p.objet_id = valeur;
   logEvent('artiste_image_zone', { zone: p.zone, objet_id: valeur });
   hooks.rendre();
@@ -394,8 +385,7 @@ async function basculerTag(tag) {
   const tags = Array.isArray(p.tags) ? [...p.tags] : [];
   const idx = tags.indexOf(tag);
   if (idx >= 0) tags.splice(idx, 1); else tags.push(tag);
-  const { error } = await sb.from('artistes_photos').update({ tags }).eq('owner_id', S.tenantId).eq('id', p.id);
-  if (error) { toast(error.message, true); return; }
+  if (!await enregistrer(() => sb.from('artistes_photos').update({ tags }).eq('owner_id', S.tenantId).eq('id', p.id), 'Tag')) return;
   p.tags = tags;
   logEvent('artiste_image_tag', { tag });
   hooks.rendre();
@@ -409,8 +399,7 @@ async function ajouterTag(tag) {
   const tags = Array.isArray(p.tags) ? [...p.tags] : [];
   if (tags.includes(normalise)) { tagInputVisible = false; hooks.rendre(); return; }
   tags.push(normalise);
-  const { error } = await sb.from('artistes_photos').update({ tags }).eq('owner_id', S.tenantId).eq('id', p.id);
-  if (error) { toast(error.message, true); return; }
+  if (!await enregistrer(() => sb.from('artistes_photos').update({ tags }).eq('owner_id', S.tenantId).eq('id', p.id), 'Tag ajouté')) return;
   p.tags = tags;
   logEvent('artiste_image_tag', { tag: normalise });
   tagInputVisible = false;
@@ -421,8 +410,7 @@ async function sauverCommentaire(texte) {
   const p = imageCourante();
   if (!p) return;
   const commentaire = texte.trim() || null;
-  const { error } = await sb.from('artistes_photos').update({ commentaire }).eq('owner_id', S.tenantId).eq('id', p.id);
-  if (error) { toast(error.message, true); return; }
+  if (!await enregistrer(() => sb.from('artistes_photos').update({ commentaire }).eq('owner_id', S.tenantId).eq('id', p.id), "Commentaire de l'image")) return;
   p.commentaire = commentaire;
   logEvent('artiste_image_commentaire', { image: p.storage_path });
 }
@@ -431,8 +419,7 @@ async function sauverTranscription(texte) {
   const p = imageCourante();
   if (!p || p.zone !== 'signature') return;
   const transcription = texte.trim() || null;
-  const { error } = await sb.from('artistes_photos').update({ transcription }).eq('owner_id', S.tenantId).eq('id', p.id);
-  if (error) { toast(error.message, true); return; }
+  if (!await enregistrer(() => sb.from('artistes_photos').update({ transcription }).eq('owner_id', S.tenantId).eq('id', p.id), 'Transcription')) return;
   p.transcription = transcription;
   logEvent('artiste_image_transcription', { image: p.storage_path });
 }
@@ -543,14 +530,21 @@ async function onDragEnd() {
 
 async function persisterOrdre(images, nouvelOrdre) {
   const updates = images.map((p, i) => ({ id: p.id, ordre: nouvelOrdre[i] }));
-  for (const u of updates) {
-    await sb.from('artistes_photos').update({ ordre: u.ordre }).eq('owner_id', S.tenantId).eq('id', u.id);
+  const resultats = await Promise.all(updates.map(u =>
+    sb.from('artistes_photos').update({ ordre: u.ordre }).eq('owner_id', S.tenantId).eq('id', u.id)
+  ));
+  const echecs = resultats.filter(r => r.error);
+  if (echecs.length) {
+    console.warn('persisterOrdre:', echecs.map(r => r.error));
+    toast(`Ordre des images non enregistré — ${echecs.length}/${updates.length} échec${echecs.length > 1 ? 's' : ''} : ${echecs[0].error.message}`, true);
+  } else {
+    toast('✓ Ordre des images enregistré');
   }
   A.images.forEach(p => {
     const u = updates.find(u => u.id === p.id);
     if (u) p.ordre = u.ordre;
   });
-  logEvent('artiste_images_ordre', { n: updates.length });
+  logEvent('artiste_images_ordre', { n: updates.length, echecs: echecs.length });
 }
 
 // ─── Lightbox / recadrage ───────────────────────────────────────────────────
@@ -616,41 +610,43 @@ function openCutter(p) {
     e.stopPropagation();
     ok.disabled = true; ok.textContent = 'Recadrage…';
     try {
-      const blob = await (await fetch(p.url)).blob();
-      const bmp = await createImageBitmap(blob);
-      const sx = Math.round(sel.x0 * bmp.width);
-      const sy = Math.round(sel.y0 * bmp.height);
-      const sw = Math.round((sel.x1 - sel.x0) * bmp.width);
-      const sh = Math.round((sel.y1 - sel.y0) * bmp.height);
-      if (sw < 20 || sh < 20) throw new Error('zone trop petite');
-      const c = document.createElement('canvas');
-      c.width = sw; c.height = sh;
-      c.getContext('2d').drawImage(bmp, sx, sy, sw, sh, 0, 0, sw, sh);
-      const out = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.92));
-      if (!out) throw new Error('encodage impossible');
+      await withBusy(async () => {
+        const blob = await (await fetch(p.url)).blob();
+        const bmp = await createImageBitmap(blob);
+        const sx = Math.round(sel.x0 * bmp.width);
+        const sy = Math.round(sel.y0 * bmp.height);
+        const sw = Math.round((sel.x1 - sel.x0) * bmp.width);
+        const sh = Math.round((sel.y1 - sel.y0) * bmp.height);
+        if (sw < 20 || sh < 20) throw new Error('zone trop petite');
+        const c = document.createElement('canvas');
+        c.width = sw; c.height = sh;
+        c.getContext('2d').drawImage(bmp, sx, sy, sw, sh, 0, 0, sw, sh);
+        const out = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.92));
+        if (!out) throw new Error('encodage impossible');
 
-      const oldStoragePath = p.storage_path;
-      const oldThumbPath = p.thumb_path;
-      const dossier = oldStoragePath.replace(/\/[^/]+$/, '');
-      const newPath = `${dossier}/${crypto.randomUUID()}.jpg`;
-      const { error: e1 } = await sb.storage.from('photos').upload(newPath, out, { contentType: 'image/jpeg' });
-      if (e1) throw e1;
-      const tb = await makeThumbBlob(out);
-      let newThumbPath = null;
-      if (tb) {
-        newThumbPath = newPath.replace(/\.jpg$/, '.thumb.jpg');
-        const { error: et } = await sb.storage.from('photos').upload(newThumbPath, tb, { contentType: 'image/jpeg' });
-        if (et) newThumbPath = null;
-      }
-      const { error: e2 } = await sb.from('artistes_photos')
-        .update({ storage_path: newPath, thumb_path: newThumbPath })
-        .eq('owner_id', S.tenantId).eq('id', p.id);
-      if (e2) throw e2;
-      await sb.storage.from('photos').remove([oldStoragePath, oldThumbPath].filter(Boolean));
-      close();
-      toast('✓ Image recadrée — résolution d’origine conservée');
-      logEvent('artiste_image_recadree', { image: newPath });
-      await hooks.recharger(A.nom);
+        const oldStoragePath = p.storage_path;
+        const oldThumbPath = p.thumb_path;
+        const dossier = oldStoragePath.replace(/\/[^/]+$/, '');
+        const newPath = `${dossier}/${crypto.randomUUID()}.jpg`;
+        const { error: e1 } = await sb.storage.from('photos').upload(newPath, out, { contentType: 'image/jpeg' });
+        if (e1) throw e1;
+        const tb = await makeThumbBlob(out);
+        let newThumbPath = null;
+        if (tb) {
+          newThumbPath = newPath.replace(/\.jpg$/, '.thumb.jpg');
+          const { error: et } = await sb.storage.from('photos').upload(newThumbPath, tb, { contentType: 'image/jpeg' });
+          if (et) newThumbPath = null;
+        }
+        const { error: e2 } = await sb.from('artistes_photos')
+          .update({ storage_path: newPath, thumb_path: newThumbPath })
+          .eq('owner_id', S.tenantId).eq('id', p.id);
+        if (e2) throw e2;
+        await sb.storage.from('photos').remove([oldStoragePath, oldThumbPath].filter(Boolean));
+        close();
+        toast('✓ Image recadrée — résolution d’origine conservée');
+        logEvent('artiste_image_recadree', { image: newPath });
+        await hooks.recharger(A.nom);
+      }, { titre: 'Recadrage de l\'image…' });
     } catch (err) {
       toast(`Recadrage échoué : ${err.message ?? err}`, true);
       ok.disabled = false; ok.textContent = '✂️ Recadrer';

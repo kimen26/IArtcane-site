@@ -5,14 +5,16 @@
 // (liste conservée) et mountDetail(nom) (hub 3a). Navigation interne posée
 // pour les sous-écrans futurs (HO-053). Délégation data-action sur #artiste-body.
 // ═══════════════════════════════════════════════════════════════════════════
-import { $, $$, esc, toast, emptyHtml } from '../../core/dom.js';
+import { $, $$, esc, emptyHtml } from '../../core/dom.js';
 import { S, canWrite } from '../../core/state.js';
 import { auteurMatch, cardHtml, fmtDate, fmtNum, mdToHtml } from '../../core/format.js';
-import { sb, signPaths, logEvent, uploadImageWithThumb, ensureCollection, loadPhotoMap } from '../../core/data.js';
+import { sb, signPaths, logEvent, ensureCollection, loadPhotoMap } from '../../core/data.js';
+import { toast, enregistrer } from '../../core/feedback.js';
 import { openViewer } from '../../core/lightbox.js';
 import { loadViewCss } from '../../core/css.js';
 import { micButton } from '../mic.js';
 import { A, hooks } from './etat.js';
+import { insererArtistePhoto } from './uploads.js';
 
 await loadViewCss('artistes');
 
@@ -654,33 +656,8 @@ $('#artiste-body').addEventListener('click', async e => {
 });
 
 // ─── Upload d'une photo (note ou image rapide) ───────────────────────────────
-async function uploadArtistePhoto(file, options = {}) {
-  const nom = A.nom;
-  if (!nom || !canWrite()) return null;
-  // La fiche artiste doit exister pour la FK.
-  const { data: a } = await sb.from('artistes').select('nom').eq('owner_id', S.tenantId).eq('nom', nom).maybeSingle();
-  if (!a) {
-    const { error: ec } = await sb.from('artistes').insert({ owner_id: S.tenantId, nom, bio_md: '' });
-    if (ec) { toast(`Création fiche artiste : ${ec.message}`, true); return null; }
-  }
-  const up = await uploadImageWithThumb(`${S.tenantId}/artistes`, file);
-  if (!up) return null;
-  return { ...up, id: null };
-}
-
-async function insererArtistePhoto(file, zone = null) {
-  const up = await uploadArtistePhoto(file);
-  if (!up) return null;
-  const { data: rows, error } = await sb.from('artistes_photos').insert({
-    owner_id: S.tenantId,
-    artiste_nom: A.nom,
-    storage_path: up.path,
-    thumb_path: up.thumbPath,
-    zone,
-  }).select('id');
-  if (error) { toast(error.message, true); return null; }
-  return rows?.[0]?.id ?? null;
-}
+// uploadArtistePhoto/insererArtistePhoto vivent dans uploads.js (HO-078) —
+// duplication avec images.js absorbée là, sous withBusy.
 
 async function ajouterNote() {
   const ta = $('#art-note-text');
@@ -689,16 +666,14 @@ async function ajouterNote() {
     toast('Tape une note ou ajoute une photo', true);
     return;
   }
-  const { error } = await sb.from('artistes_notes').insert({
+  if (!await enregistrer(() => sb.from('artistes_notes').insert({
     owner_id: S.tenantId,
     artiste_nom: A.nom,
     auteur: 'humain',
     texte: texte || null,
     photos: pendingPhotos,
-  });
-  if (error) { toast(error.message, true); return; }
+  }), 'Note')) return;
   logEvent('artiste_note', { artiste: A.nom }, null);
-  toast('Note ajoutée');
   if (ta) ta.value = '';
   pendingPhotos = [];
   await loadArtiste(A.nom);
