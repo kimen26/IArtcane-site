@@ -199,13 +199,18 @@ export async function uploadPhotosFor(oid, files, firstIsFace = false, onProgres
       failed.push({ item, reason: 'envoi du fichier impossible (réseau ?)' });
       continue;
     }
-    const kind = up.video ? 'video' : (first ? 'face' : 'autre');
+    const kind = item.kind ?? (up.video ? 'video' : (first ? 'face' : 'autre'));
+    const couverture = item.cover === true ? true : false;
+    const ordre = item.ordre ?? i + 1;
     first = false;
-    const { error } = await sb.from('photos').insert({
+    const insertPayload = {
       owner_id: S.tenantId, objet_id: oid,
       storage_path: up.path, thumb_path: up.thumbPath, kind, source: 'site',
       commentaire: comment,
-    });
+      ordre,
+    };
+    if (couverture) insertPayload.couverture = true;
+    const { error } = await sb.from('photos').insert(insertPayload);
     if (error) {
       toast(error.message, true);
       failed.push({ item, reason: error.message });
