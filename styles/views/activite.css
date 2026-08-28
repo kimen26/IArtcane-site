@@ -81,7 +81,7 @@
   border: none;
   background: var(--act-card);
   color: var(--act-ink-4);
-  font-weight: 500;
+  font-weight: 400;
   cursor: pointer;
 }
 
@@ -106,7 +106,7 @@
   background: transparent;
   color: var(--act-ink-3);
   font-size: 12.5px;
-  font-weight: 500;
+  font-weight: 400;
   cursor: pointer;
 }
 
@@ -258,7 +258,7 @@
   justify-content: space-between;
   font-size: 9.5px;
   color: var(--act-grey-text);
-  margin-top: 6px;
+  margin-top: 12px;
 }
 
 .act-kpis {
@@ -415,6 +415,13 @@
   gap: 14px;
 }
 
+/* Maquette « Activité » l. 183 : la barre respire 6px sous sa ligne de titre. */
+.act-outil {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .act-outil-head {
   display: flex;
   align-items: baseline;
@@ -439,21 +446,35 @@
   color: var(--act-ink);
 }
 
-.act-outil-bar,
-.act-maison-bar,
-.act-geste-bar {
+.act-outil-bar {
   height: 7px;
   border-radius: 4px;
   background: var(--act-blue-soft);
   overflow: hidden;
 }
 
-.act-outil-bar span,
+.act-outil-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--act-blue);
+}
+
+/* Maquette « Activité » l. 222/274 : ces deux barres sont plus fines que
+   .act-outil-bar (6px/3px vs 7px/4px) — ne pas les recoller au bloc au-dessus. */
+.act-maison-bar,
+.act-geste-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--act-blue-soft);
+  overflow: hidden;
+}
+
 .act-maison-bar span,
 .act-geste-bar span {
   display: block;
   height: 100%;
-  border-radius: 4px;
+  border-radius: 3px;
   background: var(--act-blue);
 }
 
@@ -492,7 +513,7 @@
 .act-maisons {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 13px;
 }
 
 .act-maison {
@@ -683,7 +704,7 @@
 }
 
 /* ─── A4 · Fil par objet ────────────────────────────────────────────────────── */
-.act-fil-wrapper { gap: 14px; }
+.act-fil-wrapper { gap: 11px; }
 
 .act-jour-header {
   display: flex;
@@ -810,7 +831,7 @@
 .act-objet-events {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
 }
 
 .act-event {

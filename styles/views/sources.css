@@ -28,9 +28,9 @@
 }
 
 /* ─── Barre du haut ─────────────────────────────────────────────────────── */
-.src-barre{display:flex; flex-direction:column; gap:8px; padding-bottom:4px}
-.src-barre-tete{display:flex; align-items:center; gap:10px}
-.src-titre{margin:0; font-family:var(--serif); font-weight:500; font-size:19px; color:var(--ink)}
+.src-barre{display:flex; flex-direction:column; gap:8px; padding-bottom:11px}
+.src-barre-tete{display:flex; align-items:center; gap:12px}
+.src-titre{margin:0; font-family:var(--serif); font-weight:400; font-size:17px; color:var(--ink)}
 .src-vers-palmares{
   margin-left:auto; font-size:12px; font-weight:600; color:var(--ink-3);
   border:1px solid var(--line); border-radius:var(--r-sm); padding:4px 9px;
@@ -52,6 +52,7 @@
 }
 .src-volet-tete{
   width:100%; display:flex; align-items:center; gap:9px; padding:13px 15px;
+  min-height:56px; box-sizing:border-box;
   background:none; border:0; cursor:pointer; text-align:left; color:var(--ink);
 }
 .src-caret{
@@ -95,7 +96,7 @@ a.src-nom:hover{color:var(--blue-deep)}
 /* badges d'accès */
 .src-acc{
   padding:2px 7px; border-radius:999px; font-family:var(--mono);
-  font-size:8.5px; font-weight:600; letter-spacing:.06em; white-space:nowrap; flex:none;
+  font-size:8.5px; font-weight:400; letter-spacing:.06em; white-space:nowrap; flex:none;
 }
 .acc-api{background:var(--src-api-bg); color:var(--src-api-fg)}
 .acc-nav-auto{background:var(--src-navauto-bg); color:var(--src-navauto-fg)}
@@ -129,6 +130,7 @@ a.src-nom:hover{color:var(--blue-deep)}
 .src-vide-q{padding:11px 0; font-size:11px; color:var(--ink-3)}
 
 /* ─── Volet Écartées ───────────────────────────────────────────────────── */
+.src-volet.ecartees .src-volet-tete{min-height:48px}
 .src-volet.ecartees{opacity:.6}
 .src-volet.ecartees.ouvert{opacity:1}
 .src-ligne.ecartee{cursor:default}
@@ -156,7 +158,7 @@ a.src-nom:hover{color:var(--blue-deep)}
 .src-decl-cout{margin-left:auto; flex:none; font-size:10px; color:var(--src-decl-amber-fg)}
 .src-decl-si{font-size:11px; line-height:1.45; color:var(--src-decl-ink)}
 .src-si{
-  font-size:9.5px; letter-spacing:.1em; color:var(--src-decl-si); font-weight:600;
+  font-size:9.5px; letter-spacing:.1em; color:var(--src-decl-si); font-weight:400;
 }
 .src-decl-ref{color:var(--src-decl-si)}
 .src-decl-jauge-row{display:flex; align-items:center; gap:8px}
@@ -200,7 +202,7 @@ a.src-nom:hover{color:var(--blue-deep)}
 .pal-barre-tete{display:flex; align-items:center; gap:10px}
 .pal-retour{font-size:12px; font-weight:600; color:var(--ink-3)}
 .pal-retour:hover{color:var(--blue)}
-.pal-titre{margin:0; font-family:var(--serif); font-weight:500; font-size:19px; color:var(--ink)}
+.pal-titre{margin:0; font-family:var(--serif); font-weight:400; font-size:17px; color:var(--ink)}
 .pal-bascule{margin-left:auto; display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; font-size:10.5px}
 .pal-bascule-opt{padding:5px 8px; background:none; border:0; color:var(--ink-2); cursor:pointer}
 .pal-bascule-opt.actif{background:var(--ink); color:#fff; font-weight:600}
