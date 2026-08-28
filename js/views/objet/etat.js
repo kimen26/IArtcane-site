@@ -13,6 +13,7 @@
 import { toast } from '../../core/dom.js';
 import { S } from '../../core/state.js';
 import { sb, logEvent } from '../../core/data.js';
+import { marquerUtile } from '../../core/consultations.js';
 
 export const O = {
   photos: [],     // [{ ...photo, url, thumbUrl }] — sans `sel` (galerie déplacée)
@@ -68,5 +69,8 @@ export async function toggleValidation(champ) {
   if (error) { toast?.(error.message, true); return; }
   o.validation_champs = vc;
   logEvent('validation_champ', { champ, valide: !actuel });
+  if (champ === 'auteur' && !actuel && o.auteur) {
+    marquerUtile({ objetId: o.id, artiste: o.auteur, besoin: 'referentiels-artistes' });
+  }
   hooks.rendre?.();
 }

@@ -5,6 +5,7 @@ import { esc, toast } from '../../core/dom.js';
 import { S } from '../../core/state.js';
 import { fmtNum, fmtDate } from '../../core/format.js';
 import { sb, logEvent } from '../../core/data.js';
+import { marquerUtile } from '../../core/consultations.js';
 import { loadViewCss } from '../../core/css.js';
 import { O, hooks, pastilleHtml } from './etat.js';
 
@@ -250,5 +251,6 @@ async function setExclu(cid, exclu, raison) {
     c.raison_exclusion = raison;
   }
   logEvent(exclu ? 'comparable_exclu' : 'comparable_retabli', { comparable_id: cid, ...(raison ? { raison } : {}) });
+  if (!exclu) marquerUtile({ objetId: o.id, besoin: 'comparables-prix' });
   hooks.rendre?.();
 }
