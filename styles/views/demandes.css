@@ -1,0 +1,112 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Vue Demandes — écran de tri (HO-084, D-072)
+   Feuille autonome, tokens existants uniquement. Cartes en .panel-like, pile
+   verticale, largeur max 780 px centrée en desktop, pleine largeur en mobile.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+#demandes-body{
+  max-width:780px; margin:0 auto; padding:0 16px 24px;
+  display:flex; flex-direction:column; gap:14px;
+}
+@media (max-width:700px){
+  #demandes-body{padding:0 12px 20px}
+}
+
+/* ─── Chips de filtre (motif proche pal-chip, sans importer sources.css) ── */
+.dem-chips{display:flex; gap:7px; overflow-x:auto; padding-bottom:2px}
+.dem-chip{
+  flex:none; padding:6px 11px; border-radius:8px; border:1px solid var(--line);
+  background:var(--surface); color:var(--ink-2); font-size:.8125rem; font-family:var(--sans);
+  white-space:nowrap; cursor:pointer;
+}
+.dem-chip:hover{border-color:var(--line-strong)}
+.dem-chip.actif{background:var(--blue-softer); border-color:transparent; color:var(--blue-deep); font-weight:600}
+.dem-chip-n{font-size:.75rem; color:inherit; opacity:.75}
+
+.dem-liste{display:flex; flex-direction:column; gap:12px}
+
+/* ─── Carte de demande ──────────────────────────────────────────────────── */
+.dem-carte{
+  background:var(--surface); border:1px solid var(--line);
+  border-radius:var(--r-lg); box-shadow:var(--shadow);
+  padding:16px 17px; display:flex; flex-direction:column; gap:10px;
+}
+.dem-carte-tete{display:flex; align-items:center; gap:9px; flex-wrap:wrap}
+.dem-carte-auteur{margin-left:auto; font-size:.8125rem; color:var(--ink-3)}
+
+.dem-badge{
+  padding:3px 9px; border-radius:999px; font-size:.75rem; font-weight:600; flex:none;
+}
+.dem-badge.nouvelle{background:var(--blue-soft); color:var(--blue-deep)}
+.dem-badge.acceptee{background:var(--ok-soft); color:var(--ok)}
+.dem-badge.refusee{background:var(--red-soft); color:var(--red)}
+.dem-badge.faite{background:var(--surface-2); color:var(--ink-2)}
+
+.dem-carte-texte{
+  margin:0; font-size:1rem; line-height:1.55; color:var(--ink);
+  white-space:pre-wrap; word-break:break-word;
+}
+
+.dem-carte-page{display:flex; align-items:center; gap:9px; flex-wrap:wrap; font-size:.8125rem; color:var(--ink-3)}
+.dem-carte-route{font-family:var(--mono); font-size:.75rem}
+.dem-carte-aller{
+  margin-left:auto; padding:4px 10px; border-radius:var(--r-sm); border:1px solid var(--line);
+  background:none; color:var(--blue); font-size:.8125rem; font-weight:600; cursor:pointer;
+}
+.dem-carte-aller:hover{border-color:var(--blue); background:var(--blue-softer)}
+.dem-carte-aller:disabled{opacity:.45; cursor:not-allowed}
+
+/* ─── Contexte technique (replié) ───────────────────────────────────────── */
+.dems-ctx{border-top:1px solid var(--line-soft); padding-top:8px}
+.dems-ctx summary{
+  cursor:pointer; font-size:.8125rem; font-weight:600; color:var(--ink-2);
+  list-style:none;
+}
+.dems-ctx summary::-webkit-details-marker{display:none}
+.dems-ctx summary::before{content:'▸ '; color:var(--ink-3)}
+.dems-ctx[open] summary::before{content:'▾ '}
+.dems-ctx-corps{margin-top:8px; display:flex; flex-direction:column; gap:5px; font-size:.8125rem; color:var(--ink-2)}
+.dems-ctx-vide{color:var(--ink-3)}
+.dems-snapshot{
+  margin:6px 0 0; max-height:320px; overflow:auto;
+  background:var(--surface-2); border:1px solid var(--line); border-radius:var(--r-sm);
+  padding:9px 11px; font-family:var(--mono); font-size:.6875rem; line-height:1.5;
+  color:var(--ink-2); white-space:pre-wrap; word-break:break-word;
+}
+.dems-snapshot-vide{margin:6px 0 0; font-size:.75rem; color:var(--ink-3)}
+
+/* ─── Réponse de l'admin ────────────────────────────────────────────────── */
+.dem-reponse{
+  background:var(--surface-2); border-radius:var(--r-md); padding:11px 13px;
+  display:flex; flex-direction:column; gap:4px;
+}
+.dem-reponse-tete{font-size:.75rem; font-weight:600; color:var(--ink-3); text-transform:uppercase; letter-spacing:.04em}
+.dem-reponse-texte{margin:0; font-size:.9375rem; line-height:1.5; color:var(--ink); white-space:pre-wrap}
+.dem-reponse-date{font-size:.75rem; color:var(--ink-3)}
+
+/* ─── Actions (canWrite uniquement) ─────────────────────────────────────── */
+.dem-actions{display:flex; flex-direction:column; gap:8px; border-top:1px solid var(--line-soft); padding-top:10px}
+.dem-actions-boutons{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.dem-carte-repondre{
+  margin-left:auto; background:none; border:0; color:var(--blue);
+  font-size:.8125rem; font-weight:600; cursor:pointer; padding:6px 4px;
+}
+.dem-carte-repondre:hover{color:var(--blue-deep)}
+
+.dem-carte-reponse-zone{display:none; position:relative}
+.dem-carte-reponse-zone.open{display:block}
+.dem-carte-reponse-txt{
+  width:100%; box-sizing:border-box; min-height:70px;
+  font:inherit; font-family:var(--sans); color:var(--ink);
+  border:1px solid var(--line); border-radius:var(--r-sm);
+  padding:9px 44px 9px 11px; resize:vertical; background:var(--surface);
+}
+.dem-carte-reponse-txt:focus{outline:none; border-color:var(--blue)}
+.dem-carte-reponse-zone .mic-btn{
+  position:absolute; right:8px; bottom:8px; width:28px; height:28px;
+  display:inline-flex; align-items:center; justify-content:center;
+  border:1px solid var(--line); border-radius:50%;
+  background:var(--surface); color:var(--ink-2); font-size:.875rem; line-height:1; cursor:pointer;
+}
+.dem-carte-reponse-zone .mic-btn:hover{background:var(--blue-softer); border-color:var(--blue)}
+.dem-carte-reponse-zone .mic-btn.recording{background:var(--red-soft); border-color:var(--red)}
