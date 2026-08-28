@@ -5,6 +5,7 @@ import { esc, toast } from '../../core/dom.js';
 import { S } from '../../core/state.js';
 import { fmtDate } from '../../core/format.js';
 import { sb, logEvent, enqueueJobs } from '../../core/data.js';
+import { enregistrer } from '../../core/feedback.js';
 import { loadViewCss } from '../../core/css.js';
 import { micButton } from '../mic.js';
 import { O, hooks, estValide, toggleValidation } from './etat.js';
@@ -155,10 +156,10 @@ async function saveIa() {
   const verrous = new Set(Array.isArray(o.verrous_humains) ? o.verrous_humains : []);
   verrous.add('description');
 
-  const { error } = await sb.from('objets')
+  const ok = await enregistrer(() => sb.from('objets')
     .update({ description: texte, verrous_humains: [...verrous] })
-    .eq('owner_id', S.tenantId).eq('id', o.id);
-  if (error) { toast(error.message, true); return; }
+    .eq('owner_id', S.tenantId).eq('id', o.id), 'Description');
+  if (!ok) return;
 
   o.description = texte;
   o.verrous_humains = [...verrous];
@@ -174,10 +175,10 @@ async function saveMaison() {
   const avant = o.commentaire;
   if (avant === texte) { editMaison = false; hooks.rendre?.(); return; }
 
-  const { error } = await sb.from('objets')
+  const ok = await enregistrer(() => sb.from('objets')
     .update({ commentaire: texte })
-    .eq('owner_id', S.tenantId).eq('id', o.id);
-  if (error) { toast(error.message, true); return; }
+    .eq('owner_id', S.tenantId).eq('id', o.id), 'Note de la maison');
+  if (!ok) return;
 
   o.commentaire = texte;
   logEvent('note_maison', { n: texte.length });

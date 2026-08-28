@@ -10,9 +10,9 @@
 // branche ses fonctions de rechargement/rendu/navigation ; les sous-écrans les
 // appellent sans importer index.js.
 // ═══════════════════════════════════════════════════════════════════════════
-import { toast } from '../../core/dom.js';
 import { S } from '../../core/state.js';
 import { sb, logEvent } from '../../core/data.js';
+import { enregistrer } from '../../core/feedback.js';
 import { marquerUtile } from '../../core/consultations.js';
 
 export const O = {
@@ -65,8 +65,9 @@ export async function toggleValidation(champ) {
   } else {
     vc[champ] = { par: qui, at: new Date().toISOString() };
   }
-  const { error } = await sb.from('objets').update({ validation_champs: vc }).eq('owner_id', S.tenantId).eq('id', o.id);
-  if (error) { toast?.(error.message, true); return; }
+  const label = actuel ? 'Validation retirée' : 'Champ validé';
+  const ok = await enregistrer(() => sb.from('objets').update({ validation_champs: vc }).eq('owner_id', S.tenantId).eq('id', o.id), label);
+  if (!ok) return;
   o.validation_champs = vc;
   logEvent('validation_champ', { champ, valide: !actuel });
   if (champ === 'auteur' && !actuel && o.auteur) {

@@ -5,6 +5,7 @@ import { esc, toast } from '../../core/dom.js';
 import { S } from '../../core/state.js';
 import { fmtNum, fmtDate } from '../../core/format.js';
 import { sb, logEvent } from '../../core/data.js';
+import { enregistrer } from '../../core/feedback.js';
 import { marquerUtile } from '../../core/consultations.js';
 import { loadViewCss } from '../../core/css.js';
 import { O, hooks, pastilleHtml } from './etat.js';
@@ -178,10 +179,11 @@ async function onForkChange(e, champ) {
   verrous.add('prix_bas');
   verrous.add('prix_haut');
 
-  const { error } = await sb.from('objets')
+  const label = champ === 'prix_bas' ? 'Prix bas' : 'Prix haut';
+  const ok = await enregistrer(() => sb.from('objets')
     .update({ [champ]: valeur, verrous_humains: [...verrous] })
-    .eq('owner_id', S.tenantId).eq('id', o.id);
-  if (error) { toast(error.message, true); return; }
+    .eq('owner_id', S.tenantId).eq('id', o.id), label);
+  if (!ok) return;
 
   o[champ] = valeur;
   o.verrous_humains = [...verrous];
@@ -228,10 +230,10 @@ async function onClick(e) {
 
 async function recalculer() {
   const o = S.currentObjet;
-  const { error } = await sb.from('objets')
+  const ok = await enregistrer(() => sb.from('objets')
     .update({ valo_due: true, tentative_valo_at: null })
-    .eq('owner_id', S.tenantId).eq('id', o.id);
-  if (error) { toast(error.message, true); return; }
+    .eq('owner_id', S.tenantId).eq('id', o.id), 'Relance de valorisation', { silencieuxSiOk: true });
+  if (!ok) return;
   o.valo_due = true;
   o.tentative_valo_at = null;
   logEvent('relance', { type: 'valorisation' });
@@ -241,10 +243,11 @@ async function recalculer() {
 
 async function setExclu(cid, exclu, raison) {
   const o = S.currentObjet;
-  const { error } = await sb.from('comparables')
+  const label = exclu ? 'Comparable écarté' : 'Comparable rétabli';
+  const ok = await enregistrer(() => sb.from('comparables')
     .update({ exclu, raison_exclusion: raison })
-    .eq('owner_id', S.tenantId).eq('objet_id', o.id).eq('id', cid);
-  if (error) { toast(error.message, true); return; }
+    .eq('owner_id', S.tenantId).eq('objet_id', o.id).eq('id', cid), label);
+  if (!ok) return;
   const c = O.comps.find(x => x.id === cid);
   if (c) {
     c.exclu = exclu;

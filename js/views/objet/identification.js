@@ -5,10 +5,10 @@
 // ═══════════════════════════════════════════════════════════════════════════
 import { loadViewCss } from '../../core/css.js';
 await loadViewCss('objet-identification');
-
 import { esc, toast } from '../../core/dom.js';
 import { S } from '../../core/state.js';
 import { sb, logEvent } from '../../core/data.js';
+import { enregistrer } from '../../core/feedback.js';
 import { catCanon } from '../../core/format.js';
 import { SOUS, CATS_CANON, CATS_PROMPT } from '../../core/taxonomie.js';
 import { openCamera } from '../../core/camera.js';
@@ -387,8 +387,8 @@ async function toggleAuteurInconnu(el, checked) {
     delete vc.auteur;
     if (inp) inp.disabled = false;
   }
-  const { error } = await sb.from('objets').update(updates).eq('owner_id', S.tenantId).eq('id', o.id);
-  if (error) { toast(error.message, true); return; }
+  const ok = await enregistrer(() => sb.from('objets').update(updates).eq('owner_id', S.tenantId).eq('id', o.id), checked ? 'Auteur inconnu' : 'Auteur à renseigner');
+  if (!ok) return;
   Object.assign(o, updates);
   logEvent('validation_champ', { champ: 'auteur', valide: checked, inconnu: true });
   hooks.rendre?.();
