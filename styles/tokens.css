@@ -22,8 +22,11 @@
   --warn-dot:#D9A227;    /* disque « action en attente » (!) */
   --ink-faint:#69738C;   /* méta 4e niveau (sous-vignettes, tags) */
   --mono:ui-monospace,"SF Mono","Cascadia Mono",Consolas,monospace;
-  --serif:"Fraunces",Georgia,serif;
-  --sans:"Inter",system-ui,-apple-system,sans-serif;
+  /* Titres = Spectral (maquettes D-056/D-058/D-060). Poids disponibles : 400/500/600 — pas de 700. */
+  --serif:"Spectral",Georgia,serif;
+  /* Fraunces n'est PLUS une police de titre : elle ne sert QUE au lockup du logo (.logo-name). */
+  --display:"Fraunces",Georgia,serif;
+  --sans:"Libre Franklin",system-ui,-apple-system,sans-serif;
   /* HO-052 : hero artiste */
   --ink-hero:#1B2A54;
   --ink-hero-text:#9FB2DF;

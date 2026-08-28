@@ -155,7 +155,7 @@
 .sec-title::after{content:"";flex:1;height:1px;background:var(--line)}
 .sec-title .btn.small{margin-left:auto}
 
-h1.obj-title{font-family:var(--serif);font-size:1.875rem;font-weight:700;line-height:1.2;letter-spacing:.005em}
+h1.obj-title{font-family:var(--serif);font-size:1.875rem;font-weight:600;line-height:1.2;letter-spacing:.005em}
 
 /* Boîtes à tiroir : sections repliables pour gagner en hauteur */
 details.acc>summary{list-style:none;cursor:pointer;user-select:none}

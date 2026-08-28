@@ -14,7 +14,7 @@ header{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:
 .header-in{max-width:1240px;margin:0 auto;padding:0 24px;min-height:56px;display:flex;align-items:center;gap:16px}
 .logo{display:flex;align-items:center;gap:11px;cursor:pointer}
 .logo-mark{width:48px;height:48px;flex-shrink:0;display:block}
-.logo-name{font-family:var(--serif);font-weight:700;font-size:1.375rem;letter-spacing:.01em;display:flex;align-items:baseline}
+.logo-name{font-family:var(--display);font-weight:700;font-size:1.375rem;letter-spacing:.01em;display:flex;align-items:baseline}
 .logo-name .w-i{color:var(--blue)}
 /* Rébus R2 : le monogramme ⌈ART⌋ remplace les lettres du milieu (I ⌈ART⌋ cane) */
 .logo-name .logo-glyph{height:.72em;width:auto;align-self:center;margin:0 .04em;display:block}
