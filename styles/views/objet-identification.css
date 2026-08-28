@@ -155,6 +155,7 @@ select.obj-input{
   display:flex;
   flex-direction:column;
 }
+.obj-id-suggestions[hidden]{ display:none; }
 .obj-id-suggest-header{
   padding:6px 9px;
   font-size:.5625rem;

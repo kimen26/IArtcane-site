@@ -16,7 +16,9 @@ export const KINDS = [
   { key: 'detail', label: 'détail décor' },
   { key: 'defaut', label: 'défaut' },
   { key: 'echelle', label: 'échelle' },
+  { key: 'infos', label: 'infos' },
   { key: 'autre', label: 'autre' },
+  { key: 'sans_tag', label: '✕ pas de tag' },
 ];
 
 export function kindLabel(key) {

@@ -16,21 +16,18 @@ await loadViewCss('objet-photos');
 // ─── Constantes ─────────────────────────────────────────────────────────────
 
 const KINDS = [
-  { key: 'face', label: 'face' },
-  { key: 'profil', label: 'profil' },
-  { key: 'revers', label: 'revers' },
-  { key: 'signature', label: 'signature' },
-  { key: 'poincon', label: 'marque / poinçon' },
-  { key: 'detail', label: 'détail décor' },
-  { key: 'defaut', label: 'défaut' },
-  { key: 'echelle', label: 'échelle' },
-  { key: 'autre', label: 'autre' },
+  { key: 'face', label: 'face' }, { key: 'profil', label: 'profil' },
+  { key: 'revers', label: 'revers' }, { key: 'signature', label: 'signature' },
+  { key: 'poincon', label: 'marque / poinçon' }, { key: 'detail', label: 'détail décor' },
+  { key: 'defaut', label: 'défaut' }, { key: 'echelle', label: 'échelle' },
+  { key: 'infos', label: 'infos' }, { key: 'autre', label: 'autre' },
+  { key: 'sans_tag', label: '✕ pas de tag' },
 ];
 
 const VUE_LABELS = {
   face: 'face', profil: 'profil', revers: 'revers', signature: 'signature',
   poincon: 'marque / poinçon', detail: 'détail décor', defaut: 'défaut',
-  echelle: 'échelle', dos: 'au dos', echelle_regle: 'règle / échelle',
+  echelle: 'échelle', infos: 'infos', dos: 'au dos', echelle_regle: 'règle / échelle',
 };
 
 let currentIndex = 0;
