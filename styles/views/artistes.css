@@ -1,30 +1,205 @@
-/* ─── Vue Artistes ────────────────────────────────────────── */
-/* Artistes : cartes sans photo, extrait de bio sur 3 lignes */
+/* ─── Vue Artistes (HO-052) — hub fiche artiste 3a + liste ────────────────── */
+
+/* Liste : extrait de bio tronqué sur 3 lignes (conservé de l'ancienne vue) */
 .art-extrait{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-/* Fiche artiste : en-tête structuré (nom + badges méta, référentiel §4.4) */
-.art-head{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
-.art-head .obj-title{margin-bottom:0}
-.art-badges{display:flex;gap:8px;flex-wrap:wrap}
-/* Galerie « œuvres » : miniatures cliquables en rangée scrollable */
-.art-gal{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;margin-bottom:20px;scrollbar-width:thin}
-.art-gal::-webkit-scrollbar{height:4px}
-.art-gal::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
-.art-gal-item{width:96px;height:96px;flex-shrink:0;padding:0;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--line);background:linear-gradient(135deg,#3D5A96,#22355E);cursor:pointer;position:relative}
-.art-gal-item:hover{border-color:var(--blue)}
-.art-gal-item img{width:100%;height:100%;object-fit:cover;display:block}
-.art-gal-del{position:absolute;top:3px;right:3px;width:22px;height:22px;border:none;border-radius:50%;background:rgba(13,27,62,.75);color:#fff;font-size:11px;line-height:1;cursor:pointer;display:grid;place-items:center}
-.art-gal-del:hover{background:var(--red)}
-.art-gal-files{margin-bottom:0}
-body.role-lecteur .art-gal-del{display:none}
-/* Note humaine (HO-029) */
-.human-note{font-size:13.5px;color:var(--ink-2);line-height:1.4;padding:8px 10px;background:var(--blue-softer);border-radius:var(--r-sm);border-left:3px solid var(--blue)}
-/* Dictée micro (HO-029) — copie locale car capture.css n'est pas chargée sur cette vue */
-.mic-wrap{display:flex;gap:8px;align-items:flex-start;width:100%}
-.mic-wrap textarea{flex:1;min-width:0}
-.mic-btn{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;min-width:44px;border:1px solid var(--line-strong);border-radius:var(--r-md);background:var(--surface);font-size:20px;line-height:1;cursor:pointer;transition:background .12s,border-color .12s,transform .12s}
-.mic-btn:hover{background:var(--blue-softer);border-color:var(--blue)}
-.mic-btn:disabled{opacity:.55;cursor:not-allowed;background:var(--surface);border-color:var(--line)}
-.mic-btn.recording{position:relative;background:var(--red-soft);border-color:var(--red);animation:mic-pulse 1.2s ease-in-out infinite}
-.mic-btn.recording::after{content:'';position:absolute;inset:-4px;border-radius:var(--r-md);border:2px solid var(--red);opacity:.5;animation:mic-ring 1.2s ease-out infinite}
-@keyframes mic-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
-@keyframes mic-ring{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.25);opacity:0}}
+
+/* Corps de la fiche artiste : empilement des 11 blocs */
+.art-body{padding:12px;padding-bottom:90px;display:flex;flex-direction:column;gap:10px;background:var(--bg);min-height:100%}
+
+/* Navigation interne */
+.art-nav{display:flex;align-items:center;gap:10px;padding:9px 0}
+.art-nav-back{background:none;border:none;padding:0;font-family:var(--sans);font-size:12.5px;color:var(--ink-2);cursor:pointer}
+.art-nav-back:hover{color:var(--blue)}
+.art-nav-meta{margin-left:auto;font-size:11px;color:var(--ink-3)}
+
+/* En-têtes de section réutilisables */
+.art-section-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.art-section-head>span:first-child{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.art-section-meta{margin-left:auto;font-size:10px;color:var(--ink-3)}
+
+/* ─── 1. Hero identité ────────────────────────────────────────────────────── */
+.art-hero{background:var(--ink);border-radius:14px;padding:13px;display:flex;gap:12px;align-items:flex-start}
+.art-hero-portrait{flex:0 0 auto;width:74px;height:88px;border-radius:10px;overflow:hidden;background:var(--ink-hero);cursor:pointer}
+.art-hero-portrait img{width:100%;height:100%;object-fit:cover;display:block}
+.art-hero-portrait.placeholder{background-color:var(--ink-hero);background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.07) 0 6px,transparent 6px 12px);display:flex;align-items:flex-end;padding:6px;box-sizing:border-box;cursor:default}
+.art-hero-placeholder-label{font-family:var(--mono);font-size:7.5px;line-height:1.25;color:var(--ink-hero-text)}
+.art-hero-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.art-hero-name{margin:0;font-family:var(--serif);font-size:23px;line-height:1.1;color:#fff}
+.art-hero-meta{font-size:11.5px;color:var(--ink-hero-text)}
+.art-hero-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
+.art-hero-chip{background:rgba(255,255,255,.12);color:var(--ink-hero-text);border-radius:20px;padding:3px 9px;font-size:10px;font-weight:600}
+
+/* ─── 2. Cote du segment ──────────────────────────────────────────────────── */
+.art-cote{display:flex;gap:8px;align-items:stretch}
+.art-cote-main{flex:3;background:var(--ruban);border-radius:var(--r-md);padding:9px 12px;display:flex;flex-direction:column;gap:2px}
+.art-cote-label{font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.75)}
+.art-cote-value{font-family:var(--serif);font-size:19px;color:#fff;line-height:1.15}
+.art-cote-note{font-size:9.5px;color:rgba(255,255,255,.75)}
+.art-cote-trend{flex:1;background:var(--green-soft);border-radius:var(--r-md);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.art-cote-trend-arrow{font-size:15px;color:var(--green);line-height:1}
+.art-cote-trend-word{font-size:10px;font-weight:700;color:var(--green)}
+.art-cote-trend-seg{font-size:9px;color:var(--green)}
+
+/* ─── 3. Identité ─────────────────────────────────────────────────────────── */
+.art-identite{background:var(--surface);border-radius:var(--r-md);padding:4px 12px 6px;box-shadow:var(--shadow)}
+.art-id-row{display:flex;align-items:baseline;gap:10px;padding:9px 0;border-bottom:1px solid var(--line-soft)}
+.art-id-row:last-child{border-bottom:none}
+.art-id-label{flex:0 0 auto;width:74px;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.art-id-value{flex:1;min-width:0;font-size:12.5px;line-height:1.4;color:var(--ink)}
+.art-id-chips{display:flex;flex-wrap:wrap;gap:5px}
+.art-id-chip{background:var(--surface-2);color:var(--ink-2);border-radius:20px;padding:3px 9px;font-size:10.5px}
+.art-id-chip.active{background:var(--blue-soft);color:var(--blue)}
+
+/* ─── 4. Signature de référence ───────────────────────────────────────────── */
+.art-signature{background:var(--surface);border-radius:var(--r-md);padding:11px 12px 12px;box-shadow:var(--shadow)}
+.art-signature-head{display:flex;align-items:center;margin-bottom:8px}
+.art-signature-head>span:first-child{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.art-signature-hint{margin-left:auto;font-size:10px;color:var(--ink-3)}
+.art-signature-body{display:flex;gap:10px}
+.art-signature-img{flex:0 0 auto;width:78px;height:78px;border-radius:8px;overflow:hidden;background:var(--surface-2);cursor:pointer}
+.art-signature-img img{width:100%;height:100%;object-fit:cover;display:block}
+.art-signature-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.art-signature-trans{font-family:var(--mono);font-size:11px;color:var(--ink);background:var(--surface-2);border-radius:6px;padding:5px 7px}
+.art-signature-var{font-size:10.5px;line-height:1.45;color:var(--ink-faint)}
+
+/* ─── 5. Parcours ─────────────────────────────────────────────────────────── */
+.art-parcours{background:var(--surface);border-radius:var(--r-md);padding:12px 12px 8px;box-shadow:var(--shadow)}
+.art-bio-body{font-family:var(--serif);font-size:13.5px;line-height:1.62;color:var(--ink)}
+.art-bio-body p{margin:0 0 .75em}
+.art-bio-body p:last-child{margin-bottom:0}
+.art-frise{display:flex;flex-direction:column;margin-top:13px}
+.art-frise-item{display:flex;gap:10px}
+.art-frise-year{flex:0 0 auto;width:34px;font-family:var(--mono);font-size:10.5px;color:var(--blue);padding-top:1px}
+.art-frise-year.last{color:var(--ink-3)}
+.art-frise-dot{flex:0 0 auto;display:flex;flex-direction:column;align-items:center}
+.art-frise-dot::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--blue);margin-top:4px}
+.art-frise-dot.last::before{background:var(--line-strong)}
+.art-frise-dot::after{content:'';flex:1;width:1px;background:var(--line);min-height:11px}
+.art-frise-dot:last-child::after{display:none}
+.art-frise-text{flex:1;min-width:0;padding-bottom:11px;font-size:12px;line-height:1.4;color:var(--ink)}
+.art-frise-text.last{color:var(--ink-2)}
+
+/* ─── 6. Ventes vérifiées ──────────────────────────────────────────────────── */
+.art-ventes{background:var(--surface);border-radius:var(--r-md);overflow:hidden;box-shadow:var(--shadow)}
+.art-vente-row{display:flex;align-items:center;gap:9px;padding:9px 12px;border-bottom:1px solid var(--line-soft)}
+.art-vente-row:last-child{border-bottom:none}
+.art-vente-row.highlight{background:var(--blue-softer)}
+.art-vente-main{flex:1;min-width:0}
+.art-vente-title{font-size:11.5px;font-weight:600;line-height:1.35;color:var(--ink)}
+.art-vente-meta{font-size:10px;color:var(--ink-3)}
+.art-vente-row.highlight .art-vente-meta{color:var(--blue)}
+.art-vente-price{flex:0 0 auto;text-align:right}
+.art-vente-price>div:first-child{font-family:var(--serif);font-size:14px;color:var(--ink)}
+.art-vente-est{font-size:9px;color:var(--ink-3)}
+.art-ventes-more{border-top:1px solid var(--line-soft)}
+
+/* ─── 7. Contrefaçons & confusions ─────────────────────────────────────────── */
+.art-alertes{background:var(--surface);border:1px solid var(--warn-line);border-radius:var(--r-md);padding:10px 11px;display:flex;gap:9px;align-items:flex-start;box-shadow:var(--shadow)}
+.art-alertes-puce{flex:0 0 auto;width:7px;height:7px;border-radius:50%;background:var(--warn-dot);margin-top:4px}
+.art-alertes-body{flex:1;min-width:0}
+.art-alertes-head{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.art-alertes-head>span:first-child{font-size:11.5px;font-weight:700;color:var(--ink)}
+.art-alertes-pill{margin-left:auto;white-space:nowrap;background:var(--amber-soft);color:var(--amber);border-radius:20px;padding:1px 7px;font-size:9px;font-weight:700}
+.art-alerte-text{font-size:11px;line-height:1.45;color:var(--amber)}
+
+/* ─── 8. Chez toi ───────────────────────────────────────────────────────────── */
+.art-cheztoi{background:var(--surface);border-radius:var(--r-md);padding:11px 12px 12px;box-shadow:var(--shadow)}
+.art-chez-objets{display:flex;gap:8px;align-items:stretch}
+.art-chez-obj{flex:1;cursor:pointer}
+.art-chez-obj img{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;background:var(--surface-2)}
+.art-chez-noimg{display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:1;border-radius:8px;background:var(--surface-2);font-size:24px;color:var(--ink-3)}
+.art-chez-obj-id{font-size:10px;color:var(--ink-faint);margin-top:3px}
+.art-chez-estim{flex:1;display:flex;flex-direction:column;justify-content:center;gap:3px;padding-left:2px}
+.art-chez-estim-value{font-family:var(--serif);font-size:15px;color:var(--ink)}
+.art-chez-estim-label{font-size:10px;color:var(--ink-3);line-height:1.35}
+.art-chez-sigs{border-top:1px solid var(--line-soft);margin-top:11px;padding-top:10px}
+.art-chez-sigs-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.art-chez-sigs-head>span:first-child{font-size:10.5px;font-weight:700;color:var(--ink)}
+.art-chez-sigs-compare{margin-left:auto;white-space:nowrap;font-size:10.5px;font-weight:700;color:var(--blue);background:none;border:none;padding:0;cursor:pointer}
+.art-chez-sigs-compare:hover{color:var(--blue-deep)}
+.art-chez-siggrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.art-chez-sigcase{cursor:pointer}
+.art-chez-sigcase img{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:7px;background:var(--surface-2)}
+.art-chez-sigcode{font-family:var(--mono);font-size:8.5px;color:var(--ink-2);margin-top:3px;line-height:1.3}
+.art-chez-relever-wrap{position:relative}
+.art-chez-relever{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;aspect-ratio:1;width:100%;border:1px dashed var(--line-strong);border-radius:7px;background:none;color:var(--blue);cursor:pointer}
+.art-chez-relever:hover{background:var(--blue-softer)}
+.art-chez-relever-menu{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);box-shadow:var(--shadow-hover);z-index:5;display:flex;flex-direction:column;overflow:hidden}
+.art-chez-relever-menu.hidden{display:none}
+.art-chez-relever-menu button{background:none;border:none;border-bottom:1px solid var(--line-soft);padding:8px 10px;text-align:left;font-size:11px;color:var(--ink);cursor:pointer}
+.art-chez-relever-menu button:last-child{border-bottom:none}
+.art-chez-relever-menu button:hover{background:var(--blue-softer);color:var(--blue)}
+
+/* ─── 9. Galerie externe ──────────────────────────────────────────────────── */
+.art-externe{background:var(--surface);border-radius:var(--r-md);padding:11px 12px 12px;box-shadow:var(--shadow)}
+.art-ext-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.art-ext-item{cursor:pointer}
+.art-ext-item img{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:7px;background:var(--surface-2)}
+.art-ext-caption{font-size:9.5px;color:var(--ink-faint);margin-top:3px;line-height:1.3}
+
+/* ─── 10. Presse & références ─────────────────────────────────────────────── */
+.art-presse{background:var(--surface);border-radius:var(--r-md);overflow:hidden;box-shadow:var(--shadow)}
+.art-presse-row{display:flex;align-items:center;gap:9px;padding:9px 12px;border-bottom:1px solid var(--line-soft)}
+.art-presse-row:last-child{border-bottom:none}
+.art-presse-main{flex:1;min-width:0}
+.art-presse-title{font-size:11.5px;font-weight:600;line-height:1.35;color:var(--ink)}
+.art-presse-meta{font-size:10px;color:var(--ink-3)}
+.art-presse-link{flex:0 0 auto;font-size:11px;color:var(--blue);text-decoration:none}
+.art-presse-link:hover{color:var(--blue-deep)}
+.art-presse-more{border-top:1px solid var(--line-soft)}
+
+/* ─── 11. Notes & journal ─────────────────────────────────────────────────── */
+.art-journal{background:var(--surface);border-radius:var(--r-md);padding:11px 12px 12px;box-shadow:var(--shadow)}
+.art-notes{border-left:2px solid var(--line);padding-left:10px;display:flex;flex-direction:column;gap:10px}
+.art-note{}
+.art-note-head{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.art-note-tag{font-size:9.5px;font-weight:700;border-radius:20px;padding:2px 8px}
+.art-note-tag.human{background:var(--blue-soft);color:var(--blue)}
+.art-note-tag.ia{background:var(--surface-2);color:var(--ink-3)}
+.art-note-date{font-size:9.5px;color:var(--ink-3)}
+.art-note-text{font-size:12px;line-height:1.5;color:var(--ink-2)}
+.art-note-photos{display:flex;gap:6px;margin-top:7px}
+.art-note-thumb{padding:0;border:none;background:none;cursor:pointer}
+.art-note-thumb img{width:46px;height:46px;border-radius:7px;object-fit:cover;background:var(--surface-2)}
+.art-empty-note{font-size:12px;color:var(--ink-3);font-style:italic}
+.art-composer{border:1px solid var(--line-strong);border-radius:10px;padding:9px 10px;display:flex;align-items:flex-start;gap:9px;margin-top:11px}
+.art-composer.focused{border-color:var(--blue)}
+.art-composer-field{flex:1}
+.art-composer-field textarea{width:100%;border:none;background:transparent;resize:none;font-family:var(--sans);font-size:12px;color:var(--ink);outline:none;padding:0}
+.art-composer-field textarea::placeholder{color:var(--ink-3)}
+.art-composer-photo,.art-composer-add{flex:0 0 auto;width:32px;height:32px;border-radius:50%;border:none;background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer}
+.art-composer-photo:hover{background:var(--blue-soft);color:var(--blue)}
+.art-composer-add{width:auto;border-radius:var(--r-sm);padding:0 12px;font-size:11px;font-weight:700;color:var(--surface);background:var(--blue)}
+.art-composer-add:hover{background:var(--blue-deep)}
+.art-pending-photos{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.art-pending-thumb{width:46px;height:46px;border-radius:7px;overflow:hidden;background:var(--surface-2)}
+.art-pending-thumb img{width:100%;height:100%;object-fit:cover}
+.art-pending-loading{background:var(--surface-2);animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+
+/* Bouton micro injecté par mic.js dans le composeur */
+.art-composer .mic-btn{flex:0 0 auto;width:32px;height:32px;border-radius:50%}
+
+/* ─── Section objets de la collection (cible de la barre basse) ─────────────── */
+.art-objets{padding-top:6px}
+.art-objets .grid{margin-top:8px}
+.art-sec-title{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.art-empty{font-size:12px;color:var(--ink-3);padding:8px 0}
+
+/* ─── Barre basse fixe ──────────────────────────────────────────────────────── */
+.art-bar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:11px 13px;display:flex;gap:8px;box-shadow:0 -3px 12px rgba(20,30,55,.07);z-index:10}
+.art-bar-primary{flex:1;text-align:center;background:var(--blue);color:#fff;border-radius:11px;border:none;padding:12px 0;font-size:13.5px;font-weight:700;cursor:pointer}
+.art-bar-primary:hover{background:var(--blue-deep)}
+.art-bar-outline{border:1px solid var(--line-strong);border-radius:11px;background:none;padding:12px 11px;font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer}
+.art-bar-outline:hover{border-color:var(--blue);color:var(--blue)}
+
+/* Accordéons (details) */
+.art-bio.acc summary{display:flex;align-items:center;justify-content:space-between;list-style:none;cursor:pointer;font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.art-bio.acc summary::-webkit-details-marker{display:none}
+.art-ventes-more summary,.art-presse-more summary{display:flex;align-items:center;justify-content:center;gap:5px;padding:9px 0 10px;font-size:10.5px;color:var(--ink-3);cursor:pointer}
+.art-ventes-more[open] summary,.art-presse-more[open] summary{display:none}
+
+/* Lecteur : masquer les actions d'écriture */
+body.role-lecteur .art-composer,
+body.role-lecteur .art-bar-outline,
+body.role-lecteur .art-chez-relever{display:none}
