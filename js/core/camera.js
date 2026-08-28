@@ -16,6 +16,7 @@
 import { $, toast } from './dom.js';
 import { S } from './state.js';
 import { logEvent, uploadPhotosFor } from './data.js';
+import { withBusy } from './feedback.js';
 
 let camStream = null;
 let camTarget = 'capture'; // 'capture' → addFiles (nouvel objet) · 'objet' → upload direct sur S.currentObjet
@@ -41,7 +42,6 @@ export async function openCamera(target = 'capture', h = {}) {
   }
   $('#camera-video').srcObject = camStream;
   $('#camera-modal').classList.remove('hidden');
-  document.body.classList.add('cam-open'); // toasts remontés en haut (sinon masqués par l'obturateur)
 }
 
 export function closeCamera() {
@@ -49,7 +49,6 @@ export function closeCamera() {
   camStream = null;
   $('#camera-video').srcObject = null;
   $('#camera-modal').classList.add('hidden');
-  document.body.classList.remove('cam-open');
   // Mode fiche objet : la vue appelante décide quoi faire des clichés uploadés
   // (recharger la fiche, relancer l'analyse) via le hook onClose.
   hooks.onClose?.(camUploaded);
@@ -74,7 +73,11 @@ $('#camera-shot').addEventListener('click', () => {
     if (!b) { toast('Capture impossible', true); return; }
     const file = new File([b], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
     if (camTarget === 'objet' && S.currentObjet) {
-      const { done, failed } = await uploadPhotosFor(S.currentObjet.id, [file]);
+      const { valeur } = await withBusy(
+        () => uploadPhotosFor(S.currentObjet.id, [file]),
+        { titre: 'Envoi de la photo…' },
+      );
+      const { done, failed } = valeur ?? { done: 0, failed: [] };
       if (done > 0) { camUploaded += done; logEvent('photo_ajoutee', { n: done, via: 'camera' }); toast('Photo ajoutée à la fiche — tu peux enchaîner ou Terminer'); }
       else if (failed.length) { toast(`Photo non envoyée (${failed[0].reason}) — réessaie`, true); }
     } else {

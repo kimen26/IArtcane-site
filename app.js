@@ -9,6 +9,7 @@ import { $, $$, esc, toast } from './js/core/dom.js';
 import { S, canWrite } from './js/core/state.js';
 import { catCanon, catEmoji } from './js/core/format.js';
 import { sb } from './js/core/data.js';
+import { withBusy } from './js/core/feedback.js';
 
 // ─── Service worker (D-013) : shell offline + réception « Partager avec » ───
 // http(s) uniquement (pas de SW en file://) ; échec silencieux — l'app marche sans.
@@ -143,13 +144,9 @@ $('#login-email').value = localStorage.getItem('iartcane-login-email') ?? '';
 $('#login-btn').addEventListener('click', async () => {
   const email = $('#login-email').value.trim();
   if (!email) { $('#login-email').focus(); return; }
-  const btn = $('#login-btn');
-  btn.disabled = true;
-  const { error } = await sb.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: location.origin + location.pathname },
-  });
-  btn.disabled = false;
+  const { valeur: error } = await withBusy(() => sb.auth.signInWithOtp({
+    email, options: { emailRedirectTo: location.origin + location.pathname },
+  }).then(r => r.error), { titre: 'Envoi du lien de connexion…', annulable: false });
   if (error) {
     $('#login-msg').innerHTML = `<div class="login-err">Erreur : ${esc(error.message)}</div>`;
   } else {

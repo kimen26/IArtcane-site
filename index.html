@@ -19,9 +19,9 @@
      propre module via core/css.js → un chantier de vue ne touche plus ce fichier.
      Cache-buster ?v= : NE PAS éditer à la main — `node infra/bump-version.mjs <version>`
      écrit ici, dans js/core/version.js et dans sw.js d'un seul coup (L-013). -->
-<link rel="stylesheet" href="styles/tokens.css?v=2026-08-28q">
-<link rel="stylesheet" href="styles/base.css?v=2026-08-28q">
-<link rel="stylesheet" href="styles/components.css?v=2026-08-28q">
+<link rel="stylesheet" href="styles/tokens.css?v=2026-08-28q-ho075">
+<link rel="stylesheet" href="styles/base.css?v=2026-08-28q-ho075">
+<link rel="stylesheet" href="styles/components.css?v=2026-08-28q-ho075">
 </head>
 <body>
 
@@ -203,7 +203,7 @@
 
 </main>
 
-<div class="toasts" id="toasts"></div>
+<div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
 
 <!-- Caméra en direct (getUserMedia) : la page reste au premier plan, contrairement
      à l'input capture="environment" qui passe la main à l'app photo du téléphone
@@ -256,7 +256,7 @@
   </div>
 </div>
 
-<script src="config.js?v=2026-08-28q"></script>
-<script type="module" src="app.js?v=2026-08-28q"></script>
+<script src="config.js?v=2026-08-28q-ho075"></script>
+<script type="module" src="app.js?v=2026-08-28q-ho075"></script>
 </body>
 </html>

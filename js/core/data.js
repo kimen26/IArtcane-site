@@ -2,7 +2,7 @@
 // IArtcane — core/data.js : client Supabase + accès données partagés (D-039)
 // ═══════════════════════════════════════════════════════════════════════════
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import { toast } from './dom.js';
+import { toast, enregistrer } from './feedback.js';
 import { S, canWrite } from './state.js';
 import { isVideo } from './format.js';
 
@@ -104,7 +104,7 @@ export async function lancerRecherches(oid, { force = false } = {}) {
     // Abort = dépassement du plafond, pas une panne réseau : message distinct
     // pour que l'utilisateur comprenne que la recherche continue en file.
     if (e?.name === 'AbortError') {
-      toast('Recherche trop longue — elle repart en file, la fiche se complétera plus tard.', true);
+      toast('Recherche trop longue — elle repart en file, la fiche se complétera plus tard.');
       return { ok: false, timeout: true };
     }
     toast(`Recherches injoignables : ${e.message ?? e}`, true);
@@ -123,8 +123,12 @@ export async function lancerRecherches(oid, { force = false } = {}) {
 export async function purgeConsigne(o, oid) {
   if (!o.consigne_humain) return;
   const avant = o.consigne_humain;
-  const { error } = await sb.from('objets').update({ consigne_humain: null }).eq('owner_id', S.tenantId).eq('id', oid);
-  if (error) { toast(error.message, true); return; }
+  const ok = await enregistrer(
+    () => sb.from('objets').update({ consigne_humain: null }).eq('owner_id', S.tenantId).eq('id', oid),
+    'Consigne photos',
+    { silencieuxSiOk: true },
+  );
+  if (!ok) return;
   if (S.currentObjet?.id === oid) S.currentObjet.consigne_humain = null;
   logEvent('correction', { champ: 'consigne_humain', avant: avant.slice(0, 80), apres: null }, oid);
 }
@@ -177,7 +181,7 @@ export async function uploadImageWithThumb(dossier, file) {
   const base = `${dossier}/${crypto.randomUUID()}`;
   const path = `${base}.${ext}`;
   const { error } = await sb.storage.from('photos').upload(path, file, { contentType: file.type || undefined });
-  if (error) { toast(`Upload « ${file.name} » : ${error.message}`, true); return null; }
+  if (error) { toast(`Photo « ${file.name} » non envoyée — ${error.message}`, true); return null; }
 
   const video = /^video\//.test(file.type);
   let thumbPath = null;
@@ -229,7 +233,7 @@ export async function uploadPhotosFor(oid, files, firstIsFace = false, onProgres
     if (couverture) insertPayload.couverture = true;
     const { error } = await sb.from('photos').insert(insertPayload);
     if (error) {
-      toast(error.message, true);
+      toast(`Photo « ${f.name} » non envoyée — ${error.message}`, true);
       failed.push({ item, reason: error.message });
     } else {
       done++;
@@ -244,7 +248,7 @@ export async function uploadPhotosFor(oid, files, firstIsFace = false, onProgres
 // @returns true si la ligne a bien été supprimée
 export async function deleteStoredPhoto(table, id, paths) {
   const { error } = await sb.from(table).delete().eq('owner_id', S.tenantId).eq('id', id);
-  if (error) { toast(error.message, true); return false; }
+  if (error) { toast(`Photo non supprimée — ${error.message}`, true); return false; }
   await sb.storage.from('photos').remove(paths.filter(Boolean));
   return true;
 }
