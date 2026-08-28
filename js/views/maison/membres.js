@@ -10,6 +10,7 @@
 // de maison_invitations (migration 0027) est sensible à la casse.
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, esc, toast } from '../../core/dom.js';
+import { enregistrer } from '../../core/feedback.js';
 import { S, canWrite } from '../../core/state.js';
 import { sb } from '../../core/data.js';
 import { M, hooks, normEmail } from './etat.js';
@@ -116,18 +117,18 @@ function brancher(zone) {
     sel.addEventListener('change', async () => {
       const nv = sel.value;
       if (!confirm(`Passer ${membre.nom} en rôle « ${nv} » ?`)) { hooks.rendre?.(); return; }
-      const { error } = await sb.from('collection_members').update({ role: nv })
-        .eq('owner_id', S.tenantId).eq('member_id', mid);
-      if (error) { toast(error.message, true); hooks.recharger?.(); return; }
+      const ok = await enregistrer(() => sb.from('collection_members').update({ role: nv })
+        .eq('owner_id', S.tenantId).eq('member_id', mid), 'Rôle du membre', { silencieuxSiOk: true });
+      if (!ok) { hooks.recharger?.(); return; }
       membre.role = nv;
       toast(`✓ ${membre.nom} est maintenant ${nv}`);
       hooks.rendre?.();
     });
     $('.ms-mbr-del', row).addEventListener('click', async () => {
       if (!confirm(`Retirer ${membre.nom} de la maison ?\nIl ne verra plus le catalogue.`)) return;
-      const { error } = await sb.from('collection_members').delete()
-        .eq('owner_id', S.tenantId).eq('member_id', mid);
-      if (error) { toast(error.message, true); return; }
+      const ok = await enregistrer(() => sb.from('collection_members').delete()
+        .eq('owner_id', S.tenantId).eq('member_id', mid), 'Membre retiré', { silencieuxSiOk: true });
+      if (!ok) return;
       toast(`${membre.nom} retiré de la maison`);
       hooks.recharger?.();
     });
@@ -150,9 +151,9 @@ function brancher(zone) {
     }
     // Compte pas encore créé → on matérialise l'attente.
     if (/inexistant/i.test(error.message)) {
-      const { error: eIns } = await sb.from('maison_invitations')
-        .upsert({ owner_id: S.tenantId, email, role }, { onConflict: 'owner_id,email' });
-      if (eIns) { msg.innerHTML = `<div class="ms-msg-err">${esc(eIns.message)}</div>`; return; }
+      const okIns = await enregistrer(() => sb.from('maison_invitations')
+        .upsert({ owner_id: S.tenantId, email, role }, { onConflict: 'owner_id,email' }), 'Invitation', { silencieuxSiOk: true });
+      if (!okIns) return;
       msg.innerHTML = `<div class="ms-msg-ok">✓ Invitation en attente pour ${esc(email)} — visible dès sa première connexion.</div>`;
       toast(`Invitation en attente : ${email}`);
       $('#ms-invite-email').value = '';
@@ -166,10 +167,10 @@ function brancher(zone) {
   zone.querySelectorAll('.ms-invite').forEach(row => {
     $('.ms-invite-relance', row).addEventListener('click', async () => {
       const iid = row.dataset.iid;
-      const { error } = await sb.from('maison_invitations')
+      const ok = await enregistrer(() => sb.from('maison_invitations')
         .update({ relance_le: new Date().toISOString() })
-        .eq('owner_id', S.tenantId).eq('id', iid);
-      if (error) { toast(error.message, true); return; }
+        .eq('owner_id', S.tenantId).eq('id', iid), 'Invitation relancée', { silencieuxSiOk: true });
+      if (!ok) return;
       toast('✓ Invitation relancée');
       hooks.recharger?.();
     });

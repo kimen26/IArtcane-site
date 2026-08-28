@@ -7,6 +7,7 @@
 // Choix immédiat et global : update tenants.couleur + propagation --ruban.
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, esc, toast } from '../../core/dom.js';
+import { enregistrer } from '../../core/feedback.js';
 import { S, canWrite } from '../../core/state.js';
 import { sb } from '../../core/data.js';
 import {
@@ -128,8 +129,8 @@ function rafraichir() {
 // Choix immédiat et global : update tenants.couleur + propagation --ruban.
 // null = retour au défaut (propriété CSS retirée → fallback #35696c).
 async function enregistrerCouleur(couleur) {
-  const { error } = await sb.from('tenants').upsert({ owner_id: S.tenantId, couleur });
-  if (error) { toast(error.message, true); return false; }
+  const ok = await enregistrer(() => sb.from('tenants').upsert({ owner_id: S.tenantId, couleur }), 'Couleur de la maison');
+  if (!ok) return false;
   M.tenant.couleur = couleur;
   const mienne = S.mesTenants.find(x => x.id === S.tenantId);
   if (mienne) mienne.couleur = couleur;
@@ -176,8 +177,8 @@ function brancher(zone) {
   $('#ms-rename').addEventListener('click', async () => {
     const name = $('#ms-name').value.trim();
     if (!name) { toast('Nom vide', true); return; }
-    const { error } = await sb.from('tenants').upsert({ owner_id: S.tenantId, name });
-    if (error) { toast(error.message, true); return; }
+    const ok = await enregistrer(() => sb.from('tenants').upsert({ owner_id: S.tenantId, name }), 'Nom de la maison', { silencieuxSiOk: true });
+    if (!ok) return;
     M.tenant.name = name;
     const mienne = S.mesTenants.find(x => x.id === S.tenantId);
     if (mienne) mienne.name = name;
@@ -198,7 +199,6 @@ function brancher(zone) {
     if (await enregistrerCouleur(null)) {
       const hexInput = $('#ms-hex'); if (hexInput) hexInput.value = RUBAN_DEFAUT.toUpperCase();
       rafraichir();
-      toast('✓ Ruban revenu au vert canard par défaut');
     }
   });
 }

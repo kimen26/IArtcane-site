@@ -13,6 +13,7 @@
 // le dispatch #/sources vs #/sources/palmares se fait ici, sur hashchange.
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, esc, toast } from '../../core/dom.js';
+import { enregistrer } from '../../core/feedback.js';
 import { loadViewCss } from '../../core/css.js';
 import { SRC, hooks, chargerTout, marquerConsultee } from './etat.js';
 import { mount as mountPalmares } from './palmares.js';
@@ -234,8 +235,8 @@ async function ouvrirActions(nom, besoinId) {
     alert(`Outil maison : ${e.outil}\n\n(commande à lancer côté infra — pas d'exécution depuis le site)`);
   } else if (n === '3') {
     const note = prompt('Note (facultatif) :') || '';
-    const { error } = await marquerConsultee(e.nom, besoinId, note.trim());
-    if (error) { toast(error.message, true); return; }
+    const ok = await enregistrer(() => marquerConsultee(e.nom, besoinId, note.trim()), `Consultation de « ${e.nom} »`, { silencieuxSiOk: true });
+    if (!ok) return;
     toast(`Consultation de « ${e.nom} » enregistrée`);
     await hooks.recharger();
   }

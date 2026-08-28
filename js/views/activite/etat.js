@@ -5,6 +5,7 @@
 import { sb, ensureCollection, enqueueJobs, signPaths } from '../../core/data.js';
 import { S, canWrite } from '../../core/state.js';
 import { toast } from '../../core/dom.js';
+import { withBusy } from '../../core/feedback.js';
 import { capFirst, plur, ACT_LABELS } from '../../core/format.js';
 
 // ─── État mutable partagé entre les quatre onglets ─────────────────────────
@@ -239,11 +240,19 @@ export async function majCatalogue() {
   lines.push('Les objets déjà en file sont ignorés. Le cron traitera ~5 objets par run de 2 min.');
   if (!confirm(lines.join('\n'))) return;
 
-  let n = 0;
-  if (sansR1.length) n += await enqueueJobs(sansR1.map(o => o.id), 'r1');
-  if (avecMaj.length) n += await enqueueJobs(avecMaj.map(o => o.id), 'maj');
-  toast(n
-    ? `${plur(n, 'objet mis', 'objets mis')} en file — le cron les traitera ~5 par run de 2 min.`
+  // Compteur externe : withBusy jette `valeur` en cas d'annulation (elle rend
+  // `undefined`), or le toast final doit rester honnête sur ce qui est
+  // RÉELLEMENT parti même si l'utilisateur a annulé en cours de route (L-022).
+  let enfiles = 0;
+  const { annule } = await withBusy(async ({ estAnnule }) => {
+    if (sansR1.length) enfiles += await enqueueJobs(sansR1.map(o => o.id), 'r1');
+    if (estAnnule()) return;
+    if (avecMaj.length) enfiles += await enqueueJobs(avecMaj.map(o => o.id), 'maj');
+  }, { titre: 'Mise en file du catalogue…', annulable: true });
+
+  if (annule) { toast(`${plur(enfiles, 'objet mis', 'objets mis')} en file avant annulation.`); return; }
+  toast(enfiles
+    ? `${plur(enfiles, 'objet mis', 'objets mis')} en file — le cron les traitera ~5 par run de 2 min.`
     : 'Tous les objets sont déjà en file');
 }
 
@@ -254,18 +263,30 @@ export async function majArtistes() {
   const artistes = [...new Set(objs.map(o => o.auteur))];
   if (!objs.length) { toast('Aucun objet avec un auteur renseigné', true); return; }
   if (!confirm(`Mettre à jour les fiches des ${plur(artistes.length, 'artiste', 'artistes')} (${plur(objs.length, 'objet concerné', 'objets concernés')}) ?\n\nLe cron traitera ~5 objets par run de 2 min.`)) return;
-  const n = await enqueueJobs(objs.map(o => o.id), 'r9');
-  toast(n
-    ? `${plur(n, 'objet mis', 'objets mis')} en file (${plur(artistes.length, 'artiste', 'artistes')}) — le cron les traitera ~5 par run de 2 min.`
+
+  let enfiles = 0;
+  const { annule } = await withBusy(async () => { enfiles = await enqueueJobs(objs.map(o => o.id), 'r9'); },
+    { titre: 'Mise en file des fiches artistes…', annulable: true },
+  );
+
+  if (annule) { toast(`${plur(enfiles, 'objet mis', 'objets mis')} en file avant annulation.`); return; }
+  toast(enfiles
+    ? `${plur(enfiles, 'objet mis', 'objets mis')} en file (${plur(artistes.length, 'artiste', 'artistes')}) — le cron les traitera ~5 par run de 2 min.`
     : 'Ces objets sont déjà tous en file');
 }
 
 /** Lancer une passe marché sur les objets en attente d'estimation. */
 export async function lancerFileAttente(liste) {
   if (!canWrite() || !liste.length) return;
-  const n = await enqueueJobs(liste.map(o => o.id), 'valo');
-  toast(n
-    ? `${plur(n, 'objet mis', 'objets mis')} en file pour estimation — le cron les traitera ~5 par run de 2 min.`
+
+  let enfiles = 0;
+  const { annule } = await withBusy(async () => { enfiles = await enqueueJobs(liste.map(o => o.id), 'valo'); },
+    { titre: 'Mise en file des estimations…', annulable: true },
+  );
+
+  if (annule) { toast(`${plur(enfiles, 'objet mis', 'objets mis')} en file avant annulation.`); return; }
+  toast(enfiles
+    ? `${plur(enfiles, 'objet mis', 'objets mis')} en file pour estimation — le cron les traitera ~5 par run de 2 min.`
     : 'Ces objets sont déjà tous en file');
 }
 

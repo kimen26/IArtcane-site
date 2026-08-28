@@ -7,7 +7,8 @@
 // jamais marqué). Persistance : tenants.filigrane (jsonb entier), debounce 400 ms
 // sur drag/sliders. Le rendu à l'export est HORS périmètre (aucun export n'existe).
 // ═══════════════════════════════════════════════════════════════════════════
-import { $, esc, toast } from '../../core/dom.js';
+import { $, esc } from '../../core/dom.js';
+import { enregistrer } from '../../core/feedback.js';
 import { S, canWrite } from '../../core/state.js';
 import { sb, signPaths } from '../../core/data.js';
 import { M } from './etat.js';
@@ -138,16 +139,17 @@ function appliquerMark() {
   mark.style.letterSpacing = d.track;
 }
 
-// ─── Persistance (jsonb entier, debounce 400 ms) ──────────────────────────
+// ─── Persistance (jsonb entier, debounce 800 ms) ──────────────────────────
+// Debounce allongé de 400 à 800 ms (écart assumé, cf. rapport d'exécution) :
+// le toast de confirmation doit accompagner la fin du geste sur les sliders,
+// pas chaque pixel du glissement.
 function planifierSauvegarde() {
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(sauvegarder, 400);
+  saveTimer = setTimeout(sauvegarder, 800);
 }
 
 async function sauvegarder() {
-  const { error } = await sb.from('tenants')
-    .upsert({ owner_id: S.tenantId, filigrane: M.tenant.filigrane });
-  if (error) toast(error.message, true);
+  await enregistrer(() => sb.from('tenants').upsert({ owner_id: S.tenantId, filigrane: M.tenant.filigrane }), 'Filigrane');
 }
 
 // Applique un patch en mémoire + planifie la sauvegarde ; immediate=true pour
