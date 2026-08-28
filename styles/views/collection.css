@@ -39,9 +39,12 @@
 #page-subhead{position:relative}
 .search-suggest{position:absolute;left:24px;right:24px;top:100%;z-index:60;background:var(--surface);border-radius:var(--r-md);box-shadow:var(--shadow-hover);padding:10px 0 12px;max-height:60vh;overflow:auto}
 @media (max-width:640px){.search-suggest{left:11px;right:11px}}
-.sug-head{font-size:.625rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+/* Les entêtes portent leur inset horizontal comme les lignes : depuis que
+   .search-suggest n'a plus de padding latéral (maquette « Page et menus »
+   l. 207-208), un entête sans padding tomberait à ras du bord blanc. */
+.sug-head{font-size:.625rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);padding:9px 15px 6px}
 .sug-sec + .sug-sec{margin-top:8px}
-.sug-title{font-size:.625rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:4px 0 2px}
+.sug-title{font-size:.625rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);padding:4px 15px 2px}
 .sug-artiste{display:block;width:100%;text-align:left;padding:9px 15px;border:none;background:none;font-size:.8125rem;color:var(--ink);cursor:pointer;border-radius:7px}
 .sug-artiste:hover{background:var(--blue-softer)}
 .sug-objet{display:flex;align-items:center;gap:11px;width:100%;padding:9px 15px;border:none;background:none;text-align:left;cursor:pointer;border-radius:7px}
