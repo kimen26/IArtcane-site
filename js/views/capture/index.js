@@ -77,6 +77,12 @@ function renderCategorisation() {
         <input id="cap-contenant" list="contenants" placeholder="Contenant" class="capture-input">
         <datalist id="contenants"></datalist>
       </div>
+      <div class="cap-comment" style="margin-top:8px">
+        <div class="cap-comment-label">Note maison <span class="capture-card-hint">lue par l'IA dès la 1re passe</span></div>
+        <div class="cap-comment-wrap">
+          <textarea id="cap-commentaire" class="cap-comment-area" rows="2" placeholder="Ce que tu sais déjà : signature lue, origine, anecdote…"></textarea>
+        </div>
+      </div>
     </div>`;
 }
 
@@ -209,6 +215,13 @@ function brancher() {
     ta.addEventListener('input', () => { const item = S.capFiles[getCurrentIndex()]; if (item) item.comment = ta.value; });
     const mic = micButton(ta);
     if (mic) ta.parentElement.append(mic);
+  }
+
+  // Note maison (objets.commentaire — lue par R1 dès la 1re passe) + dictée
+  const note = $('#cap-commentaire');
+  if (note) {
+    const mic = micButton(note);
+    if (mic) note.parentElement.append(mic);
   }
 
   // Grille
@@ -497,6 +510,7 @@ async function creerFiche() {
   const categorie = $('#cap-categorie')?.value || '';
   const zone = $('#cap-zone')?.value.trim() || null;
   const contenant = $('#cap-contenant')?.value.trim() || null;
+  const commentaire = $('#cap-commentaire')?.value.trim() || null;
 
   if (!categorie) {
     toast('Choisis d\'abord la catégorie', true);
@@ -530,6 +544,7 @@ async function creerFiche() {
       categorie,
       zone,
       contenant,
+      commentaire,
       source_capture: 'site',
       verrous_humains: ['categorie'],
       validation_champs: { categorie: { par: qui, at: new Date().toISOString() } },
