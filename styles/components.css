@@ -31,7 +31,7 @@
    La recherche et l'entonnoir vivent dans le bandeau depuis HO-042 (base.css) ;
    la feuille de filtres dédiée arrive en HO-044. */
 .filters-panel{display:contents}
-.filters-count{min-width:20px;min-height:20px;padding:0 6px;border-radius:999px;background:var(--blue);color:#fff;font-family:var(--mono);font-size:.75rem;font-weight:600;display:inline-grid;place-items:center}
+.filters-count{min-width:15px;min-height:15px;padding:0 6px;border-radius:999px;background:var(--blue);color:#fff;font-family:var(--mono);font-size:.5625rem;font-weight:700;display:inline-grid;place-items:center}
 /* Mobile : chrome replié — chips et listes sauvegardées en une rangée
    scrollable, marges resserrées (objectif : ≥ 2 cartes visibles sans scroll
    à 375 px, police agrandie). */
@@ -144,6 +144,11 @@
 /* ─── Panneaux & navigation transverse ────────────────────── */
 .back{display:inline-flex;align-items:center;gap:7px;background:none;border:none;color:var(--ink-2);font-size:.875rem;font-weight:500;margin-bottom:20px;padding:6px 10px 6px 0}
 .back:hover{color:var(--blue-deep)}
+/* Fiche objet : la vue a sa propre nav (.obj-nav-back « ← Céramique »), la
+   rangée de retour globale ferait double emploi — la maquette n'en montre
+   qu'une (06-fiche-objet-hub.png). Le bouton reste dans le DOM : app.js:365
+   et :392 le référencent. */
+#view-objet > .back{display:none}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow)}
 .panel-pad{padding:20px 22px}
 .page-title{margin-bottom:18px}
@@ -154,8 +159,6 @@
 .sec-title{font-family:var(--serif);font-size:1.125rem;font-weight:600;display:flex;align-items:center;gap:10px;margin-bottom:14px}
 .sec-title::after{content:"";flex:1;height:1px;background:var(--line)}
 .sec-title .btn.small{margin-left:auto}
-
-h1.obj-title{font-family:var(--serif);font-size:1.875rem;font-weight:600;line-height:1.2;letter-spacing:.005em}
 
 /* Boîtes à tiroir : sections repliables pour gagner en hauteur */
 details.acc>summary{list-style:none;cursor:pointer;user-select:none}

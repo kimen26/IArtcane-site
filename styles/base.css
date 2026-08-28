@@ -28,7 +28,7 @@ header{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:
 .btn-round:hover{border-color:var(--line-strong);color:var(--ink)}
 .btn-square{width:36px;height:36px;flex-shrink:0;display:grid;place-items:center;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink-2)}
 /* Pastille de comptage des filtres actifs sur l'entonnoir rond (HO-044 la dore) */
-.btn-round .filters-count{position:absolute;top:-6px;right:-6px}
+.btn-round .filters-count{position:absolute;top:-2px;right:-2px}
 
 /* Mobile (maquette étape 2 + retours Yann F12) : bloc placé APRÈS les règles de
    base (spécificité égale, ordre du fichier décide) — padding-left 0 (le « vert »
@@ -49,19 +49,19 @@ header{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:
 .drawer.open{transform:none}
 .drawer-veil{position:fixed;inset:0;background:rgba(9,14,28,.5);z-index:65;opacity:0;pointer-events:none;transition:opacity .2s}
 .drawer-veil.open{opacity:1;pointer-events:auto}
-.drawer-head{display:flex;flex-direction:column;gap:10px}
-.drawer-logo{font-size:1.125rem}
+.drawer-head{display:flex;flex-direction:column;gap:14px;padding-bottom:14px;border-bottom:1px solid var(--line-soft)}
+.drawer-logo{font-size:1.1875rem}
 /* Frise d'avancement du catalogage : 3 segments (estimées / à estimer / sans photo) */
-.frise{display:flex;height:7px;border-radius:999px;overflow:hidden;background:var(--line)}
+.frise{display:flex;height:7px;border-radius:4px;overflow:hidden;background:var(--line)}
 .frise-ok{background:var(--ruban,#35696c)}
 .frise-todo{background:var(--gold)}
 .frise-nophoto{background:var(--line)}
-.frise-legende{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:.6875rem;color:var(--ink-2)}
-.frise-legende .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
+.frise-legende{display:flex;flex-direction:column;gap:4px;font-size:.6875rem;color:var(--ink-2)}
+.frise-legende .dot{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:5px}
 .menu-sec{padding:2px 0;font-size:.6875rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3)}
 .drawer-cta{justify-content:center;border-radius:10px;padding:12px;font-weight:600}
 .drawer-nav{display:flex;flex-direction:column}
-.drawer-item{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:10px 8px;border:none;background:none;text-align:left;font-size:.875rem;color:var(--ink);border-radius:var(--r-sm)}
+.drawer-item{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:9px 4px;border:none;background:none;text-align:left;font-size:.875rem;color:var(--ink);border-radius:var(--r-sm)}
 .drawer-item:hover{background:var(--blue-softer)}
 .drawer-label{flex:1}
 .drawer-n{font-size:.75rem;color:var(--ink-3);font-family:var(--mono)}
@@ -69,8 +69,8 @@ header{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:
 .tenant-check{width:16px;text-align:center;color:var(--green);font-weight:700}
 .menu-tenant.current{background:var(--blue-softer)}
 /* Second niveau « Collection » : un rayon par ligne, vignette 26×26 */
-.drawer-sub{display:flex;flex-direction:column;margin:2px 0 4px 10px;padding-left:8px;border-left:1px solid var(--line-soft)}
-.drawer-rayon{display:flex;align-items:center;gap:10px;width:100%;min-height:36px;padding:5px 8px;border:none;background:none;text-align:left;font-size:.8125rem;color:var(--ink);border-radius:var(--r-sm)}
+.drawer-sub{display:flex;flex-direction:column;margin:2px 0 4px}
+.drawer-rayon{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:7px 4px;border:none;background:none;text-align:left;font-size:.8125rem;color:var(--ink);border-radius:var(--r-sm)}
 .drawer-rayon:hover{background:var(--blue-softer)}
 .drawer-rayon.active{background:var(--blue-soft);color:var(--blue-deep)}
 .rayon-thumb{width:26px;height:26px;border-radius:4px;overflow:hidden;background:var(--surface-2);display:grid;place-items:center;flex-shrink:0}
@@ -79,7 +79,7 @@ header{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:
 .rayon-nom{flex:1}
 .rayon-n{font-size:.75rem;color:var(--ink-3);font-family:var(--mono)}
 .drawer-foot{margin-top:auto;border-top:1px solid var(--line-soft);padding-top:10px;display:flex;flex-direction:column;gap:2px}
-.drawer-foot-item{display:block;width:100%;padding:8px;border:none;background:none;text-align:left;font-size:.78125rem;color:var(--ink-2);border-radius:var(--r-sm)}
+.drawer-foot-item{display:block;width:100%;padding:8px 4px;border:none;background:none;text-align:left;font-size:.78125rem;color:var(--ink-2);border-radius:var(--r-sm)}
 .drawer-foot-item:hover{background:var(--blue-softer)}
 .drawer-user{display:flex;flex-direction:column;gap:1px;padding:10px 8px 0}
 .menu-user-name{font-weight:600;font-size:.9375rem;color:var(--ink)}
@@ -92,7 +92,7 @@ header{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:
 /* Le `.page-title` partagé (components.css) porte margin-bottom:18px pour les
    titres de section des autres vues — neutralisé ici, le bandeau reste compact. */
 .page-subhead .page-title{margin-bottom:0}
-.page-title-line{display:flex;align-items:baseline;gap:10px}
+.page-title-line{display:flex;align-items:baseline;gap:8px}
 .page-title{font-family:var(--serif);font-size:1.0625rem;color:var(--ink)}
 .page-sub{font-size:.6875rem;color:var(--ink-3)}
 .page-search-line{display:flex;gap:8px;align-items:center}
@@ -101,7 +101,7 @@ header{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:
 .page-search-line .search svg{color:var(--blue)}
 .page-search-line .search-close{display:grid;place-items:center;position:absolute;right:8px;top:50%;transform:translateY(-50%);width:32px;height:32px;border:none;border-radius:50%;background:none;color:var(--ink-3);font-size:1.25rem;line-height:1}
 .page-search-line .search-close:hover{color:var(--red);background:var(--red-soft)}
-.page-search-line .search input{padding-right:40px}
+.page-search-line .search input{padding-right:40px;padding-top:9px;padding-bottom:9px}
 @media (max-width:640px){.page-subhead{padding:5px 11px}}
 
 main{max-width:1240px;margin:0 auto;padding:28px 24px 80px}
