@@ -147,7 +147,7 @@ function renderObjet() {
 function rendreHub() {
   const o = S.currentObjet;
   const cover = O.photos.find(p => p.couverture) ?? O.photos[0];
-  const alertePhoto = O.photos.some(p => p.remarque_statut === 'en_attente' || p.kind === 'autre');
+  const alertePhoto = O.photos.some(p => p.kind == null);
   const nPhotos = O.photos.length;
 
   // Position dans la collection triée created_at (si S.collection chargée).
@@ -270,28 +270,33 @@ function champRempli(champ, o) {
 
 function rendreTiroirAlertes(o) {
   const alertes = calculerAlertes(o);
-  if (!alertes.length) return '';
-  const bloquantes = alertes.filter(a => a.bloquant);
+  const refus = o.alertes_refusees ?? {};
+  const nRefus = Object.keys(refus).length;
+  if (!alertes.length && !nRefus) return '';
+  const titre = alertes.length ? `${alertes.length} chose${alertes.length > 1 ? 's' : ''} à faire avant de valider` : '0 chose à faire';
   return `
     <details class="obj-alertes">
       <summary class="obj-alertes-summary">
         <span class="obj-alertes-handle"></span>
         <div class="obj-alertes-head">
           <span class="warn-puce"></span>
-          <span class="obj-alertes-title">${alertes.length} chose${alertes.length > 1 ? 's' : ''} à faire avant de valider</span>
+          <span class="obj-alertes-title">${esc(titre)}</span>
           <span class="obj-alertes-chev">▾</span>
         </div>
       </summary>
       <div class="obj-alertes-list">
         ${alertes.map(a => `
-          <button class="obj-alerte ${a.bloquant ? 'bloquant' : 'info'}" data-action="nav" data-ecran="${a.ecran}" ${a.focus ? `data-focus='${esc(JSON.stringify(a.focus))}'` : ''}>
+          <div class="obj-alerte ${a.bloquant ? 'bloquant' : 'info'}" data-action="nav" data-ecran="${a.ecran}" ${a.focus ? `data-focus='${esc(JSON.stringify(a.focus))}'` : ''} role="button" tabindex="0">
             <span class="obj-alerte-bar"></span>
             <div class="obj-alerte-txt">
               <div class="obj-alerte-title">${esc(a.titre)}</div>
               <div class="obj-alerte-sub">${esc(a.sous)}</div>
             </div>
+            <button class="obj-alerte-refuser" data-action="alerte-refuser" data-cle="${esc(a.cle)}" aria-label="Ignorer cette alerte">✕</button>
             <span class="obj-alerte-chev">›</span>
-          </button>`).join('')}
+          </div>`).join('')}
+        ${nRefus ? `
+          <button class="obj-alerte-restaurer" data-action="alerte-restaurer">${nRefus} alerte${nRefus > 1 ? 's' : ''} ignorée${nRefus > 1 ? 's' : ''} · réafficher</button>` : ''}
       </div>
     </details>`;
 }
@@ -299,28 +304,18 @@ function rendreTiroirAlertes(o) {
 function calculerAlertes(o) {
   const alertes = [];
   if (o.hauteur_cm == null) {
-    alertes.push({ bloquant: true, ecran: 'identification', focus: { champ: 'dimensions' }, titre: 'Mesurer hauteur et diamètre', sous: 'indispensable pour chiffrer' });
-  }
-  const hasEchelle = O.photos.some(p => p.kind === 'echelle');
-  const vuesManquantes = Array.isArray(o.vues_manquantes) ? o.vues_manquantes : [];
-  const echelleAbsente = vuesManquantes.some(v => v.vue === 'echelle' && v.statut === 'absente');
-  if (!hasEchelle && !echelleAbsente) {
-    const nRemarque = O.photos.filter(p => p.remarque_statut === 'en_attente').length;
-    alertes.push({ bloquant: true, ecran: 'photos', focus: null, titre: 'Photo avec règle ou repère d’échelle', sous: nRemarque ? `${nRemarque} photo${nRemarque > 1 ? 's' : ''} à reprendre` : 'manque une vue échelle' });
+    alertes.push({ cle: 'dimensions', bloquant: true, ecran: 'identification', focus: { champ: 'dimensions' }, titre: 'Mesurer hauteur et diamètre', sous: 'indispensable pour chiffrer' });
   }
   const nVendus = O.comps.filter(c => !c.exclu && c.source_type !== 'en_vente').length;
   if (o.prix_bas == null || nVendus === 0) {
-    alertes.push({ bloquant: false, ecran: 'ventes', focus: null, titre: 'Pas encore de comparable vendu exploitable', sous: `${O.comps.filter(c => !c.exclu).length} vente${O.comps.filter(c => !c.exclu).length > 1 ? 's' : ''} relevée${O.comps.filter(c => !c.exclu).length > 1 ? 's' : ''}` });
+    alertes.push({ cle: 'comparables', bloquant: false, ecran: 'ventes', focus: null, titre: 'Pas encore de comparable vendu exploitable', sous: `${O.comps.filter(c => !c.exclu).length} vente${O.comps.filter(c => !c.exclu).length > 1 ? 's' : ''} relevée${O.comps.filter(c => !c.exclu).length > 1 ? 's' : ''}` });
   }
-  const remarques = O.photos.filter(p => p.remarque_statut === 'en_attente').length;
-  if (remarques) {
-    alertes.push({ bloquant: true, ecran: 'photos', focus: null, titre: `${remarques} remarque${remarques > 1 ? 's' : ''} photo en attente`, sous: 'des vues sont à reprendre' });
-  }
-  const nonTaguees = O.photos.filter(p => p.kind === 'autre').length;
+  const nonTaguees = O.photos.filter(p => p.kind == null).length;
   if (nonTaguees) {
-    alertes.push({ bloquant: false, ecran: 'photos', focus: null, titre: `${nonTaguees} photo${nonTaguees > 1 ? 's' : ''} sans tag`, sous: 'taguer ce que montre chaque photo (signature, revers…) — ça guide l’analyse' });
+    alertes.push({ cle: 'photos_sans_tag', bloquant: false, ecran: 'photos', focus: null, titre: `${nonTaguees} photo${nonTaguees > 1 ? 's' : ''} sans tag`, sous: 'taguer ce que montre chaque photo (signature, revers…) — ça guide l’analyse' });
   }
-  return alertes;
+  const refus = S.currentObjet.alertes_refusees ?? {};
+  return alertes.filter(a => !refus[a.cle]);
 }
 
 function rendreCarteDescription(o) {
@@ -425,7 +420,34 @@ $('#objet-body').addEventListener('click', async e => {
     loadObjet(o.id);
   }
   else if (act === 'del-objet') { deleteObjet(); }
+  else if (act === 'alerte-refuser') {
+    e.stopPropagation();
+    await refuserAlerte(el.dataset.cle);
+  }
+  else if (act === 'alerte-restaurer') {
+    await restaurerAlertes();
+  }
 });
+
+async function refuserAlerte(cle) {
+  const o = S.currentObjet;
+  if (!o || !cle) return;
+  const qui = localStorage.getItem('iartcane-qui') ?? 'alain';
+  const refus = { ...(o.alertes_refusees ?? {}), [cle]: { par: qui, at: new Date().toISOString() } };
+  if (!await enregistrer(() => sb.from('objets').update({ alertes_refusees: refus }).eq('owner_id', S.tenantId).eq('id', o.id), 'Alerte ignorée', { silencieuxSiOk: true })) return;
+  o.alertes_refusees = refus;
+  logEvent('alerte_refusee', { cle });
+  hooks.rendre();
+}
+
+async function restaurerAlertes() {
+  const o = S.currentObjet;
+  if (!o) return;
+  if (!await enregistrer(() => sb.from('objets').update({ alertes_refusees: {} }).eq('owner_id', S.tenantId).eq('id', o.id), 'Alertes réaffichées', { silencieuxSiOk: true })) return;
+  o.alertes_refusees = {};
+  logEvent('alertes_restaurees', {});
+  hooks.rendre();
+}
 
 brancherUploads(loadObjet);
 

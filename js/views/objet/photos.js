@@ -50,7 +50,7 @@ export function rendre(el) {
 
   const sel = photos[currentIndex];
   const n = photos.length;
-  const nActions = photos.filter(p => p.remarque_statut === 'en_attente' || p.kind === 'autre').length;
+  const nActions = photos.filter(p => p.kind == null).length;
   const vues = Array.isArray(o.vues_manquantes) ? o.vues_manquantes : [];
   const vuesAFaire = vues.filter(v => v.statut !== 'absente');
   const vuesAbsentes = vues.filter(v => v.statut === 'absente');
@@ -132,7 +132,7 @@ function rendreSansPhoto() {
 }
 
 function rendreCartePhoto(p, n, idx) {
-  const kindLabel = KINDS.find(k => k.key === p.kind)?.label || (p.kind === 'video' ? 'vidéo' : (p.kind || 'autre'));
+  const kindLabel = KINDS.find(k => k.key === p.kind)?.label || (p.kind === 'video' ? 'vidéo' : (p.kind || 'sans tag'));
   const isCover = p.couverture;
   const rot = p.rotation || 0;
   const hasRemarque = p.remarque_statut === 'en_attente' && p.remarque_ia;
@@ -206,9 +206,9 @@ function rendreGrille(photos, sel) {
 }
 
 function rendreThumb(p, i, selected) {
-  const kindLabel = KINDS.find(k => k.key === p.kind)?.label || (p.kind === 'video' ? 'vidéo' : (p.kind || 'autre'));
-  const hasAction = p.remarque_statut === 'en_attente' || p.kind === 'autre';
-  const untagged = p.kind === 'autre';
+  const kindLabel = KINDS.find(k => k.key === p.kind)?.label || (p.kind === 'video' ? 'vidéo' : (p.kind || 'sans tag'));
+  const hasAction = p.kind == null;
+  const untagged = p.kind == null;
   return `
     <div class="photos-thumb ${selected ? 'selected' : ''} ${untagged ? 'untagged' : ''}" data-action="select" data-idx="${i}" role="listitem" tabindex="0" aria-label="Photo ${i + 1}, ${esc(kindLabel)}">
       ${p.thumbUrl
