@@ -57,12 +57,12 @@
   clip-path:inset(0 0 -1px 0);
   margin:-28px -24px 0;   /* annule le padding haut et latéral de main (base.css:107) */
 }
+/* Desktop : le bandeau reste pleine largeur (aligné sur le reste de la page) ;
+   c'est l'IMAGE qu'on borne, pour qu'elle ne soit ni perdue au centre d'un aplat
+   (HO-092) ni transformée en carte portrait désalignée (1re passe HO-093). */
 @media (min-width:641px){
-  .obj-photo-band{
-    max-width:720px;
-    margin-inline:auto;
-    height:320px;
-  }
+  .obj-photo-band{height:340px}
+  .obj-photo-band img{max-width:min(560px, 60%); margin-inline:auto}
 }
 .obj-photo-band img{
   display:block;
