@@ -127,14 +127,37 @@ export async function withBusy(fn, { titre, annulable = true, seuilLent = 15000 
   const ctrl = new AbortController();
   let annule = false;
 
+  // DOM construit noeud par noeud, jamais par innerHTML : `titre` vient des appelants
+  // et portera des donnees (titre d'objet, nom d'artiste, nom de fichier) des que les
+  // vues consommeront withBusy — une interpolation ici serait une injection HTML.
   const el = document.createElement('div');
   el.className = 'busy-overlay';
-  el.innerHTML = `<div class="busy-card" role="alertdialog" aria-live="polite">
-    <div class="busy-spin" aria-hidden="true"></div>
-    <div class="busy-msg">${titre}</div>
-    <div class="busy-sub hidden"></div>
-    ${annulable ? '<button class="btn small" type="button" data-annuler>Annuler</button>' : ''}
-  </div>`;
+  const carte = document.createElement('div');
+  carte.className = 'busy-card';
+  carte.setAttribute('role', 'alertdialog');
+  carte.setAttribute('aria-live', 'polite');
+
+  const spin = document.createElement('div');
+  spin.className = 'busy-spin';
+  spin.setAttribute('aria-hidden', 'true');
+
+  const msg = document.createElement('div');
+  msg.className = 'busy-msg';
+  msg.textContent = titre ?? '';
+
+  const sub = document.createElement('div');
+  sub.className = 'busy-sub hidden';
+
+  carte.append(spin, msg, sub);
+  if (annulable) {
+    const b = document.createElement('button');
+    b.className = 'btn small';
+    b.type = 'button';
+    b.setAttribute('data-annuler', '');
+    b.textContent = 'Annuler';
+    carte.append(b);
+  }
+  el.append(carte);
   document.body.append(el);
 
   const btnAnnuler = el.querySelector('[data-annuler]');
