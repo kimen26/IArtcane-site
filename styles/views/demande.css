@@ -1,0 +1,86 @@
+/* ─── Feuille « écrire à l'admin » (HO-083, D-072) ───────────────────────── */
+/* Autonome : aucune classe empruntée à collection.css (la feuille s'ouvre
+   depuis n'importe quelle vue, or collection.css n'est chargé que si la
+   collection a été visitée). Tokens existants uniquement. */
+
+.dem-veil{
+  position:fixed;inset:0;z-index:120;
+  background:rgba(13,27,62,.38);
+  opacity:0;visibility:hidden;
+  transition:opacity .2s ease;
+}
+.dem-veil.open{opacity:1;visibility:visible}
+
+.dem-sheet{
+  position:fixed;z-index:121;
+  left:0;right:0;bottom:0;
+  border-radius:var(--r-lg) var(--r-lg) 0 0;
+  background:var(--surface);
+  box-shadow:var(--shadow);
+  font-family:var(--sans);
+  color:var(--ink);
+  max-height:86vh;
+  overflow:auto;
+  padding:16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  visibility:hidden;pointer-events:none;
+  transform:translateY(100%);
+  transition:transform .25s ease,visibility .25s;
+}
+.dem-sheet.open{visibility:visible;pointer-events:auto;transform:translateY(0)}
+
+@media (min-width:701px){
+  .dem-sheet{
+    left:50%;right:auto;bottom:auto;top:50%;
+    width:100%;max-width:520px;
+    border-radius:var(--r-lg);
+    padding:20px;
+    transform:translate(-50%,-50%);
+    opacity:0;
+    transition:opacity .2s ease,visibility .2s;
+  }
+  .dem-sheet.open{opacity:1;transform:translate(-50%,-50%)}
+}
+
+@media (prefers-reduced-motion: reduce){
+  .dem-veil{transition:none}
+  .dem-sheet{transition:none}
+}
+
+.dem-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.dem-title{font-family:var(--sans);font-weight:600;font-size:1.0625rem;color:var(--ink)}
+.dem-close{width:32px;height:32px;display:grid;place-items:center;border:none;border-radius:50%;background:var(--surface-2);color:var(--ink-2);font-size:1.125rem;cursor:pointer}
+.dem-close:hover{color:var(--red);background:var(--red-soft)}
+
+.dem-page{font-size:.8125rem;color:var(--ink-2);margin:0 0 12px}
+.dem-route{font-family:var(--mono);color:var(--ink-3);font-size:.75rem}
+
+.dem-field{position:relative;margin-bottom:10px}
+.dem-field textarea{
+  width:100%;min-height:120px;
+  font:inherit;font-family:var(--sans);color:var(--ink);
+  border:1px solid var(--line);border-radius:var(--r-sm);
+  padding:10px 44px 10px 12px;
+  resize:vertical;
+  background:var(--surface);
+}
+.dem-field textarea:focus{outline:none;border-color:var(--blue)}
+
+/* Bouton micro : motif repris de objet-suivi.css:424-440, sans l'importer. */
+.dem-field .mic-btn{
+  position:absolute;right:8px;bottom:8px;
+  width:30px;height:30px;
+  display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid var(--line);border-radius:50%;
+  background:var(--surface);color:var(--ink-2);
+  font-size:.9375rem;line-height:1;
+  cursor:pointer;
+}
+.dem-field .mic-btn:hover{background:var(--blue-softer);border-color:var(--blue)}
+.dem-field .mic-btn:disabled{opacity:.55;cursor:not-allowed;background:var(--surface);border-color:var(--line)}
+.dem-field .mic-btn.recording{position:absolute;background:var(--red-soft);border-color:var(--red);animation:dem-mic-pulse 1.2s ease-in-out infinite}
+.dem-field .mic-btn.recording::after{content:'';position:absolute;inset:-4px;border-radius:var(--r-md);border:2px solid var(--red);opacity:.5;animation:dem-mic-ring 1.2s ease-out infinite}
+@keyframes dem-mic-pulse{0%,100%{opacity:1}50%{opacity:.75}}
+@keyframes dem-mic-ring{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.25);opacity:0}}
+
+.dem-foot{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.dem-compteur{font-size:.75rem;color:var(--ink-3)}
