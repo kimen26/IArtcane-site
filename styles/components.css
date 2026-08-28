@@ -254,6 +254,27 @@ details.acc:not([open])>summary{margin-bottom:0}
 .lightbox.zoomed{display:block;overflow:auto;cursor:zoom-out}
 .lightbox.zoomed img,.lightbox.zoomed video{max-width:none;max-height:none}
 body.lb-open{overflow:hidden}
+
+/* ─── Menu contextuel natif sur les photos ─────────────────────────────────
+   Le long-press sur une <img> ouvre le callout de l'OS (« Télécharger l'image »,
+   « Copier le lien ») après ~500 ms — délai câblé dans le moteur, non réglable
+   en JS : on peut seulement l'autoriser ou le supprimer. Il parasitait la
+   sélection et le drag & drop de la grille photos (retour Yann 2026-08-29).
+   `-webkit-touch-callout` tue le menu tactile (iOS/WebView), `-webkit-user-drag`
+   le drag fantôme desktop. La lightbox est incluse : tant que le filigrane
+   n'est pas gravé dans l'image, un enregistrement y livrerait la photo nue.
+   Le téléchargement passera par un bouton explicite servant la dérivée 2048
+   filigranée (chantier à venir), jamais par le menu du navigateur. */
+.photos-thumb img,
+.photos-viewer img,
+.lightbox img,
+.cap-viewer img,
+.ms-fili-photo{
+  -webkit-touch-callout:none;
+  -webkit-user-drag:none;
+  user-select:none;
+}
+
 .hidden{display:none!important}
 /* Rôle lecteur (RLS 0012) : tout élément .hide-lecteur est masqué — la RLS
    bloque l'écriture de toute façon, ceci est la couche UI. */

@@ -36,6 +36,12 @@ export function createOverlay({ className = '', html = '', onClose } = {}) {
 
   el.querySelector('.lb-close').addEventListener('click', e => { e.stopPropagation(); close(); });
 
+  // Menu contextuel natif neutralisé sur le média : le CSS de components.css
+  // (-webkit-touch-callout) ne mord pas sur Firefox/Android, d'où ce garde-fou.
+  // Tant que le filigrane n'est pas gravé dans l'image, un « Enregistrer » ici
+  // livrerait la photo nue ; le téléchargement passera par un bouton explicite.
+  el.addEventListener('contextmenu', e => { if (e.target.closest('img,video')) e.preventDefault(); });
+
   document.addEventListener('keydown', onKey);
   document.body.classList.add('lb-open');
   document.body.append(el);
@@ -51,7 +57,7 @@ export function createOverlay({ className = '', html = '', onClose } = {}) {
 export function openViewer({ src, alt = '', video = false, zoomable = true, className = '', hintHtml = '' }) {
   const media = video
     ? `<video src="${esc(src)}" controls autoplay></video>`
-    : `<img src="${esc(src)}" alt="${esc(alt)}" loading="eager">`;
+    : `<img src="${esc(src)}" alt="${esc(alt)}" loading="eager" draggable="false">`;
   const vue = createOverlay({ className, html: media + hintHtml });
 
   vue.el.addEventListener('click', e => {

@@ -148,11 +148,11 @@ function rendreCartePhoto(p, n, idx) {
         <span class="photos-card-kind">· ${esc(kindLabel)}</span>
         <span class="photos-card-edited">${modifie ? 'modifiée' : ''}</span>
       </div>
-      <div class="photos-viewer">
+      <div class="photos-viewer" oncontextmenu="return false">
         ${p.thumbUrl || p.url
           ? (isVideo(p)
               ? `<video src="${esc(p.url)}" controls preload="metadata"></video>`
-              : `<img src="${esc(p.url || p.thumbUrl)}" alt="" style="transform: rotate(${rot}deg)" loading="eager" decoding="async">`)
+              : `<img src="${esc(p.url || p.thumbUrl)}" alt="" style="transform: rotate(${rot}deg)" loading="eager" decoding="async" draggable="false">`)
           : `<div class="photos-viewer-placeholder">📷</div>`}
         <button class="photos-corner photos-corner-tl" data-action="recadrer" title="Recadrer">✂</button>
         <button class="photos-corner photos-corner-tr" data-action="supprimer" title="Supprimer">🗑</button>
@@ -202,7 +202,7 @@ function rendreGrille(photos, sel) {
         <span class="photos-grid-title">Les ${photos.length} photo${photos.length > 1 ? 's' : ''}</span>
         <span class="photos-grid-help">touche pour éditer · maintiens et glisse pour l'ordre</span>
       </div>
-      <div class="photos-grid" role="list">
+      <div class="photos-grid" role="list" oncontextmenu="return false">
         ${photos.map((p, i) => rendreThumb(p, i, sel?.id === p.id)).join('')}
       </div>
     </div>`;
@@ -215,7 +215,7 @@ function rendreThumb(p, i, selected) {
   return `
     <div class="photos-thumb ${selected ? 'selected' : ''} ${untagged ? 'untagged' : ''}" data-action="select" data-idx="${i}" role="listitem" tabindex="0" aria-label="Photo ${i + 1}, ${esc(kindLabel)}">
       ${p.thumbUrl
-        ? (isVideo(p) ? '<span class="photos-thumb-vid">▶</span>' : `<img src="${esc(p.thumbUrl)}" alt="" loading="lazy" decoding="async">`)
+        ? (isVideo(p) ? '<span class="photos-thumb-vid">▶</span>' : `<img src="${esc(p.thumbUrl)}" alt="" loading="lazy" decoding="async" draggable="false">`)
         : '<span class="photos-thumb-placeholder">📷</span>'}
       ${p.couverture ? '<span class="photos-thumb-cover" aria-label="Couverture">★</span>' : ''}
       <span class="photos-thumb-num">${i + 1}</span>
