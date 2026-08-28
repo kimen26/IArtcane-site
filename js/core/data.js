@@ -141,41 +141,59 @@ export async function ensureCollection() {
   S.collection = data ?? [];
 }
 
-// Remplit S.photoMap : objet_id → { url (miniature d'abord), vid }.
+// Remplit S.photoMap : objet_id → { url (miniature 480 d'abord — cartes en
+// masonry, la 160 y serait floue), miniUrl (160, pour les futurs consommateurs
+// de vignettes — rayons, similaires), vid }.
 export async function loadPhotoMap() {
   S.photoMap = {};
   if (!S.collection.length) return;
-  const { data } = await sb.from('photos').select('objet_id,storage_path,thumb_path,kind,couverture').eq('owner_id', S.tenantId).order('couverture', { ascending: false }).order('created_at');
+  const { data } = await sb.from('photos').select('objet_id,storage_path,thumb_path,mini_path,kind,couverture').eq('owner_id', S.tenantId).order('couverture', { ascending: false }).order('created_at');
   const first = {};
   for (const p of data ?? []) if (!first[p.objet_id]) first[p.objet_id] = p;
-  const urlByPath = await signPaths(Object.values(first).flatMap(p => [p.storage_path, p.thumb_path].filter(Boolean)));
+  const urlByPath = await signPaths(Object.values(first).flatMap(p => [p.storage_path, p.thumb_path, p.mini_path].filter(Boolean)));
   for (const [oid, p] of Object.entries(first)) {
-    const url = urlByPath[p.thumb_path] ?? urlByPath[p.storage_path]; // miniature d'abord (vitesse)
+    const url = urlByPath[p.thumb_path] ?? urlByPath[p.storage_path]; // 480 d'abord (masonry, vitesse)
+    const miniUrl = urlByPath[p.mini_path] ?? url;
     // vid : 1re « photo » = vidéo → badge ▶ sur la carte (même sans miniature)
-    S.photoMap[oid] = { url: url ?? null, vid: isVideo(p) };
+    S.photoMap[oid] = { url: url ?? null, miniUrl: miniUrl ?? null, vid: isVideo(p) };
   }
 }
 
 // ─── Upload de photos (partagé capture + fiche objet + caméra) ───────────────
-// Miniature JPEG ≤ 480 px générée à l'upload (listing + carrousel — vitesse, 2026-08-24).
-// NULL si échec : l'affichage retombe sur l'image pleine.
-export async function makeThumbBlob(blob) {
+// Échelle d'images à l'upload (arbitrage Yann 2026-08-28, lane F bis, HO-089) :
+// 3 variantes JPEG bornées, générées depuis le fichier d'origine (jamais en
+// cascade d'une variante sur l'autre — deux réencodages successifs dégradent).
+const MINI_PX = 160;   // vignettes de rayon, mini-cartes, objets similaires
+const THUMB_PX = 480;  // collection, fiche produit, galerie, navigation photo
+const MOYEN_PX = 2048; // zoom plein écran, envoi LLM
+
+// Génère une variante JPEG bornée à `maxPx` sur son plus grand côté.
+// Ne grossit jamais une image plus petite que la borne (s = min(1, …)).
+// NULL si échec : l'affichage se replie sur la variante supérieure.
+async function makeVariantBlob(blob, maxPx, qualite) {
   try {
     const bmp = await createImageBitmap(blob);
-    const M = 480;
-    const s = Math.min(1, M / Math.max(bmp.width, bmp.height));
+    const s = Math.min(1, maxPx / Math.max(bmp.width, bmp.height));
     const c = document.createElement('canvas');
     c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
     c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
-    return await new Promise(res => c.toBlob(res, 'image/jpeg', 0.8));
+    return await new Promise(res => c.toBlob(res, 'image/jpeg', qualite));
   } catch { return null; }
 }
 
-// Envoie UN fichier dans le bucket + sa miniature. Primitive partagée par les
-// photos d'objet et les photos de fiche artiste (deux séquences identiques
-// auparavant — factorisées 2026-08-25).
+// Miniature JPEG ≤ 480 px (listing + carrousel — vitesse, 2026-08-24).
+// Conservée telle quelle : 4 appelants externes en dépendent (dont
+// views/artiste/images.js et views/objet/photos.js).
+export async function makeThumbBlob(blob) {
+  return makeVariantBlob(blob, THUMB_PX, 0.8);
+}
+
+// Envoie UN fichier dans le bucket + ses 3 variantes (mini/thumb/moyen).
+// Primitive partagée par les photos d'objet et les photos de fiche artiste
+// (deux séquences identiques auparavant — factorisées 2026-08-25).
 // @param dossier  préfixe de chemin dans le bucket (sans slash final)
-// @returns { path, thumbPath, video } ou null si l'envoi du fichier a échoué
+// @returns { path, thumbPath, miniPath, moyenPath, video } ou null si l'envoi
+//          du fichier d'origine a échoué
 export async function uploadImageWithThumb(dossier, file) {
   const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
   const base = `${dossier}/${crypto.randomUUID()}`;
@@ -184,17 +202,32 @@ export async function uploadImageWithThumb(dossier, file) {
   if (error) { toast(`Photo « ${file.name} » non envoyée — ${error.message}`, true); return null; }
 
   const video = /^video\//.test(file.type);
-  let thumbPath = null;
+  let thumbPath = null, miniPath = null, moyenPath = null;
   if (!video) {
-    const tb = await makeThumbBlob(file);
+    // Chaque variante se génère depuis `file` d'origine (jamais en cascade) ;
+    // échec d'une variante = non bloquant, le chemin reste NULL.
+    const [mb, tb, ob] = await Promise.all([
+      makeVariantBlob(file, MINI_PX, 0.75),
+      makeVariantBlob(file, THUMB_PX, 0.8),
+      makeVariantBlob(file, MOYEN_PX, 0.85),
+    ]);
+    if (mb) {
+      const p = `${base}.mini.jpg`;
+      const { error: e } = await sb.storage.from('photos').upload(p, mb, { contentType: 'image/jpeg' });
+      if (!e) miniPath = p;
+    }
     if (tb) {
-      thumbPath = `${base}.thumb.jpg`;
-      // Miniature ratée = pas bloquant : l'affichage retombe sur l'image pleine.
-      const { error: et } = await sb.storage.from('photos').upload(thumbPath, tb, { contentType: 'image/jpeg' });
-      if (et) thumbPath = null;
+      const p = `${base}.thumb.jpg`;
+      const { error: e } = await sb.storage.from('photos').upload(p, tb, { contentType: 'image/jpeg' });
+      if (!e) thumbPath = p;
+    }
+    if (ob) {
+      const p = `${base}.moyen.jpg`;
+      const { error: e } = await sb.storage.from('photos').upload(p, ob, { contentType: 'image/jpeg' });
+      if (!e) moyenPath = p;
     }
   }
-  return { path, thumbPath, video };
+  return { path, thumbPath, miniPath, moyenPath, video };
 }
 
 // Accepte un tableau de File purs (rétro-compat caméra / fiche objet)
@@ -226,7 +259,9 @@ export async function uploadPhotosFor(oid, files, firstIsFace = false, onProgres
     first = false;
     const insertPayload = {
       owner_id: S.tenantId, objet_id: oid,
-      storage_path: up.path, thumb_path: up.thumbPath, kind, source: 'site',
+      storage_path: up.path, thumb_path: up.thumbPath,
+      mini_path: up.miniPath, moyen_path: up.moyenPath,
+      kind, source: 'site',
       commentaire: comment,
       ordre,
     };
