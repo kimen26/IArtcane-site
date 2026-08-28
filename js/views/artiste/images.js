@@ -534,9 +534,14 @@ async function persisterOrdre(images, nouvelOrdre) {
     sb.from('artistes_photos').update({ ordre: u.ordre }).eq('owner_id', S.tenantId).eq('id', u.id)
   ));
   const echecs = resultats.filter(r => r.error);
+  logEvent('artiste_images_ordre', { n: updates.length, echecs: echecs.length });
   if (echecs.length) {
     console.warn('persisterOrdre:', echecs.map(r => r.error));
-    toast(`Ordre des images non enregistré — ${echecs.length}/${updates.length} échec${echecs.length > 1 ? 's' : ''} : ${echecs[0].error.message}`, true);
+    toast(`Ordre des images non enregistré — ${echecs.length}/${updates.length} échec${echecs.length > 1 ? 's' : ''} : ${echecs[0].error.message}`, true,
+      { action: { label: 'Réessayer', onClick: () => persisterOrdre(images, nouvelOrdre) } });
+    // Tout a échoué → on n'écrit RIEN en mémoire, sinon l'écran affiche un ordre
+    // que la base n'a pas et le rendu suivant le « confirme » silencieusement.
+    if (echecs.length === updates.length) return;
   } else {
     toast('✓ Ordre des images enregistré');
   }
@@ -544,7 +549,6 @@ async function persisterOrdre(images, nouvelOrdre) {
     const u = updates.find(u => u.id === p.id);
     if (u) p.ordre = u.ordre;
   });
-  logEvent('artiste_images_ordre', { n: updates.length, echecs: echecs.length });
 }
 
 // ─── Lightbox / recadrage ───────────────────────────────────────────────────

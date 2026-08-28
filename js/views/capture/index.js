@@ -3,9 +3,10 @@
 // Remplace le contenu de #view-capture à chaque mount ; capture.js est coquille.
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, $$, esc, toast } from '../../core/dom.js';
-import { S, canWrite } from '../../core/state.js';
+import { withBusy } from '../../core/feedback.js';
+import { S } from '../../core/state.js';
 import { plur } from '../../core/format.js';
-import { sb, logEvent, lancerRecherches, enqueueJobs, uploadPhotosFor } from '../../core/data.js';
+import { sb } from '../../core/data.js';
 import { openCamera } from '../../core/camera.js';
 import { loadViewCss } from '../../core/css.js';
 import { createOverlay } from '../../core/lightbox.js';
@@ -13,11 +14,12 @@ import { micButton } from '../mic.js';
 import { CATS_PROMPT } from '../../core/taxonomie.js';
 import { getCurrentIndex, setCurrentIndex, ensureCurrentIndex, suggestedViews, countDoneViews, setCover, reorderCapFiles } from './etat.js';
 import { renderCarte, renderGrille } from './photos.js';
+import { creerFiche, setRenderer } from './creation.js';
 
 await loadViewCss('capture');
 
-let pendingObjetId = null;
 let dragState = null;
+setRenderer(render);
 
 export function mount() {
   ensureCurrentIndex();
@@ -385,30 +387,33 @@ function openLocalCrop(file, index) {
     e.stopPropagation();
     ok.disabled = true; ok.textContent = 'Recadrage…';
     try {
-      const bmp = await createImageBitmap(file);
-      const sx = Math.round(sel.x0 * bmp.width);
-      const sy = Math.round(sel.y0 * bmp.height);
-      const sw = Math.round((sel.x1 - sel.x0) * bmp.width);
-      const sh = Math.round((sel.y1 - sel.y0) * bmp.height);
-      if (sw < 20 || sh < 20) throw new Error('zone trop petite');
-      const c = document.createElement('canvas');
-      c.width = sw; c.height = sh;
-      c.getContext('2d').drawImage(bmp, sx, sy, sw, sh, 0, 0, sw, sh);
-      const out = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.92));
-      if (!out) throw new Error('encodage impossible');
-      const name = (file.name.replace(/\.[^.]+$/, '') || 'photo') + '.jpg';
-      const cropped = new File([out], name, { type: 'image/jpeg', lastModified: Date.now() });
-      const item = S.capFiles[index];
-      if (item) {
-        if (item.url) URL.revokeObjectURL(item.url);
-        item.file = cropped;
-        item.url = null;
-      }
-      close();
-      toast('✓ Photo recadrée');
-      render();
+      await withBusy(async () => {
+        const bmp = await createImageBitmap(file);
+        const sx = Math.round(sel.x0 * bmp.width);
+        const sy = Math.round(sel.y0 * bmp.height);
+        const sw = Math.round((sel.x1 - sel.x0) * bmp.width);
+        const sh = Math.round((sel.y1 - sel.y0) * bmp.height);
+        if (sw < 20 || sh < 20) throw new Error('zone trop petite');
+        const c = document.createElement('canvas');
+        c.width = sw; c.height = sh;
+        c.getContext('2d').drawImage(bmp, sx, sy, sw, sh, 0, 0, sw, sh);
+        const out = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.92));
+        if (!out) throw new Error('encodage impossible');
+        const name = (file.name.replace(/\.[^.]+$/, '') || 'photo') + '.jpg';
+        const cropped = new File([out], name, { type: 'image/jpeg', lastModified: Date.now() });
+        const item = S.capFiles[index];
+        if (item) {
+          if (item.url) URL.revokeObjectURL(item.url);
+          item.file = cropped;
+          item.url = null;
+        }
+        close();
+        toast('✓ Photo recadrée');
+        render();
+      }, { titre: 'Recadrage de la photo…' });
     } catch (err) {
       toast(`Recadrage échoué : ${err.message ?? err}`, true);
+    } finally {
       ok.disabled = false; ok.textContent = '✂️ Recadrer';
     }
   });
@@ -503,115 +508,7 @@ function onDragEnd() {
   render();
 }
 
-// ─── Enregistrement / création de la fiche ──────────────────────────────────
-
-async function creerFiche() {
-  if (!canWrite()) return;
-  const categorie = $('#cap-categorie')?.value || '';
-  const zone = $('#cap-zone')?.value.trim() || null;
-  const contenant = $('#cap-contenant')?.value.trim() || null;
-  const commentaire = $('#cap-commentaire')?.value.trim() || null;
-
-  if (!categorie) {
-    toast('Choisis d\'abord la catégorie', true);
-    $('#cap-categorie')?.focus();
-    return;
-  }
-
-  const btn = $('#cap-save');
-  btn.disabled = true;
-  btn.textContent = 'Création…';
-  const qui = localStorage.getItem('iartcane-qui') ?? 'alain';
-
-  try {
-    if (pendingObjetId) {
-      if (!S.capFiles.length) {
-        toast('Aucune photo en attente à renvoyer', true);
-        return;
-      }
-      // Retry d'upload sur un objet déjà créé
-      await envoyerPhotos(pendingObjetId, true);
-      return;
-    }
-
-    const { data: newId, error: e0 } = await sb.rpc('next_objet_id', { p_owner: S.tenantId });
-    if (e0 || !newId) throw (e0 ?? new Error('numérotation impossible'));
-
-    const { error: e1 } = await sb.from('objets').insert({
-      owner_id: S.tenantId,
-      id: newId,
-      statut: 'nouveau',
-      categorie,
-      zone,
-      contenant,
-      commentaire,
-      source_capture: 'site',
-      verrous_humains: ['categorie'],
-      validation_champs: { categorie: { par: qui, at: new Date().toISOString() } },
-    });
-    if (e1) throw e1;
-
-    logEvent('capture', { n: S.capFiles.length, zone, categorie }, newId);
-
-    if (S.capFiles.length) {
-      await envoyerPhotos(newId, false, btn);
-      // si des échecs restent, pendingObjetId a été positionné dans envoyerPhotos
-      if (pendingObjetId) return;
-    }
-
-    finaliserCreation(newId);
-  } catch (err) {
-    toast(err.message ?? String(err), true);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Créer la fiche';
-  }
-}
-
-// R1 en tâche de fond (F-capture, 2026-08-28) : on ne bloque PLUS la navigation
-// sur les 2 appels Kimi vision (1-3 min mesurées). La fiche s'ouvre tout de
-// suite, la recherche continue derrière et se signale par un toast. Si elle
-// échoue ou dépasse le plafond (A9), on bascule sur un job `r1` que le cron
-// reprendra — l'utilisateur n'attend jamais devant un écran figé (L-027).
-function lancerR1EnFond(oid) {
-  lancerRecherches(oid)
-    .then(async r => {
-      if (r.ok) {
-        if (!r.skip) toast(`Objet #${oid} — recherche R1 terminée, recharge pour voir.`);
-        return;
-      }
-      await enqueueJobs([oid], 'r1');
-    })
-    .catch(async () => { await enqueueJobs([oid], 'r1'); });
-}
-
-async function envoyerPhotos(oid, isRetry, btn = $('#cap-save')) {
-  const total = S.capFiles.length;
-  const onProgress = (sent, tot) => { if (btn) btn.textContent = `Envoi photo ${sent + 1}/${tot}…`; };
-  const { done, failed } = await uploadPhotosFor(oid, S.capFiles, true, onProgress);
-
-  if (failed.length > 0) {
-    pendingObjetId = oid;
-    S.capFiles = failed.map(({ item }) => item);
-    render();
-    if (done > 0) lancerR1EnFond(oid);
-    toast(`Objet #${oid} créé — ${done}/${total} photos envoyées. ${failed.length} en échec : renvoyez-les depuis cet écran.`, true);
-    return;
-  }
-
-  if (done > 0) lancerR1EnFond(oid);
-
-  if (!isRetry) finaliserCreation(oid);
-}
-
-function finaliserCreation(oid) {
-  S.capFiles = [];
-  pendingObjetId = null;
-  render();
-  toast(`Objet #${oid} créé — recherches en cours en arrière-plan (R1 · R2 suit)`);
-  S.refreshHeader?.();
-  location.hash = '#/objet/' + encodeURIComponent(oid);
-}
+// ─── Enregistrement / création de la fiche : voir ./creation.js (HO-079) ────
 
 // ─── Protection fermeture + Share Target ────────────────────────────────────
 
@@ -639,13 +536,21 @@ async function receiveSharedPhotos() {
       const blob = await res.blob();
       files.push(new File([blob], res.headers.get('x-name') || 'partage.jpg', { type: res.headers.get('x-type') || blob.type || 'image/jpeg' }));
     }
-    await caches.delete('share-inbox');
+    // Nettoyage du cache de partage : non bloquant, les photos sont déjà en
+    // main (dans `files`) à ce stade — un échec ici ne doit pas déclencher
+    // le toast d'erreur, juste laisser une trace pour le diagnostic (HO-079).
+    try {
+      await caches.delete('share-inbox');
+    } catch (errDelete) {
+      console.warn('share-inbox : purge du cache échouée (non bloquant) :', errDelete);
+    }
     if (files.length) {
       addCapFiles(files);
       toast(`${plur(files.length, 'photo reçue', 'photos reçues')} par partage`);
     }
   } catch (err) {
     console.warn('share-inbox :', err);
+    toast(`Photos partagées non récupérées — ${err.message ?? err}. Réessaie le partage.`, true);
   }
 }
 
