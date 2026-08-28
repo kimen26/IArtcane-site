@@ -13,7 +13,7 @@
 /* ─── Blocs valoriser / valider ─── */
 .obj-id-bloc{
   border:1.5px solid;
-  border-radius:var(--r-md);
+  border-radius:14px;
   padding:8px 8px 9px;
   display:flex;
   flex-direction:column;
@@ -133,8 +133,8 @@ select.obj-input{
   white-space:nowrap;
 }
 .obj-id-check input{
-  width:14px;
-  height:14px;
+  width:12px;
+  height:12px;
   accent-color:var(--blue);
   cursor:pointer;
 }
@@ -193,6 +193,7 @@ select.obj-input{
   margin-top:6px;
   font-size:.71875rem;
   line-height:1.4;
+  padding:7px 9px;
 }
 
 /* ─── Dimensions ─── */

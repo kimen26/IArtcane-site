@@ -202,7 +202,9 @@
 .photos-remarque{
   padding:11px 12px 14px;
   background:var(--amber-soft);
-  border-bottom:1px solid var(--line-soft);
+  border:1px solid var(--warn-line);
+  border-radius:10px;
+  margin:0 12px 10px;
 }
 .photos-remarque-head{
   display:flex;

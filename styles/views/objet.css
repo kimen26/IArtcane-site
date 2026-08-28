@@ -63,7 +63,6 @@
   box-shadow:0 1px 3px rgba(20,30,55,.14);
   cursor:pointer;
   background:linear-gradient(135deg,var(--ink-3),var(--blue-deep));
-  min-height:120px;
 }
 .obj-thumb img,
 .obj-thumb-placeholder{
@@ -250,6 +249,9 @@
   font-size:.65625rem;
   color:var(--ink-3);
 }
+.obj-card-more span{
+  font-size:.5625rem;
+}
 
 /* Identification grid */
 .obj-id-grid{
@@ -397,10 +399,12 @@
   opacity:.65;
   cursor:not-allowed;
 }
-.obj-action-outline{
+.obj-actions button.obj-action-outline{
   border:1px solid var(--line);
   background:var(--surface);
   color:var(--ink);
+  font-size:.78125rem;
+  font-weight:600;
 }
 .obj-action-ia{
   border:1px solid var(--line-strong);
@@ -637,7 +641,7 @@
 
 /* Zoom texte 200 % : pas de hauteur fixe sur les zones de texte */
 @media (max-width:373px){
-  .obj-thumb{width:80px; min-height:110px}
+  .obj-thumb{width:80px}
   .obj-thumb img{width:80px}
   .obj-id-grid{grid-template-columns:1fr}
   .obj-photo-grid{grid-template-columns:repeat(2,1fr)}
