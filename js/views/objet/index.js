@@ -20,7 +20,7 @@ import {
 } from '../../core/format.js';
 import { sb, signPaths, logEvent, lancerRecherches, enqueueJobs } from '../../core/data.js';
 import { loadViewCss } from '../../core/css.js';
-import { O, hooks, CHAMPS_VALIDABLES, estValide, toggleValidation } from './etat.js';
+import { O, hooks, CHAMPS_VALIDABLES, estValide, toggleValidation, chargerNLens } from './etat.js';
 import { brancherUploads } from './uploads.js';
 
 await loadViewCss('objet');
@@ -40,13 +40,14 @@ async function loadObjet(id) {
   S.currentObjet = o;
   O.ecran = 'hub';
   O.focus = null;
-  const [{ data: photos }, { data: comps }, { data: fiches }, { data: events }, { data: artiste }, { data: jobs }] = await Promise.all([
+  const [{ data: photos }, { data: comps }, { data: fiches }, { data: events }, { data: artiste }, { data: jobs }, nLens] = await Promise.all([
     sb.from('photos').select('*').eq('owner_id', S.tenantId).eq('objet_id', id).order('ordre', { nullsFirst: false }).order('created_at'),
     sb.from('comparables').select('*').eq('owner_id', S.tenantId).eq('objet_id', id).order('date_vente', { ascending: false, nullsFirst: false }),
     sb.from('fiches').select('*').eq('owner_id', S.tenantId).eq('objet_id', id).order('version', { ascending: false }).limit(1),
     sb.from('evenements').select('*').eq('owner_id', S.tenantId).eq('objet_id', id).order('created_at', { ascending: false }).limit(50),
     o.auteur ? sb.from('artistes').select('*').eq('owner_id', S.tenantId).eq('nom', o.auteur).maybeSingle() : Promise.resolve({ data: null }),
     sb.from('jobs').select('type,statut').eq('owner_id', S.tenantId).eq('objet_id', id).in('statut', ['en_attente','en_cours']),
+    chargerNLens(id),
   ]);
   const compPaths = (comps ?? []).map(c => c.image_path).filter(Boolean);
   const urlByPath = await signPaths([...(photos ?? []).flatMap(p => [p.storage_path, p.thumb_path].filter(Boolean)), ...compPaths]);
@@ -56,6 +57,7 @@ async function loadObjet(id) {
   O.events = events ?? [];
   O.artiste = artiste ?? null;
   O.jobs = jobs ?? [];
+  O.nLens = nLens ?? 0;
   O.pipe = computePipe(O.events, O.jobs, S.currentObjet);
   renderObjet();
   loadSimilar(o);
@@ -319,6 +321,10 @@ function calculerAlertes(o) {
   if (nonTaguees) {
     alertes.push({ cle: 'photos_sans_tag', bloquant: false, ecran: 'photos', focus: null, titre: `${nonTaguees} photo${nonTaguees > 1 ? 's' : ''} sans tag`, sous: 'taguer ce que montre chaque photo (signature, revers…) — ça guide l’analyse' });
   }
+  // Artiste introuvable malgré Lens (HO-087) + photos en cause par l'IA (suggestions refusables — pas la corvée bloquante retirée en HO-085).
+  if (O.nLens >= 2 && !o.auteur) alertes.push({ cle: 'artiste_introuvable', bloquant: false, ecran: 'photos', focus: null, titre: `Artiste toujours pas identifié après ${O.nLens} passes Lens`, sous: 'des photos plus nettes de la signature aideraient' });
+  const nSignalees = O.photos.filter(p => p.remarque_statut === 'en_attente').length;
+  if (nSignalees) alertes.push({ cle: 'photo_qualite', bloquant: false, ecran: 'photos', focus: null, titre: `${nSignalees} photo${nSignalees > 1 ? 's' : ''} signalée${nSignalees > 1 ? 's' : ''} par l'analyse`, sous: "l'IA pense qu'une reprise aiderait l'identification" });
   const refus = S.currentObjet.alertes_refusees ?? {};
   return alertes.filter(a => !refus[a.cle]);
 }

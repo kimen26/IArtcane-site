@@ -25,7 +25,19 @@ export const O = {
   jobs: [],       // jobs en attente/en cours
   ecran: 'hub',   // 'hub' | 'photos' | 'identification' | 'ventes' | 'description' | 'historique'
   focus: null,    // { champ } | { photoId } — consommé par l'écran cible puis remis à null
+  nLens: 0,       // nb de passes R2 Lens (evenements action='lens R2', HO-087) — 0 par défaut
 };
+
+/** Compte les passes R2 (Lens) d'un objet — même échouées (le runbook trace
+ * toujours, cf. infra/cron/prompt-enrichment.md l. 166). 0 si la requête
+ * échoue : une alerte manquante est préférable à une fiche cassée. */
+export async function chargerNLens(id) {
+  const { count, error } = await sb.from('evenements')
+    .select('id', { count: 'exact', head: true })
+    .eq('owner_id', S.tenantId).eq('objet_id', id).eq('action', 'lens R2');
+  if (error) { console.warn('chargerNLens:', error.message); return 0; }
+  return count ?? 0;
+}
 
 /** Photo actuellement affichée dans la galerie (à défaut : la première). */
 export const selPhoto = () => O.photos[0];
