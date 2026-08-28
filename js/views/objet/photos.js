@@ -232,13 +232,8 @@ function brancher(el) {
   el.querySelector('[data-action="nav"]')?.addEventListener('click', () => hooks.naviguer('hub'));
 
   // Boutons barre du bas
-  el.querySelector('[data-action="ajouter"]')?.addEventListener('click', () => {
-    $('#file-add-photo').click();
-  });
-  el.querySelector('[data-action="enregistrer"]')?.addEventListener('click', () => {
-    toast('✓ Photos enregistrées');
-    hooks.naviguer('hub');
-  });
+  el.querySelector('[data-action="ajouter"]')?.addEventListener('click', () => { $('#file-add-photo').click(); });
+  el.querySelector('[data-action="enregistrer"]')?.addEventListener('click', () => { toast('✓ Photos enregistrées'); hooks.naviguer('hub'); });
   el.querySelector('[data-action="relancer"]')?.addEventListener('click', async e => {
     const btn = e.currentTarget;
     const o = S.currentObjet;
@@ -264,10 +259,6 @@ function brancher(el) {
   el.querySelector('[data-action="recadrer"]')?.addEventListener('click', () => {
     const p = photoCourante();
     if (!p) return;
-    if (p.rotation && p.rotation !== 0) {
-      toast('Remets la photo droite (0°) avant de recadrer', true);
-      return;
-    }
     openLightbox(p, 'cut');
   });
   el.querySelector('[data-action="supprimer"]')?.addEventListener('click', () => supprimerPhoto());
@@ -276,14 +267,10 @@ function brancher(el) {
 
   // Remarque IA
   el.querySelector('[data-action="remarque-refuse"]')?.addEventListener('click', () => refuserRemarque());
-  el.querySelector('[data-action="remarque-reprendre"]')?.addEventListener('click', () => {
-    openCamera('objet', { onClose: onCamClose });
-  });
+  el.querySelector('[data-action="remarque-reprendre"]')?.addEventListener('click', () => { openCamera('objet', { onClose: onCamClose }); });
 
   // Tags radio
-  el.querySelectorAll('[data-action="tag"]').forEach(btn => {
-    btn.addEventListener('click', () => changerTag(btn.dataset.kind));
-  });
+  el.querySelectorAll('[data-action="tag"]').forEach(btn => { btn.addEventListener('click', () => changerTag(btn.dataset.kind)); });
 
   // Commentaire + dictée
   const ta = el.querySelector('[data-action="commentaire"]');
@@ -576,11 +563,13 @@ async function openLightbox(photo, mode = null) {
     return;
   }
   // Le geste porte sur la brute, pas sur l'affichage courant (HO-091).
+  // La rotation reste une métadonnée CSS : la brute n'est jamais pivotée sur le disque.
   const bruteUrl = (await signPaths([photo.storage_path]))[photo.storage_path];
   if (!bruteUrl) return toast('Impossible de charger la brute pour le recadrage', true);
+  const rotation = photo.rotation || 0;
   const { el: lb, close } = createOverlay({
     className: 'cut',
-    html: `<img src="${esc(bruteUrl)}" alt="Photo à recadrer — ${esc(titre)}">
+    html: `<img src="${esc(bruteUrl)}" style="transform: rotate(${rotation}deg)" alt="Photo à recadrer — ${esc(titre)}">
       <div class="cut-bar"><span class="cut-hint">Tire les poignées (bords et coins) pour délimiter la zone à garder</span>
       <button class="btn primary small" data-ok disabled>✂️ Recadrer</button>
       <button class="btn small" data-cancel>Annuler</button></div>`,
@@ -641,17 +630,27 @@ async function openLightbox(photo, mode = null) {
       await withBusy(async () => {
         const blob = await (await fetch(bruteUrl)).blob();
         const bmp = await createImageBitmap(blob);
-        const sx = Math.round(sel.x0 * bmp.width), sy = Math.round(sel.y0 * bmp.height);
-        const sw = Math.round((sel.x1 - sel.x0) * bmp.width), sh = Math.round((sel.y1 - sel.y0) * bmp.height);
+        // Redresser la brute avant découpe : la sélection porte sur l'image telle que
+        // vue à l'écran (pivotée), jamais sur la brute non pivotée (HO-094).
+        const swap = rotation === 90 || rotation === 270;
+        const dw = swap ? bmp.height : bmp.width, dh = swap ? bmp.width : bmp.height;
+        const straight = document.createElement('canvas');
+        straight.width = dw; straight.height = dh;
+        const sctx = straight.getContext('2d');
+        sctx.translate(dw / 2, dh / 2); sctx.rotate(rotation * Math.PI / 180);
+        sctx.drawImage(bmp, -bmp.width / 2, -bmp.height / 2);
+        const sx = Math.round(sel.x0 * dw), sy = Math.round(sel.y0 * dh);
+        const sw = Math.round((sel.x1 - sel.x0) * dw), sh = Math.round((sel.y1 - sel.y0) * dh);
         if (sw < 20 || sh < 20) throw new Error('zone trop petite');
         const c = document.createElement('canvas');
         c.width = sw; c.height = sh;
-        c.getContext('2d').drawImage(bmp, sx, sy, sw, sh, 0, 0, sw, sh);
+        c.getContext('2d').drawImage(straight, sx, sy, sw, sh, 0, 0, sw, sh);
         const out = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.92));
         if (!out) throw new Error('encodage impossible');
-        // storage_path (la brute) n'est JAMAIS réécrit ni supprimé (Yann, HO-091) — crop_path devient l'image de travail.
+        // storage_path (la brute) n'est JAMAIS réécrit ni supprimé (Yann, HO-091) — crop_path devient l'image de travail,
+        // déjà droite : la métadonnée rotation repasse à 0 pour ne pas la pivoter une 2e fois à l'affichage.
         const base = photo.storage_path.replace(/\.[^./]+$/, '').replace(/[^/]+$/, crypto.randomUUID());
-        const cropPath = `${base}.crop.jpg`, paths = { crop_path: cropPath };
+        const cropPath = `${base}.crop.jpg`, paths = { crop_path: cropPath, rotation: 0 };
         const { error: e1 } = await sb.storage.from('photos').upload(cropPath, out, { contentType: 'image/jpeg' });
         if (e1) throw e1;
         const bornes = [['mini_path', MINI_PX, 0.75], ['thumb_path', THUMB_PX, 0.8], ['moyen_path', MOYEN_PX, 0.85]];
