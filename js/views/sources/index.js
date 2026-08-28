@@ -6,13 +6,16 @@
 // vue (`mount()`), appelé par la coquille views/sources.js.
 //
 // Territoire (D-041) :
-//   • index.js   ce fichier — rendu + délégation d'actions
-//   • etat.js    chargement JSON + agrégats consultations + mesures
-// S-B « Palmarès » : HO-060 (entrée de navigation en stub ici).
+//   • index.js     ce fichier — rendu S-A + délégation d'actions + dispatch S-A/S-B
+//   • etat.js      chargement JSON + agrégats consultations + mesures
+//   • palmares.js  écran S-B « Palmarès d'usage » (HO-060)
+// `sources.js` (coquille, hors périmètre) appelle mount() sans lire le hash —
+// le dispatch #/sources vs #/sources/palmares se fait ici, sur hashchange.
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, esc, toast } from '../../core/dom.js';
 import { loadViewCss } from '../../core/css.js';
 import { SRC, hooks, chargerTout, marquerConsultee } from './etat.js';
+import { mount as mountPalmares } from './palmares.js';
 
 await loadViewCss('sources');
 
@@ -30,8 +33,9 @@ const BESOINS = [
 const LIGNES_VISIBLES = 4;     // lignes dépliées par défaut dans un volet ouvert
 
 // Badge d'accès — mapping multi-codes repris de l'ancienne vue (« API/NAV-AUTO »
-// = deux badges). Le libellé long vient de la légende du JSON.
-function badges(codes) {
+// = deux badges). Le libellé long vient de la légende du JSON. Exporté : réutilisé
+// tel quel par palmares.js (S-B) — même vocabulaire visuel que S-A.
+export function badges(codes) {
   const leg = SRC.data?.legende ?? {};
   return String(codes ?? '').split('/').map(c => c.trim()).filter(Boolean).map(code => {
     const cls = 'acc-' + code.toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -119,7 +123,7 @@ function volet(besoin) {
 // ─── Carte « Payantes — conditions de déclenchement » ─────────────────────
 // Une entrée par source candidate portant un trigger. Avancement = mesure
 // calculée (etat.js) / seuil. Badge d'état selon trigger.etat.
-const ETAT_BADGE = {
+export const ETAT_BADGE = {
   arme: { txt: 'ARMÉ', cls: 'arme' },
   atteint: { txt: 'ARMÉ', cls: 'arme' },
   ajourne: { txt: 'AJOURNÉ', cls: 'ajourne' },
@@ -128,13 +132,14 @@ const ETAT_BADGE = {
 
 // Nom de source « nu » : on retire la parenthèse de précision pour rapprocher
 // « Akoun en ligne (380 000 artistes) », « Akoun en ligne illimité »…
-const nomNu = nom => String(nom).replace(/\s*\(.*$/, '').replace(/\s+(illimité|en ligne)$/i, '').trim();
+export const nomNu = nom => String(nom).replace(/\s*\(.*$/, '').replace(/\s+(illimité|en ligne)$/i, '').trim();
 
-function carteDeclencheurs() {
-  // Une entrée par condition : la section « stratégie d'acquisition » du JSON
-  // reprend des sources déjà listées ailleurs, souvent sous un libellé un peu
-  // différent. On dédoublonne sur l'identité du déclencheur (mesure + seuil),
-  // en gardant la 1re occurrence et son libellé le plus court.
+// Une entrée par condition de déclenchement, dédoublonnée sur l'identité du
+// déclencheur (mesure + seuil) — la section « stratégie d'acquisition » du JSON
+// reprend des sources déjà listées ailleurs, souvent sous un libellé différent.
+// Garde la 1re occurrence et son libellé le plus court. Exporté : source unique
+// pour S-A (carte déclencheurs) et S-B (palmares.js) — ne pas dupliquer.
+export function candidatsDeclencheurs() {
   const parCle = new Map();
   for (const sec of SRC.data.sections) {
     for (const e of sec.entrees ?? []) {
@@ -144,7 +149,11 @@ function carteDeclencheurs() {
       if (!gardee || nomNu(e.nom).length < nomNu(gardee.nom).length) parCle.set(cle, e);
     }
   }
-  const candidates = [...parCle.values()];
+  return [...parCle.values()];
+}
+
+function carteDeclencheurs() {
+  const candidates = candidatsDeclencheurs();
   if (!candidates.length) return '';
 
   const lignes = candidates.map(e => {
@@ -200,7 +209,8 @@ function voletEcartees() {
 }
 
 // ─── Actions au clic sur une source ─────────────────────────────────────
-function trouverSource(nom) {
+// Exportée : palmares.js (S-B) résout badge d'accès / périmètre par nom.
+export function trouverSource(nom) {
   for (const sec of SRC.data.sections) {
     const e = (sec.entrees ?? []).find(x => x.nom === nom);
     if (e) return e;
@@ -253,7 +263,7 @@ function render() {
       <div class="src-barre">
         <div class="src-barre-tete">
           <h1 class="src-titre">Sources</h1>
-          <a class="src-vers-palmares" href="#/sources/palmares" data-stub="1" title="Palmarès d'usage — HO-060">Palmarès →</a>
+          <a class="src-vers-palmares" href="#/sources/palmares">Palmarès →</a>
         </div>
         <input class="src-recherche" type="search" placeholder="Filtrer par nom…" value="${esc(SRC.q)}" aria-label="Filtrer les sources par nom">
         <div class="src-sousligne">${esc(sousLigne())}</div>
@@ -296,9 +306,6 @@ function brancher() {
       }
       return;
     }
-    const stub = e.target.closest('[data-stub]');
-    if (stub) { e.preventDefault(); toast('Le palmarès d\'usage arrive bientôt (HO-060)'); return; }
-
     const ligne = e.target.closest('.src-ligne:not(.ecartee)');
     if (ligne && !e.target.closest('a')) {
       await ouvrirActions(ligne.dataset.src, ligne.dataset.besoin);
@@ -319,6 +326,27 @@ hooks.recharger = async () => { await chargerTout(); render(); };
 
 let branche = false;
 
+// Dispatch S-A / S-B : la coquille views/sources.js (hors périmètre HO-060)
+// appelle mount() sans lire le hash — les deux écrans du territoire partagent
+// donc le hashchange global (window.addEventListener côté app.js) pour savoir
+// lequel afficher, sans re-remonter tout le territoire.
+const estPalmares = () => /^#\/sources\/palmares/.test(location.hash);
+
+async function afficherEcranCourant() {
+  const body = $('#sources-body');
+  if (estPalmares()) {
+    await mountPalmares();
+  } else {
+    body.innerHTML = '<div class="skeleton" style="height:220px"></div>';
+    if (!branche) { brancher(); branche = true; }
+    render();
+  }
+}
+
+window.addEventListener('hashchange', () => {
+  if (/^#\/sources/.test(location.hash) && SRC.data) afficherEcranCourant();
+});
+
 export async function mount() {
   const body = $('#sources-body');
   body.innerHTML = '<div class="skeleton" style="height:220px"></div>';
@@ -329,6 +357,5 @@ export async function mount() {
     body.innerHTML = '<div class="empty"><div class="big">🗃️</div><h2>Sources indisponibles</h2><p>data/sources.json introuvable ou invalide.</p></div>';
     return;
   }
-  if (!branche) { brancher(); branche = true; }
-  render();
+  await afficherEcranCourant();
 }

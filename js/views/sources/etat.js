@@ -17,7 +17,8 @@ import { catCanon } from '../../core/format.js';
 
 export const SRC = {
   data: null,          // contenu brut de sources.json
-  rendement: {},       // source_nom → { vues, utiles, derniereVue }
+  rendement: {},       // source_nom → { vues, utiles, derniereVue } (30 j, S-A)
+  consultations: [],   // lignes brutes (tout l'historique) — filtrées côté S-B (fenêtre + besoin)
   mesures: {},         // clé meta.mesures → nombre | null
   ecarts: [],          // messages d'écart (mesures non calculables proprement)
   q: '',               // filtre de recherche (nom de source)
@@ -41,10 +42,10 @@ const auteurVide = o => !o.auteur || !String(o.auteur).trim();
 
 export async function chargerTout() {
   SRC.data ??= await (await fetch('data/sources.json')).json();
-  await Promise.all([chargerRendement(), chargerMesures()]);
+  await Promise.all([chargerRendement(), chargerConsultations(), chargerMesures()]);
 }
 
-// Agrégat des consultations sur 30 jours, par nom canonique de source.
+// Agrégat des consultations sur 30 jours, par nom canonique de source (S-A).
 async function chargerRendement() {
   SRC.rendement = {};
   const { data, error } = await sb
@@ -59,6 +60,18 @@ async function chargerRendement() {
     if (c.a_nourri) r.utiles++;
     if (!r.derniereVue || c.created_at > r.derniereVue) r.derniereVue = c.created_at;
   }
+}
+
+// Lignes brutes, tout l'historique (S-B « Palmarès ») — la fenêtre 30 j/tout et
+// le filtre de besoin s'appliquent côté vue, sans re-requêter.
+async function chargerConsultations() {
+  SRC.consultations = [];
+  const { data, error } = await sb
+    .from('sources_consultations')
+    .select('source_nom, besoin, objet_id, a_nourri, created_at')
+    .eq('owner_id', S.tenantId);
+  if (error) { console.warn('sources_consultations (palmarès):', error.message); return; }
+  SRC.consultations = data ?? [];
 }
 
 // Les 4 mesures de la clé fermée meta.mesures (HO-058). Chaque mesure est un
