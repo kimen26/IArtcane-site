@@ -19,8 +19,27 @@ async function majCatalogue() {
   if (!canWrite()) return;
   await ensureCollection();
   if (!S.collection.length) { toast('Aucun objet dans le catalogue', true); return; }
-  if (!confirm(`Rejouer les recherches (R2 Lens + R3 si artiste) sur les ${S.collection.length} objets du catalogue ?\n\nLes objets déjà en file sont ignorés. Le cron traitera ~5 objets par run de 2 min.`)) return;
-  const n = await enqueueJobs(S.collection.map(o => o.id), 'maj');
+
+  // D-064 : bouton MAJ générale intelligent — R1 d'abord pour les objets jamais identifiés.
+  const ids = S.collection.map(o => o.id);
+  const { data: idsR1 } = await sb.from('evenements')
+    .select('objet_id')
+    .eq('owner_id', S.tenantId)
+    .eq('action', 'identification')
+    .in('objet_id', ids);
+  const avecR1 = new Set((idsR1 ?? []).map(e => e.objet_id));
+  const sansR1 = S.collection.filter(o => !avecR1.has(o.id));
+  const avecMaj = S.collection.filter(o => avecR1.has(o.id));
+
+  const lines = [`Mettre à jour les ${S.collection.length} objets du catalogue ?`];
+  if (sansR1.length) lines.push(`• ${plur(sansR1.length, 'objet jamais identifié', 'objets jamais identifiés')} → R1 (Kimi) d'abord`);
+  if (avecMaj.length) lines.push(`• ${plur(avecMaj.length, 'objet déjà identifié', 'objets déjà identifiés')} → R2 (Lens) + R3`);
+  lines.push('Les objets déjà en file sont ignorés. Le cron traitera ~5 objets par run de 2 min.');
+  if (!confirm(lines.join('\n'))) return;
+
+  let n = 0;
+  if (sansR1.length) n += await enqueueJobs(sansR1.map(o => o.id), 'r1');
+  if (avecMaj.length) n += await enqueueJobs(avecMaj.map(o => o.id), 'maj');
   toast(n
     ? `${plur(n, 'objet mis', 'objets mis')} en file — le cron les traitera ~5 par run de 2 min.`
     : 'Tous les objets sont déjà en file');
