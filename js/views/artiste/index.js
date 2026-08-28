@@ -148,8 +148,14 @@ function renderArtiste() {
     });
     return;
   }
-  // Sous-écrans futurs (HO-053) : navigation interne via hooks.naviguer.
-  hooks.naviguer?.(A.ecran);
+  // Sous-écrans (HO-053) : chargement dynamique de la vue interne.
+  if (A.ecran === 'images') {
+    import('./images.js').then(m => m.rendre()).catch(err => {
+      console.error('HO-053 images.js:', err);
+      toast('Écran Images injoignable', true);
+    });
+    return;
+  }
 }
 
 function brancherComposer() {
@@ -164,11 +170,17 @@ function brancherComposer() {
 function naviguer(ecran, focus = null) {
   A.ecran = ecran;
   A.focus = focus;
+  if (ecran === 'fiche') {
+    // Retour depuis un sous-écran : recharger pour refléter les zones fraîches.
+    loadArtiste(A.nom);
+    return;
+  }
   renderArtiste();
 }
 
 hooks.recharger = loadArtiste;
 hooks.naviguer = naviguer;
+hooks.rendre = renderArtiste;
 
 // ─── Helpers de données ─────────────────────────────────────────────────────
 function dossier() {
@@ -218,7 +230,7 @@ function rendreFiche() {
       <button class="art-bar-primary" data-action="scroll-objets">Voir les ${A.objets.length} objet${A.objets.length > 1 ? 's' : ''}</button>
       ${canWrite()
         ? `<button class="art-bar-outline" data-action="focus-note">✎ Note</button>
-           <button class="art-bar-outline" data-action="quick-photo" title="Ajouter une image">📷</button>`
+           <button class="art-bar-outline" data-action="nav-images" title="Gérer les images">🖼 Images · ${A.images.length}</button>`
         : ''}
     </div>`;
 
@@ -604,6 +616,8 @@ $('#artiste-body').addEventListener('click', async e => {
   } else if (act === 'focus-note') {
     const ta = $('#art-note-text');
     if (ta) { ta.focus(); $('#art-composer')?.classList.add('focused'); }
+  } else if (act === 'nav-images') {
+    hooks.naviguer('images');
   } else if (act === 'zoom-artiste-photo') {
     e.stopPropagation();
     openArtistePhoto(el.dataset.pid);
