@@ -247,8 +247,13 @@ export async function uploadPhotosFor(oid, files, firstIsFace = false, onProgres
 // artiste — seules la table et les chemins changent.
 // @returns true si la ligne a bien été supprimée
 export async function deleteStoredPhoto(table, id, paths) {
-  const { error } = await sb.from(table).delete().eq('owner_id', S.tenantId).eq('id', id);
+  // `.select()` force PostgREST à renvoyer les lignes RÉELLEMENT supprimées.
+  // Sans lui, un DELETE que la RLS bloque rend `error: null` et 0 ligne : le
+  // code concluait « supprimée », l'écran se rerendait sans la vignette, et la
+  // ligne restait en base. Panne muette constatée en prod (Yann, 2026-08-28).
+  const { data, error } = await sb.from(table).delete().eq('owner_id', S.tenantId).eq('id', id).select('id');
   if (error) { toast(`Photo non supprimée — ${error.message}`, true); return false; }
+  if (!data?.length) { toast('Photo non supprimée — droits insuffisants ou déjà supprimée. Recharge la page.', true); return false; }
   await sb.storage.from('photos').remove(paths.filter(Boolean));
   return true;
 }

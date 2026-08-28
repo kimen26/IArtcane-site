@@ -67,12 +67,17 @@ async function deleteObjet() {
   const o = S.currentObjet;
   if (!o) return;
   if (!confirm(`Supprimer l'objet #${o.id} ?\n${O.photos.length} photo(s), fiche, comparables et historique partent avec — définitif.`)) return;
-  const { annule } = await withBusy(async () => {
-    const paths = O.photos.map(p => p.storage_path);
+  // La ligne d'abord : tant qu'elle résiste (RLS, droits), on ne touche PAS aux
+  // fichiers — sinon un refus silencieux laisserait une fiche sans ses photos.
+  const { valeur: supprime, annule } = await withBusy(async () => {
+    const ok = await enregistrer(() => sb.from('objets').delete().eq('owner_id', S.tenantId).eq('id', o.id).select('id'),
+      'Objet supprimé', { silencieuxSiOk: true, attendLignes: true });
+    if (!ok) return false;
+    const paths = O.photos.map(p => p.storage_path).filter(Boolean);
     if (paths.length) await sb.storage.from('photos').remove(paths);
-    if (!await enregistrer(() => sb.from('objets').delete().eq('owner_id', S.tenantId).eq('id', o.id), 'Objet supprimé', { silencieuxSiOk: true })) throw new Error('suppression échouée');
+    return true;
   }, { titre: 'Suppression de l\'objet…', annulable: false });
-  if (annule) return;
+  if (annule || !supprime) return;
   toast(`Objet #${o.id} supprimé`);
   location.hash = '#/';
 }

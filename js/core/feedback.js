@@ -93,12 +93,19 @@ function relancerMinuteur(t, duree) {
  * @param opts.silencieuxSiOk  true = pas de toast de succès (réservé aux gestes implicites)
  * @returns true si l'écriture a réussi, false sinon — l'appelant s'arrête sur false
  */
-export async function enregistrer(requete, label, { silencieuxSiOk = false } = {}) {
-  let error;
+export async function enregistrer(requete, label, { silencieuxSiOk = false, attendLignes = false } = {}) {
+  let error, data;
   try {
-    ({ error } = await (typeof requete === 'function' ? requete() : requete));
+    ({ error, data } = await (typeof requete === 'function' ? requete() : requete));
   } catch (err) {
     error = err;
+  }
+  // Un DELETE/UPDATE que la RLS bloque rend `error: null` et 0 ligne : sans ce
+  // garde, on annonce « enregistré » alors que la base n'a pas bougé (panne muette
+  // constatée en prod — Yann, 2026-08-28). L'appelant qui ajoute `.select()` à sa
+  // requête peut demander la vérification par `attendLignes: true`.
+  if (!error && attendLignes && !data?.length) {
+    error = new Error('aucune ligne modifiée — droits insuffisants ou élément déjà supprimé');
   }
   if (error) {
     console.warn('enregistrer:', label, error);
