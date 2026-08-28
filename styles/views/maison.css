@@ -1,13 +1,220 @@
-/* ─── Vue Maison : nom, membres, rôles (écran owner, 0012) ─── */
-.mbr-form{display:flex;gap:10px;align-items:center}
-.mbr-form input{flex:1;min-width:0}
-.mbr-list{display:flex;flex-direction:column;margin-top:12px}
-.mbr-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
-.mbr-name{flex:1;min-width:0;font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mbr-role{flex-shrink:0}
+/* ═══════════════════════════════════════════════════════════════════════════
+   Vue Maison (HO-056) — territoire js/views/maison/ : 3 onglets sous une barre
+   commune (Identité / Filigrane / Membres), navigation locale sans route.
+
+   Tokens d'abord (tokens.css gelé — HO-057/059 en parallèle). Les couleurs de
+   la maquette sans équivalent token deviennent des variables LOCALES ci-dessous.
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root{
+  --ms-action:#2456E0;          /* bleu action maquette (filet d'onglet, boutons) */
+  --ms-action-deep:#173A8F;     /* survol */
+  --ms-navy:#0D1B3E;            /* hero plein — proche de --ink, gardé fidèle maquette */
+  --ms-navy-sub:#9BA9CE;        /* sur-ligne sur navy */
+  --ms-field:#FBFCFE;           /* fond de champ maquette */
+  --ms-field-line:#DDE3EE;      /* bordure de champ maquette */
+  --ms-card-line:#EDF0F6;       /* filet interne des cartes blanches (maquette) */
+  --ms-ink-2:#44507A;           /* texte secondaire maquette */
+  --ms-ink-3:#69738C;           /* texte tertiaire maquette (notes) */
+  --ms-ink-faint:#8A94B8;       /* texte faible / onglet inactif */
+  --ms-pave:#F1F5FA;            /* fond pavé interne (rôles) */
+  --ms-red:#B23A48;             /* trait retrait membre */
+  --ms-red-line:#F0D6DA;        /* bordure bouton retrait */
+  --ms-placeholder:#E4E6EC;     /* fond image absente */
+}
+
+/* La <section id="view-maison"> d'index.html (transverse gelé) porte déjà un
+   bouton retour et un titre « Maison » : on les cache, notre barre les remplace. */
+#view-maison > .back,
+#view-maison > .page-title{ display:none; }
+#view-maison{ padding:0; }
+
+/* ─── Coque + barre commune ──────────────────────────────────────────────── */
+.ms-shell{ display:flex; flex-direction:column; min-height:100%; background:var(--bg); }
+
+.ms-bar{ position:sticky; top:0; z-index:5; background:var(--surface); border-bottom:1px solid var(--ms-card-line); }
+.ms-bar-top{ display:flex; align-items:center; gap:12px; padding:12px 15px 0; }
+.ms-bar-title{ font-family:var(--serif); font-size:17px; font-weight:600; color:var(--ink); }
+.ms-bar-spacer{ flex:1; }
+.ms-back{ display:inline-flex; align-items:center; gap:6px; background:none; border:none; padding:0;
+  font-family:var(--sans); font-size:11.5px; color:var(--ms-action); cursor:pointer; }
+.ms-back-chev{ width:6px; height:6px; border-left:1.7px solid var(--ms-action); border-bottom:1.7px solid var(--ms-action); transform:rotate(45deg); }
+
+.ms-tabs{ display:flex; gap:18px; padding:12px 15px 0; }
+.ms-tab{ display:flex; flex-direction:column; gap:8px; background:none; border:none; padding:0 0 0;
+  font-family:var(--sans); font-size:12.5px; color:var(--ms-ink-faint); cursor:pointer; }
+.ms-tab.is-active{ font-weight:600; color:var(--ink); }
+.ms-tab-filet{ height:2px; border-radius:2px; background:transparent; transition:background .18s; }
+.ms-tab.is-active .ms-tab-filet{ background:var(--ms-action); }
+
+/* ─── Zone d'onglet ──────────────────────────────────────────────────────── */
+.ms-onglet{ flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:11px; padding:12px; }
+
+.ms-card{ background:var(--surface); border-radius:14px; padding:15px 16px 17px;
+  box-shadow:0 1px 3px rgba(20,30,55,.1); display:flex; flex-direction:column; gap:12px; }
+.ms-hero-card{ padding:0; overflow:hidden; gap:0; }
+
+.ms-sec-title{ display:flex; align-items:baseline; gap:9px; }
+.ms-sec-title > span:first-child{ font-family:var(--serif); font-size:16px; color:var(--ink); }
+.ms-rule{ flex:1; height:1px; background:var(--ms-card-line); }
+.ms-count{ font-family:var(--mono); font-size:11px; color:var(--ms-ink-faint); }
+
+.ms-note{ margin:0; font-size:11.5px; line-height:1.5; color:var(--ms-ink-3); }
+.ms-note-faint{ font-size:11px; color:var(--ms-ink-faint); }
+
+.ms-mini-block{ display:flex; flex-direction:column; gap:6px; }
+.ms-mini-label{ font-size:10px; letter-spacing:.13em; text-transform:uppercase; color:var(--ms-ink-faint); }
+
+/* ─── Champs & boutons ───────────────────────────────────────────────────── */
+.ms-field-row{ display:flex; gap:8px; }
+.ms-input{ flex:1; min-width:0; border:1px solid var(--ms-field-line); border-radius:9px;
+  padding:10px 11px; font-family:var(--sans); font-size:13.5px; color:var(--ink); background:var(--ms-field); outline:none; }
+.ms-input:focus{ border-color:var(--ms-action); }
+.ms-select{ border:1px solid var(--ms-field-line); border-radius:9px; padding:9px 10px;
+  font-family:var(--sans); font-size:12.5px; color:var(--ms-ink-2); background:var(--ms-field); outline:none; }
+
+.ms-btn{ border:none; border-radius:9px; padding:0 15px; font-family:var(--sans); font-size:12.5px;
+  font-weight:600; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+.ms-btn:disabled{ opacity:.5; cursor:not-allowed; }
+.ms-btn-primary{ background:var(--ms-action); color:#fff; padding:10px 15px; }
+.ms-btn-primary:hover:not(:disabled){ background:var(--ms-action-deep); }
+.ms-btn-ghost{ background:none; border:1px solid var(--ms-field-line); color:var(--ms-ink-2); padding:8px 13px; align-self:flex-start; }
+
+/* ─── M1 · Hero ──────────────────────────────────────────────────────────── */
+.ms-hero{ position:relative; padding:20px 16px 16px; background:var(--ms-navy); overflow:hidden; }
+.ms-hero-ring{ position:absolute; border-radius:50%; border:1px solid rgba(255,255,255,.14); }
+.ms-hero-ring-a{ right:-34px; top:-34px; width:132px; height:132px; }
+.ms-hero-ring-b{ right:-14px; bottom:-52px; width:112px; height:112px; border-color:rgba(255,255,255,.09); }
+.ms-hero-row{ position:relative; display:flex; align-items:center; gap:13px; }
+.ms-hero-disc{ width:52px; height:52px; border-radius:50%; border:1px solid rgba(255,255,255,.35);
+  display:flex; align-items:center; justify-content:center; font-family:var(--serif); font-weight:700; font-size:23px; color:#fff; flex:none; }
+.ms-hero-txt{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+.ms-hero-name{ font-family:var(--serif); font-weight:700; font-size:21px; letter-spacing:.02em; color:#fff;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ms-hero-sub{ font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--ms-navy-sub); }
+.ms-hero-body{ padding:14px 16px 16px; display:flex; flex-direction:column; gap:9px; }
+
+/* ─── M1 · Roue de teintes ──────────────────────────────────────────────── */
+.ms-ruban-grid{ display:flex; gap:14px; align-items:center; }
+.ms-wheel{ position:relative; width:152px; height:152px; flex:none; }
+.ms-wheel-dot{ position:absolute; border:none; padding:0; border-radius:50%; cursor:pointer;
+  box-shadow:0 0 0 1px rgba(13,27,62,.10); }
+.ms-wheel-dot.is-sel{ box-shadow:0 0 0 2px #fff, 0 0 0 4px var(--ms-navy); }
+.ms-wheel-core{ position:absolute; left:50%; top:50%; width:56px; height:56px; margin:-28px 0 0 -28px;
+  border-radius:50%; box-shadow:0 0 0 3px #fff, 0 1px 6px rgba(20,30,55,.28);
+  display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; letter-spacing:.06em; }
+
+.ms-ruban-side{ flex:1; min-width:0; display:flex; flex-direction:column; gap:9px; }
+.ms-neutres{ display:flex; gap:5px; }
+.ms-neutre{ flex:1; height:20px; border:none; padding:0; border-radius:5px; cursor:pointer; box-shadow:0 0 0 1px rgba(13,27,62,.10); }
+.ms-neutre.is-sel{ box-shadow:0 0 0 2px #fff, 0 0 0 4px var(--ms-navy); }
+.ms-hex{ width:100%; box-sizing:border-box; border:1px solid var(--ms-field-line); border-radius:8px;
+  padding:8px 9px; font-family:var(--mono); font-size:12px; color:var(--ink); background:var(--ms-field); outline:none; }
+.ms-hex:focus{ border-color:var(--ms-action); }
+.ms-ruban-etat{ display:flex; align-items:flex-start; gap:7px; font-size:10.5px; line-height:1.4; color:var(--ms-ink-3); }
+.ms-etat-chip{ flex:none; width:7px; height:7px; margin-top:3px; border-radius:2px; }
+
+/* ─── M1 · Aperçu vignette ──────────────────────────────────────────────── */
+.ms-ruban-apercu{ display:flex; align-items:flex-start; gap:12px; padding-top:12px; border-top:1px solid var(--ms-card-line); }
+.ms-vignette{ position:relative; width:74px; aspect-ratio:3/4; border-radius:4px; overflow:hidden;
+  background:var(--ms-placeholder); box-shadow:0 1px 3px rgba(20,30,55,.2); flex:none; }
+.ms-vig-veil{ position:absolute; left:0; top:0; bottom:0; width:14px; background:linear-gradient(90deg, rgba(8,12,24,.45), rgba(8,12,24,0)); }
+.ms-vig-id{ position:absolute; left:2px; top:5px; writing-mode:vertical-rl; font-size:6px; font-weight:700;
+  letter-spacing:.13em; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.8); }
+.ms-vig-ruban{ position:absolute; right:-22px; bottom:9px; width:80px; transform:rotate(-45deg);
+  text-align:center; padding:2px 0; font-size:7px; font-weight:700; }
+.ms-apercu-txt{ flex:1; display:flex; flex-direction:column; gap:9px; }
+
+/* ─── M2 · Interrupteur ─────────────────────────────────────────────────── */
+.ms-switch{ width:38px; height:22px; border:none; border-radius:11px; background:var(--ms-field-line);
+  padding:0 3px; display:flex; align-items:center; justify-content:flex-start; cursor:pointer; transition:background .15s; }
+.ms-switch.is-on{ background:var(--ms-action); justify-content:flex-end; }
+.ms-switch:disabled{ opacity:.5; cursor:not-allowed; }
+.ms-switch-knob{ width:16px; height:16px; border-radius:50%; background:#fff; }
+
+/* ─── M2 · Aperçu manipulable ───────────────────────────────────────────── */
+.ms-fili-preview{ position:relative; border-radius:9px; overflow:hidden; box-shadow:0 1px 4px rgba(20,30,55,.2);
+  touch-action:none; cursor:grab; user-select:none; }
+.ms-fili-preview.is-off{ opacity:.55; }
+.ms-fili-photo{ display:block; width:100%; height:auto; aspect-ratio:4/3; object-fit:cover; background:var(--ms-placeholder); pointer-events:none; }
+.ms-fili-placeholder{ display:flex; align-items:center; justify-content:center; font-family:var(--mono);
+  font-size:10px; letter-spacing:.08em; color:var(--ms-ink-faint); }
+.ms-fili-mark{ position:absolute; left:78%; top:82%; transform:translate(-50%,-50%); display:flex; align-items:center;
+  gap:6px; pointer-events:none; white-space:nowrap; }
+.ms-fili-mark-disc{ width:20px; height:20px; border-radius:50%; border:1px solid #fff; display:flex; align-items:center;
+  justify-content:center; font-size:10px; color:#fff; }
+.ms-fili-mark-name{ font-size:13px; color:#fff; text-shadow:0 1px 3px rgba(0,0,0,.45); }
+.ms-fili-legend{ position:absolute; left:9px; bottom:8px; font-size:8.5px; font-family:var(--mono);
+  letter-spacing:.1em; color:rgba(255,255,255,.72); text-shadow:0 1px 2px rgba(0,0,0,.6); }
+
+/* ─── M2 · Lettrage / sliders / snaps ───────────────────────────────────── */
+.ms-lettrages{ display:flex; gap:7px; }
+.ms-lettrage{ flex:1; padding:9px 6px; border-radius:9px; text-align:center; background:var(--surface);
+  border:1px solid var(--ms-field-line); cursor:pointer; display:flex; flex-direction:column; gap:3px; align-items:center; }
+.ms-lettrage.is-sel{ background:var(--blue-soft); border-color:var(--ms-action); }
+.ms-lettrage > span:first-child{ font-size:14px; color:var(--ink); }
+.ms-lettrage.is-sel > span:first-child{ color:var(--ms-action); }
+.ms-lettrage-n{ font-size:9px; color:var(--ms-ink-faint); }
+
+.ms-fili-sliders{ display:flex; gap:12px; }
+.ms-slider{ flex:1; display:flex; flex-direction:column; gap:6px; }
+.ms-slider-head{ display:flex; align-items:baseline; gap:6px; }
+.ms-slider-head > span:last-child{ margin-left:auto; font-size:11px; font-weight:600; color:var(--ink); }
+.ms-slider input[type=range]{ width:100%; margin:0; accent-color:var(--ms-action); }
+
+.ms-fili-snaps{ display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+.ms-snap{ padding:6px 9px; border:1px solid var(--ms-field-line); border-radius:7px; background:var(--surface);
+  font-size:10.5px; color:var(--ms-ink-2); cursor:pointer; }
+.ms-snap:hover:not(:disabled){ border-color:var(--ms-action); color:var(--ms-action); }
+
+/* ─── M2 · Cibles ───────────────────────────────────────────────────────── */
+.ms-cibles{ display:flex; flex-direction:column; gap:9px; }
+.ms-cible{ display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--ink); cursor:pointer; }
+.ms-cible.is-disabled{ color:var(--ms-ink-3); cursor:default; }
+.ms-cible input{ position:absolute; opacity:0; width:0; height:0; }
+.ms-cible-box{ width:17px; height:17px; border-radius:5px; border:1px solid var(--ms-field-line); flex:none; position:relative; }
+.ms-cible input:checked + .ms-cible-box{ background:var(--ms-action); border-color:var(--ms-action); }
+.ms-cible input:checked + .ms-cible-box::after{ content:""; position:absolute; left:4px; top:2px; width:6px; height:9px;
+  border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg); }
+
+/* ─── M3 · Rôles + membres ──────────────────────────────────────────────── */
+.ms-roles{ display:flex; gap:10px; }
+.ms-role-pave{ flex:1; padding:10px 11px; border-radius:9px; background:var(--ms-pave); display:flex; flex-direction:column; gap:4px; }
+.ms-role-title{ font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ink); }
+.ms-role-txt{ font-size:11px; line-height:1.45; color:var(--ms-ink-2); }
+
+.ms-mbr-list{ display:flex; flex-direction:column; }
+.ms-mbr{ display:flex; align-items:center; gap:11px; padding:12px 0; border-top:1px solid var(--ms-card-line); }
+.ms-mbr-avatar{ width:34px; height:34px; border-radius:50%; background:var(--ms-navy); display:flex; align-items:center;
+  justify-content:center; font-family:var(--serif); font-weight:700; font-size:14px; color:#fff; flex:none; }
+.ms-mbr-id{ display:flex; flex-direction:column; gap:2px; min-width:0; flex:1; }
+.ms-mbr-name{ font-size:13px; font-weight:600; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ms-mbr-actions{ display:flex; align-items:center; gap:8px; flex:none; }
+.ms-mbr-role{ font-size:11.5px; }
+.ms-mbr-del{ width:26px; height:26px; border-radius:8px; border:1px solid var(--ms-red-line); background:var(--surface);
+  display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.ms-mbr-del:disabled{ opacity:.4; cursor:not-allowed; }
+.ms-mbr-del-bar{ width:11px; height:1.6px; background:var(--ms-red); }
+
+/* ─── M3 · Invitations ──────────────────────────────────────────────────── */
+.ms-invite-msg{ margin-top:2px; }
+.ms-msg-ok{ font-size:12px; color:var(--green); background:var(--green-soft); border-radius:7px; padding:8px 10px; }
+.ms-msg-err{ font-size:12px; color:var(--red); background:var(--red-soft); border-radius:7px; padding:8px 10px; }
+
+.ms-invite-list{ display:flex; flex-direction:column; gap:12px; }
+.ms-invite{ display:flex; align-items:center; gap:11px; }
+.ms-invite-avatar{ width:34px; height:34px; border-radius:50%; border:1px dashed var(--line-strong);
+  display:flex; align-items:center; justify-content:center; font-size:14px; color:var(--ms-ink-faint); flex:none; }
+.ms-invite-id{ display:flex; flex-direction:column; gap:2px; min-width:0; flex:1; }
+.ms-invite-mail{ font-size:12.5px; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ms-invite-meta{ font-size:10.5px; color:var(--ms-ink-faint); }
+.ms-invite-relance{ background:none; border:none; padding:0; font-size:11.5px; font-weight:600; color:var(--ms-action); cursor:pointer; }
+.ms-invite-relance:disabled{ opacity:.5; cursor:not-allowed; }
+
+/* ─── Responsive ────────────────────────────────────────────────────────── */
 @media (max-width:640px){
-  .mbr-form{flex-wrap:wrap}
-  .mbr-form input{flex:1 1 100%}
-  .mbr-row{flex-wrap:wrap;gap:8px}
-  .mbr-name{flex:1 1 100%}
+  .ms-field-row{ flex-wrap:wrap; }
+  .ms-field-row .ms-input{ flex:1 1 100%; }
+  .ms-ruban-grid{ flex-direction:column; align-items:stretch; }
+  .ms-wheel{ align-self:center; }
+  .ms-roles{ flex-direction:column; }
 }
