@@ -13,7 +13,6 @@
 // ═══════════════════════════════════════════════════════════════════════════
 import { S } from '../../core/state.js';
 import { sb } from '../../core/data.js';
-import { catCanon } from '../../core/format.js';
 
 export const SRC = {
   data: null,          // contenu brut de sources.json
@@ -82,21 +81,21 @@ async function chargerMesures() {
   SRC.ecarts = [];
   const depuis = ilya30j();
 
-  const [{ data: objets, error: eO }, { data: sign, error: eS }, { data: comps, error: eC }] = await Promise.all([
-    sb.from('objets').select('id, auteur, categorie, created_at')
+  // `comparables` n'est plus interrogée depuis le retrait des 2 mesures fausses
+  // (Q22, 2026-08-28) : les 2 mesures restantes ne dépendent que d'objets + photos.
+  const [{ data: objets, error: eO }, { data: sign, error: eS }] = await Promise.all([
+    sb.from('objets').select('id, auteur, created_at')
       .eq('owner_id', S.tenantId).gte('created_at', depuis),
     sb.from('photos').select('objet_id, kind')
       .eq('owner_id', S.tenantId).eq('kind', 'signature'),
-    sb.from('comparables').select('objet_id').eq('owner_id', S.tenantId),
   ]);
-  if (eO || eS || eC) {
+  if (eO || eS) {
     SRC.ecarts.push('Base indisponible : mesures de déclenchement non calculées.');
     for (const k of Object.keys(SRC.data?.meta?.mesures ?? {})) SRC.mesures[k] = null;
     return;
   }
 
   const recents = objets ?? [];
-  const avecComp = new Set((comps ?? []).map(c => c.objet_id));
   const avecSignature = new Set((sign ?? []).map(p => p.objet_id));
 
   // Pas de champ « artiste coté » en base : on compte tous les objets récents
@@ -111,15 +110,12 @@ async function chargerMesures() {
   SRC.mesures.signatures_a_dechiffrer_30j = recents
     .filter(o => avecSignature.has(o.id) && auteurVide(o)).length;
 
-  // Pas de champ zone/pays DACH exploitable : mesure globale (objets récents
-  // sans aucun comparable) — écart signalé.
-  SRC.mesures.objets_dach_sans_comparable_30j = recents.filter(o => !avecComp.has(o.id)).length;
-  SRC.ecarts.push('« objets DACH sans comparable » : compté globalement — aucun champ pays/zone DACH sur les objets.');
-
-  // Tableaux récents sans comparable (catégorie canonique « Tableau »).
-  SRC.mesures.tableaux_cotes_sans_comparable_30j = recents
-    .filter(o => catCanon(o.categorie) === 'Tableau' && !avecComp.has(o.id)).length;
-  SRC.ecarts.push('« tableaux cotés sans comparable » : filtre « coté » non disponible — tous les tableaux récents sans comparable.');
+  // Retirées le 2026-08-28 (Q22, arbitrage Yann) : « objets DACH sans comparable »
+  // et « tableaux cotés sans comparable » comptaient TOUS les objets / tous les
+  // tableaux, faute de champ pays/zone et de notion « artiste coté » en base.
+  // Un seuil allumé sur un compteur faux pousse à un achat injustifié (Lot-Tissimo
+  // affichait « ARMÉ 15/12 » sur des objets possiblement tous français) : mieux vaut
+  // pas d'alerte qu'une fausse. À reposer si les champs manquants arrivent un jour.
 }
 
 // ─── Marquage d'une consultation (le seul geste d'écriture de l'écran) ──────

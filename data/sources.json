@@ -2,9 +2,7 @@
   "meta": {
     "mesures": {
       "artistes_non_resolus_30j": "Artistes cotés non résolus par les sources gratuites sur 30 jours",
-      "signatures_a_dechiffrer_30j": "Signatures à déchiffrer non résolues par les sources gratuites sur 30 jours",
-      "objets_dach_sans_comparable_30j": "Objets DACH (porcelaine allemande, montres…) sans comparable sur 30 jours",
-      "tableaux_cotes_sans_comparable_30j": "Tableaux cotés sans comparable suffisant sur 30 jours"
+      "signatures_a_dechiffrer_30j": "Signatures à déchiffrer non résolues par les sources gratuites sur 30 jours"
     }
   },
   "source": "docs/cartographie-sources.md (D-028) — miroir tenu à la main ; cohérence vérifiée par `python infra/check-sources-sync.py`",
@@ -580,13 +578,7 @@
               "monde"
             ]
           },
-          "statut": "candidate",
-          "trigger": {
-            "regle": "SI 30 tableaux cotés sans comparable suffisant sur 30 jours",
-            "seuil": 30,
-            "mesure": "tableaux_cotes_sans_comparable_30j",
-            "etat": "arme"
-          }
+          "statut": "candidate"
         },
         {
           "nom": "Artnet / WorthPoint / Gordon's",
@@ -622,13 +614,7 @@
               "DACH"
             ]
           },
-          "statut": "candidate",
-          "trigger": {
-            "regle": "SI 12 objets dach (porcelaine allemande, montres…) sans comparable sur 30 jours",
-            "seuil": 12,
-            "mesure": "objets_dach_sans_comparable_30j",
-            "etat": "arme"
-          }
+          "statut": "candidate"
         },
         {
           "nom": "Cotes/indices (Akoun livre, indices Artprice)",
@@ -930,13 +916,7 @@
               "DACH"
             ]
           },
-          "statut": "candidate",
-          "trigger": {
-            "regle": "SI 12 objets dach (porcelaine allemande, montres…) sans comparable sur 30 jours",
-            "seuil": 12,
-            "mesure": "objets_dach_sans_comparable_30j",
-            "etat": "arme"
-          }
+          "statut": "candidate"
         },
         {
           "nom": "Artprice Advanced",
@@ -951,13 +931,7 @@
               "monde"
             ]
           },
-          "statut": "candidate",
-          "trigger": {
-            "regle": "SI 30 tableaux cotés sans comparable suffisant sur 30 jours",
-            "seuil": 30,
-            "mesure": "tableaux_cotes_sans_comparable_30j",
-            "etat": "arme"
-          }
+          "statut": "candidate"
         },
         {
           "nom": "askART",
