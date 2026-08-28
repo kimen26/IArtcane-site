@@ -18,9 +18,12 @@ export const S = {
   filters: { q: '', cats: [], group: 'categorie', list: '', prixMin: null, prixMax: null },
   currentObjet: null,      // objet ouvert sur la fiche (utilisé par logEvent, caméra, lightbox)
   capFiles: [],            // clichés en attente d'enregistrement (vue Capturer)
+  currentView: null,       // { view, tab, hash, label, params } — vue affichée (contexte des demandes, D-072)
+  demandesOuvertes: 0,     // demandes non closes de la maison (pastille d'en-tête)
   // Hooks branchés par le shell — rafraîchissement transverse depuis les vues
   refreshHeader: null,
   refreshMenu: null,
+  refreshDemandes: null,
 };
 
 // Un lecteur voit tout le catalogue mais ne peut rien modifier (RLS 0012 + UI masquée).

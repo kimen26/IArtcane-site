@@ -32,6 +32,12 @@
    la feuille de filtres dédiée arrive en HO-044. */
 .filters-panel{display:contents}
 .filters-count{min-width:15px;min-height:15px;padding:0 6px;border-radius:999px;background:var(--blue);color:#fff;font-family:var(--mono);font-size:.5625rem;font-weight:700;display:inline-grid;place-items:center}
+/* Pastille de la bulle « écrire à l'admin » (D-072) : même motif que .filters-count,
+   en rouge d'alerte pour la distinguer du badge de filtres. Le positionnement absolu
+   jumeau de .btn-round .filters-count (base.css:31, gelé pour ce chantier) est
+   volontairement dupliqué ici plutôt que touché là-bas. */
+.demandes-count{min-width:15px;min-height:15px;padding:0 6px;border-radius:999px;background:var(--red);color:#fff;font-family:var(--mono);font-size:.5625rem;font-weight:700;display:inline-grid;place-items:center}
+.btn-round .demandes-count{position:absolute;top:-2px;right:-2px}
 /* Mobile : chrome replié — chips et listes sauvegardées en une rangée
    scrollable, marges resserrées (objectif : ≥ 2 cartes visibles sans scroll
    à 375 px, police agrandie). */

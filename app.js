@@ -10,6 +10,7 @@ import { S, canWrite } from './js/core/state.js';
 import { catCanon, catEmoji } from './js/core/format.js';
 import { sb } from './js/core/data.js';
 import { withBusy } from './js/core/feedback.js';
+import { viewLabel } from './js/core/nav.js';
 
 // ─── Service worker (D-013) : shell offline + réception « Partager avec » ───
 // http(s) uniquement (pas de SW en file://) ; échec silencieux — l'app marche sans.
@@ -31,11 +32,12 @@ sb.auth.onAuthStateChange((event, session) => {
 function show(view) {
   $$('.view').forEach(v => v.classList.remove('active'));
   $('#view-' + view).classList.add('active');
-  // Ligne de titre/recherche et actions (loupe/entonnoir) = outils de la collection
-  // (HO-042) — masqués sur tous les autres écrans.
+  // Ligne de titre/recherche + loupe/entonnoir = outils propres à la collection (HO-042) ;
+  // la bulle « écrire à l'admin » (#header-actions), elle, reste visible sur toute vue (D-072).
   const isColl = view === 'collection';
   $('#page-subhead').classList.toggle('hidden', !isColl);
-  $('#header-actions').classList.toggle('hidden', !isColl || !S.user);
+  $('#header-actions').classList.toggle('hidden', !S.user);
+  ['#btn-search-toggle', '#btn-filters'].forEach(sel => $(sel).classList.toggle('hidden', !isColl));
   window.scrollTo({ top: 0 });
 }
 function showLogin() {
@@ -52,7 +54,7 @@ async function enterApp() {
   $('#menu-gov').classList.remove('hidden');
   await resolveTenant();
   renderMenu();
-  await Promise.all([loadHeader(), loadProfile()]);
+  await Promise.all([loadHeader(), loadProfile(), S.refreshDemandes()]);
   watchLive();
   route();
 }
@@ -126,6 +128,7 @@ function selectTenant(id) {
   applyRole();
   renderMenu();
   loadHeader();
+  S.refreshDemandes();
   const h = location.hash;
   location.hash = '#/';
   if (h === '#/' || h === '') route(); // sinon le hashchange déclenche route()
@@ -178,6 +181,7 @@ async function loadHeader() {
 // Hooks transverses : les vues rafraîchissent en-tête/menu sans importer le shell.
 S.refreshHeader = () => loadHeader();
 S.refreshMenu = () => renderMenu();
+S.refreshDemandes = async () => { await (await import('./js/views/demandes.js')).refreshCompteur(); renderMenu(); }; // D-072
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ROUTEUR (hash) — lazy import des vues (D-039)
@@ -191,6 +195,7 @@ const MENU_GOUV = [
   { hash: '#/activite',   label: 'Activité' },
   { hash: '#/sources',    label: 'Sources' },
   { hash: '#/categories', label: 'Catégories & familles' },
+  { hash: '#/demandes',   label: 'Demandes' },
 ];
 const drawerEl = () => $('#menu-panel');
 const veilEl = () => $('#drawer-veil');
@@ -267,7 +272,7 @@ function renderMenu() {
       ${rayonsHtml()}
     </nav>
     <div class="drawer-foot">
-      ${MENU_GOUV.map(e => `<button class="drawer-foot-item" data-hash="${esc(e.hash)}">${esc(e.label)}</button>`).join('')}
+      ${MENU_GOUV.map(e => `<button class="drawer-foot-item" data-hash="${esc(e.hash)}">${esc(e.label)}${e.hash === '#/demandes' && S.demandesOuvertes ? `<span class="drawer-n">${S.demandesOuvertes}</span>` : ''}</button>`).join('')}
       <div class="drawer-user">
         <span class="menu-user-name">${esc(profileName || '…')}${badgeRO}</span>
         ${S.user?.email && S.user.email !== profileName ? `<span class="menu-user-mail">${esc(S.user.email)}</span>` : ''}
@@ -313,6 +318,7 @@ $('#btn-search-toggle').addEventListener('click', () => {
 $('#btn-search-close').addEventListener('click', () => setSearchLine(false));
 // L'entonnoir de la ligne de recherche délègue à celui du bandeau (même panneau).
 $('#btn-filters-2').addEventListener('click', () => $('#btn-filters').click());
+$('#btn-demande').addEventListener('click', () => import('./js/views/demande.js').then(m => m.openDemandeSheet())); // D-072, feuille en HO-083
 
 // Registre des routes : ajouter un écran = 1 entrée ici + 1 module js/views/
 // (export `mount`, ou le nom donné via fn) + 1 <section class="view">.
@@ -326,6 +332,7 @@ const ROUTES = [
   { re: /^#\/artiste\/([^/]+)$/,  tab: 'artistes',  view: 'artiste',   load: () => import('./js/views/artistes.js'), fn: 'mountDetail' },
   { re: /^#\/artistes/,           tab: 'artistes',  view: 'artistes',  load: () => import('./js/views/artistes.js'), fn: 'mountList' },
   { re: /^#\/sources/,            view: 'sources',   load: () => import('./js/views/sources.js') },
+  { re: /^#\/demandes/,           view: 'demandes',  load: () => import('./js/views/demandes.js') },
   { re: /^#\/categories/,         view: 'categories', load: () => import('./js/views/categories.js') },
 ];
 
@@ -368,23 +375,8 @@ $$('.js-back').forEach(b => b.addEventListener('click', () => { location.hash = 
 let currentView = null;
 let prevView = null;
 
-function viewLabel(view, params = []) {
-  switch (view) {
-    case 'collection': return 'Collection';
-    case 'capture':    return 'Capturer';
-    case 'artistes':   return 'Artistes';
-    case 'artiste':    return params[0] || 'Artiste';
-    case 'objet':      return 'Objet';
-    case 'rayon':      return params[0] || 'Rayon';
-    case 'maison':     return 'Maison';
-    case 'activite':   return 'Activité';
-    case 'sources':    return 'Sources';
-    case 'categories': return 'Catégories & familles';
-    default:           return 'Collection';
-  }
-}
-
 function updateBackButtons() {
+  S.currentView = currentView; // D-072 : la feuille de demande connaît la page courante
   const label = '← ' + (prevView?.label ?? 'Collection');
   $('#obj-back').textContent = label;
   $$('.js-back').forEach(b => b.textContent = label);
