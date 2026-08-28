@@ -81,19 +81,36 @@ export async function enqueueJobs(oids, type = 'r2') {
 // photos : le recalcul est un acte humain (Enregistrer / « Relancer les
 // recherches »). L'edge elle-même saute la R1 si aucune photo n'a changé.
 // @returns { ok, skip?, certain?, error? }
+// Plafond d'attente de la R1 live (A9, 2026-08-28). Sans lui, un appel bloqué
+// laissait l'utilisateur sur « Recherche R1 (Kimi)… » indéfiniment — perçu comme
+// « ça n'ouvre jamais » (L-027). Au-delà, on rend la main : l'appelant bascule
+// sur un job `r1` que le cron reprendra.
+const R1_TIMEOUT_MS = 120000;
+
 export async function lancerRecherches(oid, { force = false } = {}) {
   const { data: { session } } = await sb.auth.getSession();
   if (!session?.access_token) { toast('Session expirée — reconnecte-toi', true); return { ok: false }; }
   let res;
+  const ctrl = new AbortController();
+  const minuteur = setTimeout(() => ctrl.abort(), R1_TIMEOUT_MS);
   try {
     res = await fetch(`${SUPABASE_URL}/functions/v1/identify-photo`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
       body: JSON.stringify({ owner_id: S.tenantId, objet_id: oid, force }),
+      signal: ctrl.signal,
     });
   } catch (e) {
+    // Abort = dépassement du plafond, pas une panne réseau : message distinct
+    // pour que l'utilisateur comprenne que la recherche continue en file.
+    if (e?.name === 'AbortError') {
+      toast('Recherche trop longue — elle repart en file, la fiche se complétera plus tard.', true);
+      return { ok: false, timeout: true };
+    }
     toast(`Recherches injoignables : ${e.message ?? e}`, true);
     return { ok: false, reseau: true };
+  } finally {
+    clearTimeout(minuteur);
   }
   const body = await res.json().catch(() => ({}));
   if (!res.ok) { toast(body.error ?? `Recherches échouées (HTTP ${res.status})`, true); return { ok: false, ...body }; }

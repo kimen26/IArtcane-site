@@ -568,6 +568,23 @@ async function creerFiche() {
   }
 }
 
+// R1 en tâche de fond (F-capture, 2026-08-28) : on ne bloque PLUS la navigation
+// sur les 2 appels Kimi vision (1-3 min mesurées). La fiche s'ouvre tout de
+// suite, la recherche continue derrière et se signale par un toast. Si elle
+// échoue ou dépasse le plafond (A9), on bascule sur un job `r1` que le cron
+// reprendra — l'utilisateur n'attend jamais devant un écran figé (L-027).
+function lancerR1EnFond(oid) {
+  lancerRecherches(oid)
+    .then(async r => {
+      if (r.ok) {
+        if (!r.skip) toast(`Objet #${oid} — recherche R1 terminée, recharge pour voir.`);
+        return;
+      }
+      await enqueueJobs([oid], 'r1');
+    })
+    .catch(async () => { await enqueueJobs([oid], 'r1'); });
+}
+
 async function envoyerPhotos(oid, isRetry, btn = $('#cap-save')) {
   const total = S.capFiles.length;
   const onProgress = (sent, tot) => { if (btn) btn.textContent = `Envoi photo ${sent + 1}/${tot}…`; };
@@ -577,20 +594,12 @@ async function envoyerPhotos(oid, isRetry, btn = $('#cap-save')) {
     pendingObjetId = oid;
     S.capFiles = failed.map(({ item }) => item);
     render();
-    if (done > 0) {
-      if (btn) btn.textContent = 'Recherche R1 (Kimi)…';
-      const r = await lancerRecherches(oid);
-      if (!r.ok) await enqueueJobs([oid], 'r1');
-    }
+    if (done > 0) lancerR1EnFond(oid);
     toast(`Objet #${oid} créé — ${done}/${total} photos envoyées. ${failed.length} en échec : renvoyez-les depuis cet écran.`, true);
     return;
   }
 
-  if (done > 0) {
-    if (btn) btn.textContent = 'Recherche R1 (Kimi)…';
-    const r = await lancerRecherches(oid);
-    if (!r.ok) await enqueueJobs([oid], 'r1');
-  }
+  if (done > 0) lancerR1EnFond(oid);
 
   if (!isRetry) finaliserCreation(oid);
 }
@@ -599,7 +608,7 @@ function finaliserCreation(oid) {
   S.capFiles = [];
   pendingObjetId = null;
   render();
-  toast(`Objet #${oid} créé — recherches lancées (R1 · R2 suit)`);
+  toast(`Objet #${oid} créé — recherches en cours en arrière-plan (R1 · R2 suit)`);
   S.refreshHeader?.();
   location.hash = '#/objet/' + encodeURIComponent(oid);
 }
