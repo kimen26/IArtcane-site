@@ -154,8 +154,8 @@ function renderObjet() {
 function rendreHub() {
   const o = S.currentObjet;
   const cover = O.photos.find(p => p.couverture) ?? O.photos[0];
-  const alertePhoto = O.photos.some(p => p.kind == null);
-  const nPhotos = O.photos.length;
+  const nVendus = O.comps.filter(c => !c.exclu && c.source_type !== 'en_vente').length;
+  const nVente = O.comps.filter(c => !c.exclu && c.source_type === 'en_vente').length;
 
   // Position dans la collection triée created_at (si S.collection chargée).
   let posMeta = '';
@@ -174,34 +174,30 @@ function rendreHub() {
 
   return `
   <div class="obj-hub">
-    <nav class="obj-nav">
-      <button class="obj-nav-back" data-action="nav-back">← ${o.categorie ? esc(catCanon(o.categorie)) : 'Accueil'}</button>
-      <span class="obj-nav-meta">#${esc(o.id)}${esc(posMeta)}</span>
-    </nav>
+    <div class="obj-photo-band" data-action="nav" data-ecran="photos">
+      ${cover?.thumbUrl
+        ? `<img src="${esc(cover.thumbUrl)}" alt="${esc(o.titre || 'objet')}" loading="eager" decoding="async">`
+        : `<div class="obj-photo-band-placeholder">${catEmoji(o.categorie)}</div>`}
+      <div class="obj-photo-band-voile-top">
+        <button class="obj-nav-back" data-action="nav-back">← ${o.categorie ? esc(catCanon(o.categorie)) : 'Accueil'}</button>
+        <span class="obj-nav-meta">#${esc(o.id)}${esc(posMeta)}</span>
+      </div>
+      <div class="obj-photo-band-voile-bottom">
+        <h1 class="obj-title">${esc(o.titre || 'Sans titre')}</h1>
+        ${auteurHtml}
+      </div>
+      ${rendreRuban(o)}
+    </div>
 
     <div class="obj-hub-body">
-      <section class="obj-header">
-        <div class="obj-thumb" data-action="nav" data-ecran="photos">
-          ${cover?.thumbUrl
-            ? `<img src="${esc(cover.thumbUrl)}" alt="${esc(o.titre || 'objet')}" loading="eager" decoding="async">`
-            : `<div class="obj-thumb-placeholder">${catEmoji(o.categorie)}</div>`}
-          <div class="obj-thumb-voile"></div>
-          <span class="obj-thumb-id">#${esc(o.id)}</span>
-          <div class="obj-thumb-bar">${nPhotos} photo${nPhotos > 1 ? 's' : ''} ›${alertePhoto ? '<span class="warn-dot">!</span>' : ''}</div>
-        </div>
-        <div class="obj-header-txt">
-          <h1 class="obj-title">${esc(o.titre || 'Sans titre')}</h1>
-          ${auteurHtml}
-        </div>
-      </section>
-
-      <section class="obj-estim-row">
-        ${rendrePaveEstimation(o)}
-        <button class="obj-status-card" data-action="nav" data-ecran="historique">
-          <span class="obj-status-label">${STATUTS[o.statut] ?? esc(o.statut)}</span>
-          <span class="obj-status-date">${fmtDate(o.updated_at)}</span>
-        </button>
-      </section>
+      <div class="obj-thumb-row" data-action="nav" data-ecran="photos">
+        ${O.photos.map(p => `<img class="obj-thumb-mini${p.id === cover?.id ? ' cover' : ''}" src="${esc(p.thumbUrl)}" alt="" loading="lazy" decoding="async">`).join('')}
+        <span class="obj-thumb-mini obj-thumb-add">+</span>
+      </div>
+      <div class="obj-meta-row">
+        <span class="obj-meta-comps">${nVendus} vendu${nVendus > 1 ? 's' : ''} · ${nVente} en vente</span>
+        <span class="obj-meta-statut">${STATUTS[o.statut] ?? esc(o.statut)} · <span class="obj-meta-date">${fmtDate(o.updated_at)}</span></span>
+      </div>
 
       ${rendreCarteIdentification(o)}
       ${rendreTiroirAlertes(o)}
@@ -229,18 +225,10 @@ function rendreHub() {
   </div>`;
 }
 
-function rendrePaveEstimation(o) {
-  const nVendus = O.comps.filter(c => !c.exclu && c.source_type !== 'en_vente').length;
-  const nVente = O.comps.filter(c => !c.exclu && c.source_type === 'en_vente').length;
-  const valeur = (o.prix_bas != null && o.prix_haut != null)
-    ? `<div class="obj-estim-value">${fmtNum(o.prix_bas)}–${fmtNum(o.prix_haut)} €</div>`
-    : `<div class="obj-estim-none">Pas encore d'estimation</div>`;
+function rendreRuban(o) {
+  if (o.prix_bas == null || o.prix_haut == null) return '';
   return `
-    <button class="obj-estim" data-action="nav" data-ecran="ventes">
-      <div><div class="obj-estim-label">Estimation</div>${valeur}</div>
-      <span class="obj-estim-sep"></span>
-      <div class="obj-estim-counts"><strong>${nVendus}</strong> vendu${nVendus > 1 ? 's' : ''} · <strong>${nVente}</strong> en vente</div>
-    </button>`;
+    <button class="obj-ruban" data-action="nav" data-ecran="ventes">${fmtNum(o.prix_bas)} – ${fmtNum(o.prix_haut)} €</button>`;
 }
 
 function rendreCarteIdentification(o) {
