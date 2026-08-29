@@ -5,6 +5,7 @@
 
 .dem-veil{
   position:fixed;inset:0;z-index:120;
+  /* proche mais distinct de --voile-feuille (opacité .38 vs .4 ici, HO-103) */
   background:rgba(13,27,62,.38);
   opacity:0;visibility:hidden;
   transition:opacity .2s ease;

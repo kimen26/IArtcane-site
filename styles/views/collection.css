@@ -81,7 +81,7 @@
 #filters-count{background:var(--gold);color:var(--ink)}
 
 /* ─── Feuille de filtres (HO-044) : bottom sheet mobile, modale desktop ─── */
-.sheet-veil{position:fixed;inset:0;z-index:90;background:rgba(13,27,62,.4)}
+.sheet-veil{position:fixed;inset:0;z-index:90;background:var(--voile-feuille)}
 .sheet{position:fixed;left:0;right:0;bottom:0;z-index:95;background:var(--surface);border-radius:16px 16px 0 0;box-shadow:var(--shadow-hover);padding:14px 16px 20px;max-height:82vh;overflow:auto}
 @media (min-width:641px){
   .sheet{left:50%;right:auto;bottom:auto;top:50%;transform:translate(-50%,-50%);width:420px;border-radius:16px}

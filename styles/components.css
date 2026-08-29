@@ -89,6 +89,8 @@
 /* Mobile : cartes artistes en grille dense 3 colonnes (HO-033) */
 @media (max-width:640px){
   .grid{grid-template-columns:repeat(3,1fr);gap:10px}
+  /* ombre carte mobile, valeur unique — nuance volontairement plus
+     discrète que --shadow, non fusionnée d'office (HO-103) */
   .card{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 1px 4px rgba(13,27,62,.08);margin-top:8px}
   .card-body{padding:8px 8px 9px;gap:2px}
   .card-title{font-size:.8125rem;font-weight:700;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -101,7 +103,8 @@
        .card.obj = carte OBJET du listing (format.js::cardHtml) ; les règles sont
        scopées pour neutraliser le socle .card ci-dessus sans toucher aux cartes
        artistes. Couleurs littérales = spec haute fidélité (pas de token équivalent
-       dans tokens.css : #16233f ≠ --ink, #8b93a6/#98a0b1 ≠ --ink-3). ─────── */
+       dans tokens.css : --ink-titre ≠ --ink, --ink-meta/--ink-meta-2 ≠ --ink-3,
+       tokens ajoutés HO-103). ─────── */
 /* Mosaïque en colonnes : ne s'applique qu'aux grilles de cartes objet — la
    liste d'artistes réutilise .grid sans .card.obj (artistes.js non modifié). */
 .grid:has(> .card.obj){display:block;columns:3;column-gap:11px}
@@ -115,29 +118,31 @@
 .card.obj:hover{box-shadow:none;transform:none;border-color:transparent}
 .card.obj:active{opacity:.88}
 /* Image : ratio natif (height:auto), seul bloc blanc de la carte */
-.card.obj .card-img{position:relative;background:#fff;border-radius:3px;overflow:hidden;box-shadow:0 1px 2px rgba(20,30,55,.12),0 5px 12px rgba(20,30,55,.15);transition:box-shadow .16s ease-out}
-@media (hover:hover){.card.obj:hover .card-img{box-shadow:0 2px 4px rgba(20,30,55,.14),0 10px 22px rgba(20,30,55,.18)}}
-.card.obj .card-img img{display:block;width:100%;height:auto;background:#e4e6ec}
-.card.obj .card-noimg{display:grid;place-items:center;aspect-ratio:1/1;background:#e4e6ec;font-size:2rem}
+.card.obj .card-img{position:relative;background:#fff;border-radius:3px;overflow:hidden;box-shadow:var(--shadow-carte-img);transition:box-shadow .16s ease-out}
+@media (hover:hover){.card.obj:hover .card-img{box-shadow:var(--shadow-carte-img-survol)}}
+.card.obj .card-img img{display:block;width:100%;height:auto;background:var(--surface-image)}
+.card.obj .card-noimg{display:grid;place-items:center;aspect-ratio:1/1;background:var(--surface-image);font-size:2rem}
 /* N° d'inventaire vertical sur voile de lisibilité, bord gauche de l'image */
-.card.obj .card-veil{position:absolute;left:0;top:0;bottom:0;width:22px;background:linear-gradient(90deg,rgba(8,12,24,.45),rgba(8,12,24,0))}
-.card.obj .card-id{position:absolute;left:4px;top:7px;writing-mode:vertical-rl;font-family:var(--sans);font-size:.5rem;font-weight:700;letter-spacing:.14em;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8),0 0 7px rgba(0,0,0,.55)}
-/* Estimation : ruban diagonal, angle bas droit — --ruban piloté par maison en HO-041 */
-.card.obj .card-ribbon{position:absolute;right:-30px;bottom:12px;width:110px;transform:rotate(-45deg);text-align:center;padding:3px 0;font-family:var(--sans);font-size:.5625rem;font-weight:700;letter-spacing:.04em;color:#eef6f5;background:var(--ruban,#35696c);box-shadow:0 1px 4px rgba(8,12,24,.28)}
+.card.obj .card-veil{position:absolute;left:0;top:0;bottom:0;width:22px;background:linear-gradient(90deg,var(--voile-fort),var(--voile-doux))}
+.card.obj .card-id{position:absolute;left:4px;top:7px;writing-mode:vertical-rl;font-family:var(--sans);font-size:.5rem;font-weight:700;letter-spacing:.14em;color:#fff;text-shadow:0 1px 2px var(--ombre-id-texte),0 0 7px var(--ombre-texte-douce)}
+/* Estimation : ruban diagonal, angle bas droit — --ruban piloté par maison en
+   HO-041 ; le repli littéral ci-dessous reste tel quel (mécanisme JS, HO-103) */
+.card.obj .card-ribbon{position:absolute;right:-30px;bottom:12px;width:110px;transform:rotate(-45deg);text-align:center;padding:3px 0;font-family:var(--sans);font-size:.5625rem;font-weight:700;letter-spacing:.04em;color:var(--ruban-texte);background:var(--ruban,#35696c);box-shadow:0 1px 4px var(--ombre-ruban-carte)}
 /* Badge ▶ discret quand la 1re « photo » de l'objet est une vidéo (D-013) */
-.card.obj .card-vid{position:absolute;top:6px;right:6px;background:rgba(8,12,24,.6);color:#fff;font-family:var(--sans);font-size:.5625rem;line-height:1;padding:3px 6px;border-radius:5px}
+.card.obj .card-vid{position:absolute;top:6px;right:6px;background:var(--badge-video-bg);color:#fff;font-family:var(--sans);font-size:.5625rem;line-height:1;padding:3px 6px;border-radius:5px}
 /* Texte sous l'image, directement sur le fond de page ; titre non tronqué
    (display:block explicite : écrase le line-clamp mobile du socle) */
 .card.obj .card-body{padding:7px 1px 0;display:block}
-.card.obj .card-title{display:block;overflow:visible;font-family:var(--serif);font-weight:400;font-size:.78rem;line-height:1.3;color:#16233f}
-.card.obj .card-artist{font-size:.625rem;color:#98a0b1;margin-top:1px}
+.card.obj .card-title{display:block;overflow:visible;font-family:var(--serif);font-weight:400;font-size:.78rem;line-height:1.3;color:var(--ink-titre)}
+.card.obj .card-artist{font-size:.625rem;color:var(--ink-meta-2);margin-top:1px}
 
-/* En-tête de groupe (collection) : spec HO-040 — nom serif 400 1.375rem #16233f,
-   compteur sans .78rem #8b93a6, filet #dfe3ec. La règle d'origine vit dans
+/* En-tête de groupe (collection) : spec HO-040 — nom serif 400 1.375rem
+   --ink-titre, compteur sans .78rem --ink-meta, filet --line-carte (HO-103).
+   La règle d'origine vit dans
    styles/views/collection.css (hors périmètre) : surcharge scopée #view-collection. */
-#view-collection .group-title{align-items:center;font-weight:400;font-size:1.375rem;color:#16233f}
-#view-collection .group-title .n{font-family:var(--sans);font-size:.78rem;color:#8b93a6}
-#view-collection .group-title::after{background:#dfe3ec}
+#view-collection .group-title{align-items:center;font-weight:400;font-size:1.375rem;color:var(--ink-titre)}
+#view-collection .group-title .n{font-family:var(--sans);font-size:.78rem;color:var(--ink-meta)}
+#view-collection .group-title::after{background:var(--line-carte)}
 
 /* statuts (machine D-057 : nouveau → pre_classe → analyse → a_completer | validee) */
 .st{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 11px;border-radius:999px;white-space:nowrap}
@@ -236,10 +241,10 @@ details.acc:not([open])>summary{margin-bottom:0}
 /* Largeur PLANCHER autant que plafond (retour Yann 2026-08-28 : « 4 lignes pour
    8 mots ») — sans width, le flex se réduit à la largeur du contenu et les deux
    cibles de 44 px (action + ✕) écrasent le texte en colonne étroite. */
-.toast{display:flex;align-items:center;gap:6px;background:var(--ink);color:#fff;font-size:.875rem;font-weight:500;padding:6px 6px 6px 16px;border-radius:var(--r-md);box-shadow:var(--shadow-hover);animation:fade .2s ease;border:1px solid rgba(255,255,255,.3);width:min(92vw,480px);max-width:min(92vw,480px);text-align:left;line-height:1.4}
+.toast{display:flex;align-items:center;gap:6px;background:var(--ink);color:#fff;font-size:.875rem;font-weight:500;padding:6px 6px 6px 16px;border-radius:var(--r-md);box-shadow:var(--shadow-hover);animation:fade .2s ease;border:1px solid var(--bordure-claire-douce);width:min(92vw,480px);max-width:min(92vw,480px);text-align:left;line-height:1.4}
 .toast.err{background:var(--red)}
 .toast-msg{flex:1;min-width:0}
-.toast-n{flex:0 0 auto;background:rgba(255,255,255,.25);border-radius:999px;font-size:.75rem;font-weight:700;padding:2px 8px}
+.toast-n{flex:0 0 auto;background:var(--voile-clair);border-radius:999px;font-size:.75rem;font-weight:700;padding:2px 8px}
 .toast-action,.toast-close{flex:0 0 auto;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;background:transparent;border:none;color:#fff;cursor:pointer;font-size:.8125rem}
 .toast-action{font-weight:600;text-decoration:underline;text-underline-offset:2px;padding:0 6px}
 .toast-close{font-size:1rem;opacity:.85;padding:0 8px}
@@ -247,8 +252,8 @@ details.acc:not([open])>summary{margin-bottom:0}
 
 /* Overlay bloquant générique (HO-075, généralise .upl-overlay de HO-032 — cohabitation
    temporaire assumée le temps que HO-076 bascule la fiche objet dessus). */
-.busy-overlay{position:fixed;inset:0;z-index:180;background:rgba(13,27,62,.55);display:grid;place-items:center;backdrop-filter:blur(2px)}
-.busy-card{display:flex;flex-direction:column;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:28px 34px;box-shadow:0 12px 40px rgba(13,27,62,.35);max-width:82vw;text-align:center}
+.busy-overlay{position:fixed;inset:0;z-index:180;background:var(--voile-bloquant);display:grid;place-items:center;backdrop-filter:blur(2px)}
+.busy-card{display:flex;flex-direction:column;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:28px 34px;box-shadow:0 12px 40px var(--ombre-carte-flottante);max-width:82vw;text-align:center}
 .busy-msg{font-weight:600;color:var(--ink)}
 .busy-sub{font-size:.8125rem;color:var(--ink-2)}
 .busy-spin{width:34px;height:34px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--blue);animation:busy-rot .8s linear infinite}
@@ -257,8 +262,8 @@ details.acc:not([open])>summary{margin-bottom:0}
 @media (prefers-reduced-motion: reduce){ .busy-spin{animation:none} .toast{animation:none} }
 
 /* ─── Lightbox (overlay plein écran) ──────────────────────── */
-.lightbox{position:fixed;inset:0;z-index:150;background:rgba(13,27,62,.88);display:grid;place-items:center;cursor:zoom-out;padding:24px;overflow:hidden}
-.lightbox .lb-close{position:fixed;top:14px;right:14px;z-index:20;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.35);background:rgba(13,27,62,.75);color:#fff;font-size:18px;cursor:pointer}
+.lightbox{position:fixed;inset:0;z-index:150;background:var(--voile-lightbox);display:grid;place-items:center;cursor:zoom-out;padding:24px;overflow:hidden}
+.lightbox .lb-close{position:fixed;top:14px;right:14px;z-index:20;width:44px;height:44px;border-radius:50%;border:1px solid var(--bordure-claire);background:var(--surface-bouton-lightbox);color:#fff;font-size:18px;cursor:pointer}
 .lightbox img,.lightbox video{max-width:calc(100vw - 48px);max-height:calc(100dvh - 48px);border-radius:var(--r-md)}
 .lightbox.zoomed{display:block;overflow:auto;cursor:zoom-out}
 .lightbox.zoomed img,.lightbox.zoomed video{max-width:none;max-height:none}
@@ -289,9 +294,10 @@ body.lb-open{overflow:hidden}
 body.role-lecteur .hide-lecteur{display:none!important}
 
 /* ─── Caméra en direct (module partagé capture/fiche) ─────── */
+/* noir plein définitif pour le viseur caméra, valeur unique (HO-103) */
 .camera-modal{position:fixed;inset:0;z-index:80;background:#000;display:flex;flex-direction:column}
 .camera-modal video{flex:1;width:100%;min-height:0;object-fit:contain}
 .camera-bar{display:flex;align-items:center;justify-content:center;gap:32px;padding:18px}
-.camera-bar .btn{background:rgba(255,255,255,.12);color:#fff;border:none}
-.camera-shutter{width:68px;height:68px;border-radius:50%;border:4px solid #fff;background:rgba(255,255,255,.25);cursor:pointer;transition:background .1s}
+.camera-bar .btn{background:var(--surface-claire-voilee);color:#fff;border:none}
+.camera-shutter{width:68px;height:68px;border-radius:50%;border:4px solid #fff;background:var(--voile-clair);cursor:pointer;transition:background .1s}
 .camera-shutter:active{background:#fff}

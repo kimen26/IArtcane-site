@@ -4,35 +4,35 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  --act-navy: #0D1B3E;
-  --act-navy-text: #9BA9CE;
-  --act-blue: #2456E0;
-  --act-blue-deep: #173A8F;
-  --act-blue-soft: #E9EFFC;
-  --act-blue-pale: #B8C6E8;
-  --act-green: #35696C;
-  --act-green-light: #7FD1A8;
-  --act-green-soft: #E4F1E8;
-  --act-amber: #E0C56A;
-  --act-amber-soft: #FDFBF4;
-  --act-amber-line: #F0E4C4;
-  --act-amber-text: #6B5A28;
-  --act-grey: #E7EAF1;
-  --act-grey-text: #A9B1C4;
-  --act-warn: #C08A3E;
-  --act-ink: #0D1B3E;
-  --act-ink-2: #44507A;
-  --act-ink-3: #8A94B8;
-  --act-ink-4: #69738C;
-  --act-ink-5: #98A0B1;
-  --act-line: #EDF0F6;
-  --act-line-strong: #DDE3EE;
+  --act-navy: var(--ink);
+  --act-navy-text: var(--ink-sur-navy);
+  --act-blue: var(--blue);
+  --act-blue-deep: var(--blue-deep);
+  --act-blue-soft: var(--blue-soft);
+  --act-blue-pale: var(--bleu-pale);
+  --act-green: var(--accent-teal); /* PAS var(--ruban) : indicateur "complet" fixe, sans rapport avec le ruban de maison (HO-103) */
+  --act-green-light: var(--vert-clair);
+  --act-green-soft: var(--surface-verte-douce);
+  --act-amber: var(--gold);
+  --act-amber-soft: var(--surface-ambre-douce);
+  --act-amber-line: var(--ligne-ambre);
+  --act-amber-text: var(--texte-ambre);
+  --act-grey: var(--surface-grise);
+  --act-grey-text: var(--ink-gris);
+  --act-warn: var(--ambre-alerte);
+  --act-ink: var(--ink);
+  --act-ink-2: var(--ink-2);
+  --act-ink-3: var(--ink-3);
+  --act-ink-4: var(--ink-faint);
+  --act-ink-5: var(--ink-meta-2);
+  --act-line: var(--line-soft);
+  --act-line-strong: var(--ligne-champ);
   --act-card: #FFFFFF;
-  --act-bg: #F6F8FC;
+  --act-bg: var(--fond-activite);
   --act-radius-card: 14px;
   --act-radius-sm: 8px;
   --act-radius-pill: 999px;
-  --act-shadow: 0 1px 3px rgba(20, 30, 55, .1);
+  --act-shadow: 0 1px 3px var(--ombre-carte-douce);
 }
 
 /* ─── Layout général ───────────────────────────────────────────────────────── */
@@ -194,7 +194,7 @@
   height: 38px;
   flex: none;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, .3);
+  border: 1px solid var(--bordure-claire-douce);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -753,7 +753,7 @@
   border-radius: 4px;
   overflow: hidden;
   align-self: flex-start;
-  box-shadow: 0 1px 3px rgba(20, 30, 55, .2);
+  box-shadow: 0 1px 3px var(--ombre-vignette);
 }
 
 .act-objet-thumb img {
@@ -782,7 +782,7 @@
   top: 0;
   bottom: 0;
   width: 12px;
-  background: linear-gradient(90deg, rgba(8, 12, 24, .45), rgba(8, 12, 24, 0));
+  background: linear-gradient(90deg, var(--voile-fort), var(--voile-doux));
 }
 
 .act-objet-id {
@@ -794,7 +794,7 @@
   font-weight: 700;
   letter-spacing: .13em;
   color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, .8);
+  text-shadow: 0 1px 2px var(--ombre-id-texte);
 }
 
 .act-objet-body {

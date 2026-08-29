@@ -119,7 +119,7 @@
   border:1.5px solid var(--line-strong);
   border-radius:14px;
   overflow:hidden;
-  box-shadow:0 2px 8px rgba(13,27,62,.10);
+  box-shadow:0 2px 8px var(--ombre-legere);
   display:flex;
   flex-direction:column;
 }
@@ -164,6 +164,7 @@
 }
 .photos-viewer-placeholder{
   font-size:2rem;
+  /* icône de visionneuse vide, valeur unique (HO-103) */
   color:rgba(255,255,255,.7);
 }
 .photos-corner{
@@ -187,7 +188,7 @@
   width:30px;
   height:30px;
   border-radius:50%;
-  background:rgba(255,255,255,.92);
+  background:var(--surface-coin-clair);
 }
 .photos-corner-tl,
 .photos-corner-bl{
@@ -199,7 +200,7 @@
 }
 .photos-corner-tl{
   top:10px;
-  background:rgba(255,255,255,.92);
+  background:var(--surface-coin-clair);
 }
 .photos-corner-bl{
   bottom:10px;
@@ -386,7 +387,7 @@
   display:grid;
   place-items:center;
   font-size:1.25rem;
-  color:rgba(255,255,255,.9);
+  color:var(--icone-sur-fonce);
 }
 .photos-thumb-vid{
   position:absolute;
@@ -394,7 +395,8 @@
   display:grid;
   place-items:center;
   font-size:1.5rem;
-  color:rgba(255,255,255,.9);
+  color:var(--icone-sur-fonce);
+  /* halo du pictogramme vidéo en plein écran, valeur unique (HO-103) */
   text-shadow:0 1px 3px rgba(0,0,0,.5);
 }
 .photos-thumb-cover{
@@ -402,7 +404,7 @@
   left:4px; top:4px;
   font-size:.625rem;
   color:var(--gold);
-  text-shadow:0 1px 2px rgba(0,0,0,.45);
+  text-shadow:0 1px 2px var(--ombre-texte-forte);
 }
 .photos-thumb-num{
   position:absolute;
@@ -412,7 +414,7 @@
   height:15px;
   padding:0 3px;
   border-radius:8px;
-  background:rgba(13,27,62,.72);
+  background:var(--badge-vignette-bg);
   color:var(--surface);
   display:flex;
   align-items:center;
@@ -539,7 +541,7 @@
 .cut-sel {
   position: fixed;
   border: 2px dashed #fff;
-  box-shadow: 0 0 0 9999px rgba(13,27,62,.55);
+  box-shadow: 0 0 0 9999px var(--voile-bloquant);
   pointer-events: none;
   z-index: 10;
 }
@@ -552,7 +554,7 @@
   border-radius: 50%;
   pointer-events: auto;
   touch-action: none;
-  box-shadow: 0 2px 6px rgba(0,0,0,.45);
+  box-shadow: 0 2px 6px var(--ombre-texte-forte);
   transform: translate(-50%, -50%);
   transition: transform .1s, background .1s;
 }

@@ -6,20 +6,20 @@
    la maquette sans équivalent token deviennent des variables LOCALES ci-dessous.
    ═══════════════════════════════════════════════════════════════════════════ */
 :root{
-  --ms-action:#2456E0;          /* bleu action maquette (filet d'onglet, boutons) */
-  --ms-action-deep:#173A8F;     /* survol */
-  --ms-navy:#0D1B3E;            /* hero plein — proche de --ink, gardé fidèle maquette */
-  --ms-navy-sub:#9BA9CE;        /* sur-ligne sur navy */
-  --ms-field:#FBFCFE;           /* fond de champ maquette */
-  --ms-field-line:#DDE3EE;      /* bordure de champ maquette */
-  --ms-card-line:#EDF0F6;       /* filet interne des cartes blanches (maquette) */
-  --ms-ink-2:#44507A;           /* texte secondaire maquette */
-  --ms-ink-3:#69738C;           /* texte tertiaire maquette (notes) */
-  --ms-ink-faint:#8A94B8;       /* texte faible / onglet inactif */
-  --ms-pave:#F1F5FA;            /* fond pavé interne (rôles) */
-  --ms-red:#B23A48;             /* trait retrait membre */
-  --ms-red-line:#F0D6DA;        /* bordure bouton retrait */
-  --ms-placeholder:#E4E6EC;     /* fond image absente */
+  --ms-action:var(--blue);          /* bleu action maquette (filet d'onglet, boutons) */
+  --ms-action-deep:var(--blue-deep);     /* survol */
+  --ms-navy:var(--ink);            /* hero plein — proche de --ink, gardé fidèle maquette */
+  --ms-navy-sub:var(--ink-sur-navy);        /* sur-ligne sur navy */
+  --ms-field:var(--surface-champ);           /* fond de champ maquette */
+  --ms-field-line:var(--ligne-champ);      /* bordure de champ maquette */
+  --ms-card-line:var(--line-soft);       /* filet interne des cartes blanches (maquette) */
+  --ms-ink-2:var(--ink-2);           /* texte secondaire maquette */
+  --ms-ink-3:var(--ink-faint);           /* texte tertiaire maquette (notes) */
+  --ms-ink-faint:var(--ink-3);       /* texte faible / onglet inactif */
+  --ms-pave:var(--surface-pave);            /* fond pavé interne (rôles) */
+  --ms-red:var(--rouge-retrait);             /* trait retrait membre */
+  --ms-red-line:var(--ligne-retrait);        /* bordure bouton retrait */
+  --ms-placeholder:var(--surface-image);     /* fond image absente */
 }
 
 /* La <section id="view-maison"> d'index.html (transverse gelé) porte déjà un
@@ -50,7 +50,7 @@
 .ms-onglet{ flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:11px; padding:12px; }
 
 .ms-card{ background:var(--surface); border-radius:14px; padding:15px 16px 17px;
-  box-shadow:0 1px 3px rgba(20,30,55,.1); display:flex; flex-direction:column; gap:12px; }
+  box-shadow:0 1px 3px var(--ombre-carte-douce); display:flex; flex-direction:column; gap:12px; }
 .ms-hero-card{ padding:0; overflow:hidden; gap:0; }
 
 .ms-sec-title{ display:flex; align-items:baseline; gap:9px; }
@@ -81,11 +81,12 @@
 
 /* ─── M1 · Hero ──────────────────────────────────────────────────────────── */
 .ms-hero{ position:relative; padding:20px 16px 16px; background:var(--ms-navy); overflow:hidden; }
-.ms-hero-ring{ position:absolute; border-radius:50%; border:1px solid rgba(255,255,255,.14); }
+.ms-hero-ring{ position:absolute; border-radius:50%; border:1px solid var(--bordure-claire-fine); }
 .ms-hero-ring-a{ right:-34px; top:-34px; width:132px; height:132px; }
+/* anneau décoratif du hero maison, valeur unique (HO-103) */
 .ms-hero-ring-b{ right:-14px; bottom:-52px; width:112px; height:112px; border-color:rgba(255,255,255,.09); }
 .ms-hero-row{ position:relative; display:flex; align-items:center; gap:13px; }
-.ms-hero-disc{ width:52px; height:52px; border-radius:50%; border:1px solid rgba(255,255,255,.35);
+.ms-hero-disc{ width:52px; height:52px; border-radius:50%; border:1px solid var(--bordure-claire);
   display:flex; align-items:center; justify-content:center; font-family:var(--serif); font-weight:700; font-size:23px; color:#fff; flex:none; }
 .ms-hero-txt{ display:flex; flex-direction:column; gap:3px; min-width:0; }
 .ms-hero-name{ font-family:var(--serif); font-weight:700; font-size:21px; letter-spacing:.02em; color:#fff;
@@ -97,15 +98,16 @@
 .ms-ruban-grid{ display:flex; gap:14px; align-items:center; }
 .ms-wheel{ position:relative; width:152px; height:152px; flex:none; }
 .ms-wheel-dot{ position:absolute; border:none; padding:0; border-radius:50%; cursor:pointer;
-  box-shadow:0 0 0 1px rgba(13,27,62,.10); }
+  box-shadow:0 0 0 1px var(--ombre-legere); }
 .ms-wheel-dot.is-sel{ box-shadow:0 0 0 2px #fff, 0 0 0 4px var(--ms-navy); }
 .ms-wheel-core{ position:absolute; left:50%; top:50%; width:56px; height:56px; margin:-28px 0 0 -28px;
+  /* ombre du disque central de la roue de teintes, valeur unique (HO-103) */
   border-radius:50%; box-shadow:0 0 0 3px #fff, 0 1px 6px rgba(20,30,55,.28);
   display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; letter-spacing:.06em; }
 
 .ms-ruban-side{ flex:1; min-width:0; display:flex; flex-direction:column; gap:9px; }
 .ms-neutres{ display:flex; gap:5px; }
-.ms-neutre{ flex:1; height:20px; border:none; padding:0; border-radius:5px; cursor:pointer; box-shadow:0 0 0 1px rgba(13,27,62,.10); }
+.ms-neutre{ flex:1; height:20px; border:none; padding:0; border-radius:5px; cursor:pointer; box-shadow:0 0 0 1px var(--ombre-legere); }
 .ms-neutre.is-sel{ box-shadow:0 0 0 2px #fff, 0 0 0 4px var(--ms-navy); }
 .ms-hex{ width:100%; box-sizing:border-box; border:1px solid var(--ms-field-line); border-radius:8px;
   padding:8px 9px; font-family:var(--mono); font-size:12px; color:var(--ink); background:var(--ms-field); outline:none; }
@@ -116,10 +118,10 @@
 /* ─── M1 · Aperçu vignette ──────────────────────────────────────────────── */
 .ms-ruban-apercu{ display:flex; align-items:flex-start; gap:12px; padding-top:12px; border-top:1px solid var(--ms-card-line); }
 .ms-vignette{ position:relative; width:74px; aspect-ratio:3/4; border-radius:4px; overflow:hidden;
-  background:var(--ms-placeholder); box-shadow:0 1px 3px rgba(20,30,55,.2); flex:none; }
-.ms-vig-veil{ position:absolute; left:0; top:0; bottom:0; width:14px; background:linear-gradient(90deg, rgba(8,12,24,.45), rgba(8,12,24,0)); }
+  background:var(--ms-placeholder); box-shadow:0 1px 3px var(--ombre-vignette); flex:none; }
+.ms-vig-veil{ position:absolute; left:0; top:0; bottom:0; width:14px; background:linear-gradient(90deg, var(--voile-fort), var(--voile-doux)); }
 .ms-vig-id{ position:absolute; left:2px; top:5px; writing-mode:vertical-rl; font-size:6px; font-weight:700;
-  letter-spacing:.13em; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.8); }
+  letter-spacing:.13em; color:#fff; text-shadow:0 1px 2px var(--ombre-id-texte); }
 .ms-vig-ruban{ position:absolute; right:-22px; bottom:9px; width:80px; transform:rotate(-45deg);
   text-align:center; padding:2px 0; font-size:7px; font-weight:700; }
 .ms-apercu-txt{ flex:1; display:flex; flex-direction:column; gap:9px; }

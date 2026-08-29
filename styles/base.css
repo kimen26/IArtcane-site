@@ -47,12 +47,14 @@ header{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:
 .burger i{width:19px;height:1.8px;background:var(--ink);display:block}
 .drawer{position:fixed;left:0;top:0;bottom:0;width:280px;max-width:88vw;background:var(--surface);box-shadow:var(--shadow-drawer);z-index:70;transform:translateX(-105%);transition:transform .24s ease-out;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
 .drawer.open{transform:none}
-.drawer-veil{position:fixed;inset:0;background:rgba(9,14,28,.5);z-index:65;opacity:0;pointer-events:none;transition:opacity .2s}
+.drawer-veil{position:fixed;inset:0;background:var(--voile-tiroir);z-index:65;opacity:0;pointer-events:none;transition:opacity .2s}
 .drawer-veil.open{opacity:1;pointer-events:auto}
 .drawer-head{display:flex;flex-direction:column;gap:14px;padding-bottom:14px;border-bottom:1px solid var(--line-soft)}
 .drawer-logo{font-size:1.1875rem}
 /* Frise d'avancement du catalogage : 3 segments (estimées / à estimer / sans photo) */
 .frise{display:flex;height:7px;border-radius:4px;overflow:hidden;background:var(--line)}
+/* repli --ruban : couleur pilotée par la maison (HO-041, app.js::applyRuban),
+   pas une couleur en dur (HO-103) */
 .frise-ok{background:var(--ruban,#35696c)}
 .frise-todo{background:var(--gold)}
 .frise-nophoto{background:var(--line)}

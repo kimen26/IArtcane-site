@@ -150,7 +150,7 @@ select.obj-input{
   border:1px solid var(--line-soft);
   border-top:none;
   border-radius:0 0 var(--r-sm) var(--r-sm);
-  box-shadow:0 4px 12px rgba(13,27,62,.10);
+  box-shadow:0 4px 12px var(--ombre-legere);
   z-index:10;
   display:flex;
   flex-direction:column;
@@ -228,7 +228,7 @@ select.obj-input{
 .obj-id-complements{
   background:var(--surface);
   border-radius:var(--r-md);
-  box-shadow:0 1px 3px rgba(20,30,55,.09);
+  box-shadow:0 1px 3px var(--ombre-carte);
   overflow:hidden;
 }
 .obj-id-complements > summary{

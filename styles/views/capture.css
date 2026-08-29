@@ -269,6 +269,7 @@
   border: 1.5px solid var(--line-strong);
   border-radius: 14px;
   overflow: hidden;
+  /* proche mais distinct de --ombre-carte (opacité .09 vs .10 ici, HO-103) */
   box-shadow: 0 2px 8px rgba(20,30,55,.10);
 }
 .cap-card-head {
@@ -329,7 +330,7 @@
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: rgba(255,255,255,.92);
+  background: var(--surface-coin-clair);
   font-size: 13px;
 }
 .cap-corner-tl { left: 11px; }
@@ -352,7 +353,7 @@
 .cap-corner-bl.active { background: var(--blue); }
 .cap-corner-br {
   right: 11px;
-  background: rgba(255,255,255,.92);
+  background: var(--surface-coin-clair);
   color: var(--ink);
 }
 
@@ -499,7 +500,7 @@
   bottom: 20px;
   font-size: 11px;
   color: var(--gold);
-  text-shadow: 0 1px 2px rgba(0,0,0,.55);
+  text-shadow: 0 1px 2px var(--ombre-texte-douce);
 }
 .cap-thumb-num {
   position: absolute;
@@ -509,7 +510,7 @@
   height: 15px;
   padding: 0 3px;
   border-radius: 8px;
-  background: rgba(13,27,62,.72);
+  background: var(--badge-vignette-bg);
   color: #fff;
   font-size: 9px;
   font-weight: 700;
@@ -591,7 +592,7 @@
 .cut-sel {
   position: fixed;
   border: 2px dashed #fff;
-  box-shadow: 0 0 0 9999px rgba(13,27,62,.55);
+  box-shadow: 0 0 0 9999px var(--voile-bloquant);
   pointer-events: none;
   z-index: 10;
 }
@@ -604,7 +605,7 @@
   border-radius: 50%;
   pointer-events: auto;
   touch-action: none;
-  box-shadow: 0 2px 6px rgba(0,0,0,.45);
+  box-shadow: 0 2px 6px var(--ombre-texte-forte);
   transform: translate(-50%, -50%);
   transition: transform .1s, background .1s;
 }
@@ -628,7 +629,9 @@
   justify-content: center;
   gap: 14px;
   padding: 14px;
+  /* fond du bandeau de recadrage local, valeurs uniques (HO-103) */
   background: rgba(13,27,62,.82);
+  /* filet du même bandeau, valeur unique (HO-103) */
   border-top: 1px solid rgba(255,255,255,.18);
   z-index: 12;
 }

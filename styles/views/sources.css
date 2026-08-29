@@ -5,24 +5,25 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 .src-wrap{
   /* accès — fonds de badges */
-  --src-api-bg:#E4F1E8;      --src-api-fg:#2F6B45;
-  --src-navauto-bg:#E9EFFC;  --src-navauto-fg:#173A8F;
-  --src-navman-bg:#EDE9FC;   --src-navman-fg:#4A3D9E;   /* violet accès manuel */
-  --src-bpi-bg:#FBF0DC;      --src-bpi-fg:#7A5B12;
-  --src-place-line:#C9D2E6;  --src-place-fg:#44507A;
-  --src-achat-bg:#F1F5FA;    --src-achat-fg:#44507A;
-  --src-payant-bg:#FCE8E8;   --src-payant-fg:#A2323B;
+  --src-api-bg:var(--surface-verte-douce); --src-api-fg:var(--vert-acces);
+  --src-navauto-bg:var(--blue-soft); --src-navauto-fg:var(--blue-deep);
+  --src-navman-bg:var(--surface-violette); --src-navman-fg:var(--violet-acces);   /* violet accès manuel */
+  --src-bpi-bg:var(--surface-ambre-bpi); --src-bpi-fg:var(--ambre-bpi);
+  --src-place-line:var(--ligne-lieu); --src-place-fg:var(--ink-2);
+  --src-achat-bg:var(--surface-pave); --src-achat-fg:var(--ink-2);
+  --src-payant-bg:var(--surface-rouge-douce); --src-payant-fg:var(--rouge-payant);
   /* rendement */
-  --src-ruban:#35696C;       --src-ruban-faible:#E0C56A; --src-ruban-faible-fg:#94822F;
+  --src-ruban:var(--accent-teal); /* PAS var(--ruban) : jauge de rendement fixe, sans rapport avec le ruban de maison (HO-103) */
+  --src-ruban-faible:var(--gold); --src-ruban-faible-fg:var(--texte-ambre-faible);
   /* carte déclencheurs — ambre */
-  --src-decl-bg:#FDFBF4;     --src-decl-line:#EFE2C0;    --src-decl-ink:#6B5F3C;
-  --src-decl-si:#A79358;     --src-decl-amber-fg:#8A6E23;
-  --src-decl-arme-bg:#F7EBC8;
-  --src-decl-neutral-bg:#EDEAE1; --src-decl-neutral-fg:#6B6252;
-  --src-decl-dormant-bg:#EFF1F6;
+  --src-decl-bg:var(--surface-ambre-douce); --src-decl-line:var(--ligne-ambre-douce); --src-decl-ink:var(--texte-ambre-carte);
+  --src-decl-si:var(--ambre-si); --src-decl-amber-fg:var(--texte-ambre-fonce);
+  --src-decl-arme-bg:var(--surface-ambre-armee);
+  --src-decl-neutral-bg:var(--surface-neutre); --src-decl-neutral-fg:var(--texte-neutre);
+  --src-decl-dormant-bg:var(--surface-dormante);
   /* divers maquette */
-  --src-faint:#A7B0C8;
-  --src-line-soft:#EDF0F6;
+  --src-faint:var(--ink-discret);
+  --src-line-soft:var(--line-soft);
 
   display:flex; flex-direction:column; gap:9px;
 }
@@ -183,16 +184,17 @@ a.src-nom:hover{color:var(--blue-deep)}
    DOM (dispatch par hash, index.js), mais chaque bloc doit rester lisible seul.
    ═══════════════════════════════════════════════════════════════════════════ */
 .pal-wrap{
-  --pal-vert:#35696C;        --pal-vert-fg:#3F7A52;
-  --pal-ambre:#E0C56A;       --pal-ambre-fg:#94822F; --pal-ambre-deep:#8A6E23;
-  --pal-decl-bg:#FDFBF4;     --pal-decl-line:#EFE2C0; --pal-decl-ink:#6B5F3C;
-  --pal-decl-arme-bg:#F7EBC8;
-  --pal-neutral-bg:#EDEAE1;  --pal-neutral-fg:#6B6252;
-  --pal-dormant-bg:#EFF1F6;
-  --pal-line-soft:#EDF0F6;
-  --pal-faint:#A7B0C8;
-  --pal-navy-fg:#9BA9CE;     --pal-navy-vert:#7FD1A8;
-  --pal-navauto-fg:#173A8F;
+  --pal-vert:var(--accent-teal); /* PAS var(--ruban) : sans rapport avec le ruban de maison (HO-103) */
+  --pal-vert-fg:var(--vert-palmares);
+  --pal-ambre:var(--gold);   --pal-ambre-fg:var(--texte-ambre-faible); --pal-ambre-deep:var(--texte-ambre-fonce);
+  --pal-decl-bg:var(--surface-ambre-douce); --pal-decl-line:var(--ligne-ambre-douce); --pal-decl-ink:var(--texte-ambre-carte);
+  --pal-decl-arme-bg:var(--surface-ambre-armee);
+  --pal-neutral-bg:var(--surface-neutre); --pal-neutral-fg:var(--texte-neutre);
+  --pal-dormant-bg:var(--surface-dormante);
+  --pal-line-soft:var(--line-soft);
+  --pal-faint:var(--ink-discret);
+  --pal-navy-fg:var(--ink-sur-navy); --pal-navy-vert:var(--vert-clair);
+  --pal-navauto-fg:var(--blue-deep);
 
   display:flex; flex-direction:column; gap:9px;
 }
