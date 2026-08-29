@@ -119,10 +119,16 @@ export async function ajouter(cible, fichiers, opts = {}) {
 
 // ─── supprimer() ─────────────────────────────────────────────────────────────
 // Prolongement direct de deleteStoredPhoto(table, id, paths), déjà paramétré
-// par table. @returns {Promise<boolean>} true si la ligne a bien été supprimée.
+// par table. TOUTES les dérivées partent avec la brute : avant le 2026-08-30,
+// seules storage_path et thumb_path étaient retirées et mini/moyen/crop
+// restaient orphelines au stockage (dette relevée par l'exécutant HO-105,
+// corrigée à la revue). Les colonnes absentes côté artiste sont `undefined`
+// et filtrées par deleteStoredPhoto.
+// @returns {Promise<boolean>} true si la ligne a bien été supprimée.
 export async function supprimer(cible, photo) {
   const d = await deps();
-  return d.deleteStoredPhoto(cible.table, photo.id, [photo.storage_path, photo.thumb_path]);
+  return d.deleteStoredPhoto(cible.table, photo.id,
+    [photo.storage_path, photo.thumb_path, photo.mini_path, photo.moyen_path, photo.crop_path]);
 }
 
 // ─── remplacer() — édition destructive (D-073/D-075) ────────────────────────
