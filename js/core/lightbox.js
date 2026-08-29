@@ -38,8 +38,8 @@ export function createOverlay({ className = '', html = '', onClose } = {}) {
 
   // Menu contextuel natif neutralisé sur le média : le CSS de components.css
   // (-webkit-touch-callout) ne mord pas sur Firefox/Android, d'où ce garde-fou.
-  // Tant que le filigrane n'est pas gravé dans l'image, un « Enregistrer » ici
-  // livrerait la photo nue ; le téléchargement passera par un bouton explicite.
+  // Aucun filigrane n'est prévu (D-073) : c'est le geste parasite qu'on bloque,
+  // pas la fuite d'une image non marquée.
   el.addEventListener('contextmenu', e => { if (e.target.closest('img,video')) e.preventDefault(); });
 
   document.addEventListener('keydown', onKey);

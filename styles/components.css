@@ -261,15 +261,14 @@ body.lb-open{overflow:hidden}
    en JS : on peut seulement l'autoriser ou le supprimer. Il parasitait la
    sélection et le drag & drop de la grille photos (retour Yann 2026-08-29).
    `-webkit-touch-callout` tue le menu tactile (iOS/WebView), `-webkit-user-drag`
-   le drag fantôme desktop. La lightbox est incluse : tant que le filigrane
-   n'est pas gravé dans l'image, un enregistrement y livrerait la photo nue.
-   Le téléchargement passera par un bouton explicite servant la dérivée 2048
-   filigranée (chantier à venir), jamais par le menu du navigateur. */
+   le drag fantôme desktop.
+   Il n'y a AUCUN filigrane et il n'y en aura pas (D-073) : la dérivée 2048 est
+   celle envoyée au LLM, la marquer dégraderait l'identification. Le blocage ici
+   ne protège donc pas une marque — il empêche simplement un geste parasite. */
 .photos-thumb img,
 .photos-viewer img,
 .lightbox img,
-.cap-viewer img,
-.ms-fili-photo{
+.cap-viewer img{
   -webkit-touch-callout:none;
   -webkit-user-drag:none;
   user-select:none;

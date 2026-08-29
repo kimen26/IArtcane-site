@@ -124,41 +124,6 @@
   text-align:center; padding:2px 0; font-size:7px; font-weight:700; }
 .ms-apercu-txt{ flex:1; display:flex; flex-direction:column; gap:9px; }
 
-/* ─── M2 · Interrupteur ─────────────────────────────────────────────────── */
-.ms-switch{ width:38px; height:22px; border:none; border-radius:11px; background:var(--ms-field-line);
-  padding:0 3px; display:flex; align-items:center; justify-content:flex-start; cursor:pointer; transition:background .15s; }
-.ms-switch.is-on{ background:var(--ms-action); justify-content:flex-end; }
-.ms-switch:disabled{ opacity:.5; cursor:not-allowed; }
-.ms-switch-knob{ width:16px; height:16px; border-radius:50%; background:#fff; }
-
-/* ─── M2 · Lettrage / sliders / snaps ───────────────────────────────────── */
-.ms-lettrages{ display:flex; gap:7px; }
-.ms-lettrage{ flex:1; padding:9px 6px; border-radius:9px; text-align:center; background:var(--surface);
-  border:1px solid var(--ms-field-line); cursor:pointer; display:flex; flex-direction:column; gap:3px; align-items:center; }
-.ms-lettrage.is-sel{ background:var(--blue-soft); border-color:var(--ms-action); }
-.ms-lettrage > span:first-child{ font-size:14px; color:var(--ink); }
-.ms-lettrage.is-sel > span:first-child{ color:var(--ms-action); }
-.ms-lettrage-n{ font-size:9px; color:var(--ms-ink-faint); }
-
-.ms-slider{ flex:1; display:flex; flex-direction:column; gap:6px; }
-.ms-slider-head{ display:flex; align-items:baseline; gap:6px; }
-.ms-slider-head > span:last-child{ margin-left:auto; font-size:11px; font-weight:600; color:var(--ink); }
-.ms-slider input[type=range]{ width:100%; margin:0; accent-color:var(--ms-action); }
-
-.ms-snap{ padding:6px 9px; border:1px solid var(--ms-field-line); border-radius:7px; background:var(--surface);
-  font-size:10.5px; color:var(--ms-ink-2); cursor:pointer; }
-.ms-snap:hover:not(:disabled){ border-color:var(--ms-action); color:var(--ms-action); }
-
-/* ─── M2 · Cibles ───────────────────────────────────────────────────────── */
-.ms-cibles{ display:flex; flex-direction:column; gap:9px; }
-.ms-cible{ display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--ink); cursor:pointer; }
-.ms-cible.is-disabled{ color:var(--ms-ink-3); cursor:default; }
-.ms-cible input{ position:absolute; opacity:0; width:0; height:0; }
-.ms-cible-box{ width:17px; height:17px; border-radius:5px; border:1px solid var(--ms-field-line); flex:none; position:relative; }
-.ms-cible input:checked + .ms-cible-box{ background:var(--ms-action); border-color:var(--ms-action); }
-.ms-cible input:checked + .ms-cible-box::after{ content:""; position:absolute; left:4px; top:2px; width:6px; height:9px;
-  border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg); }
-
 /* ─── M3 · Rôles + membres ──────────────────────────────────────────────── */
 .ms-roles{ display:flex; gap:10px; }
 .ms-role-pave{ flex:1; padding:10px 11px; border-radius:9px; background:var(--ms-pave); display:flex; flex-direction:column; gap:4px; }
