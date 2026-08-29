@@ -22,7 +22,7 @@ export function loadViewCss(nom, dossier = 'views') {
   if (charges.has(cle)) return charges.get(cle);
   // URL résolue depuis ce module (site/js/core/) → site/styles/<dossier>/<nom>.css :
   // insensible au chemin de déploiement (racine, sous-dossier Pages, serveur local).
-  // `dossier` par défaut 'views' — les 12 appelants existants sont inchangés (HO-100 :
+  // `dossier` par défaut 'views' — les 18 vues appelantes sont inchangées (HO-100 :
   // extension additive, seule la clé de cache interne passe de `nom` à `dossier/nom`).
   const href = new URL(`../../styles/${dossier}/${nom}.css`, import.meta.url).href + `?v=${VERSION}`;
   const p = new Promise(resolve => {
