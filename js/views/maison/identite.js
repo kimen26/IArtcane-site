@@ -37,7 +37,7 @@ export function rendre(zone) {
       </div>
       <div class="ms-hero-body">
         <div class="ms-sec-title"><span>Nom de la maison</span><span class="ms-rule"></span></div>
-        <p class="ms-note">Affiché dans l'en-tête, dans le switcher du menu et sous forme d'initiale sur le filigrane.</p>
+        <p class="ms-note">Affiché dans l'en-tête et dans le switcher du menu.</p>
         <div class="ms-field-row">
           <input id="ms-name" class="ms-input" value="${esc(t.name)}" placeholder="PONAIRE…" ${lecture ? 'disabled' : ''} autocomplete="off">
           <button class="ms-btn ms-btn-primary" id="ms-rename" ${lecture ? 'disabled' : ''}>Renommer</button>

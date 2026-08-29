@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // IArtcane — views/maison/etat.js : état partagé du territoire Maison.
 //
-// Trois onglets (identité / filigrane / membres) sous une barre commune,
+// Deux onglets (identité / membres) sous une barre commune,
 // navigation locale SANS changement de route (O.onglet + re-rendu).
 // Même parti pris que views/objet/etat.js : on exporte un OBJET muté en place,
 // jamais des `let`. `hooks` évite la dépendance circulaire index ↔ sous-onglets.
@@ -9,28 +9,17 @@
 
 /** État partagé du territoire Maison. */
 export const M = {
-  onglet: 'identite',      // 'identite' | 'filigrane' | 'membres'
-  tenant: null,            // ligne `tenants` : { name, couleur, filigrane }
+  onglet: 'identite',      // 'identite' | 'membres'
+  tenant: null,            // ligne `tenants` : { name, couleur }
   membres: [],             // [{ member_id, role, created_at, nom }]
   invitations: [],         // [{ id, email, role, created_at, relance_le }]
   nObjets: 0,              // count objets de la maison (sous-ligne du hero)
   nArtistes: 0,            // count distinct objets.auteur
-  coverPath: null,         // storage_path de la photo de couverture du 1er objet (aperçu filigrane)
   scroll: {},              // position de défilement mémorisée par onglet (best effort)
 };
 
 /** Valeur par défaut du ruban (fallback CSS + bouton « Revenir au défaut »). */
 export const RUBAN_DEFAUT = '#35696c';
-
-/** Défauts de la config filigrane (jsonb souple, migration 0027). */
-export const FILIGRANE_DEFAUT = {
-  actif: false,
-  x: 78, y: 82,     // position en % du cadre
-  scale: 100,       // 60–220 %
-  opacite: 38,      // 8–90 %
-  font: 'fraunces', // 'fraunces' | 'spectral' | 'franklin'
-  cibles: { partagePublic: true, exportPdf: true, telechargementOriginal: false },
-};
 
 /** Branchés par views/maison/index.js au chargement du module. */
 export const hooks = {
@@ -122,13 +111,3 @@ export function roueTeintes() {
 
 /** Normalise un e-mail à l'écriture : trim + minuscules (unicité 0027 sensible à la casse). */
 export const normEmail = e => String(e ?? '').trim().toLowerCase();
-
-/** Fusionne une config filigrane partielle (base) avec les défauts. */
-export function filigraneAvecDefauts(raw) {
-  const f = raw && typeof raw === 'object' ? raw : {};
-  return {
-    ...FILIGRANE_DEFAUT,
-    ...f,
-    cibles: { ...FILIGRANE_DEFAUT.cibles, ...(f.cibles && typeof f.cibles === 'object' ? f.cibles : {}) },
-  };
-}

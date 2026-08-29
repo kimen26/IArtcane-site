@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   Vue Maison (HO-056) — territoire js/views/maison/ : 3 onglets sous une barre
-   commune (Identité / Filigrane / Membres), navigation locale sans route.
+   Vue Maison (HO-056) — territoire js/views/maison/ : 2 onglets sous une barre
+   commune (Identité / Membres), navigation locale sans route.
 
    Tokens d'abord (tokens.css gelé — HO-057/059 en parallèle). Les couleurs de
    la maquette sans équivalent token deviennent des variables LOCALES ci-dessous.
@@ -131,21 +131,6 @@
 .ms-switch:disabled{ opacity:.5; cursor:not-allowed; }
 .ms-switch-knob{ width:16px; height:16px; border-radius:50%; background:#fff; }
 
-/* ─── M2 · Aperçu manipulable ───────────────────────────────────────────── */
-.ms-fili-preview{ position:relative; border-radius:9px; overflow:hidden; box-shadow:0 1px 4px rgba(20,30,55,.2);
-  touch-action:none; cursor:grab; user-select:none; }
-.ms-fili-preview.is-off{ opacity:.55; }
-.ms-fili-photo{ display:block; width:100%; height:auto; aspect-ratio:4/3; object-fit:cover; background:var(--ms-placeholder); pointer-events:none; }
-.ms-fili-placeholder{ display:flex; align-items:center; justify-content:center; font-family:var(--mono);
-  font-size:10px; letter-spacing:.08em; color:var(--ms-ink-faint); }
-.ms-fili-mark{ position:absolute; left:78%; top:82%; transform:translate(-50%,-50%); display:flex; align-items:center;
-  gap:6px; pointer-events:none; white-space:nowrap; }
-.ms-fili-mark-disc{ width:20px; height:20px; border-radius:50%; border:1px solid #fff; display:flex; align-items:center;
-  justify-content:center; font-size:10px; color:#fff; }
-.ms-fili-mark-name{ font-size:13px; color:#fff; text-shadow:0 1px 3px rgba(0,0,0,.45); }
-.ms-fili-legend{ position:absolute; left:9px; bottom:8px; font-size:8.5px; font-family:var(--mono);
-  letter-spacing:.1em; color:rgba(255,255,255,.72); text-shadow:0 1px 2px rgba(0,0,0,.6); }
-
 /* ─── M2 · Lettrage / sliders / snaps ───────────────────────────────────── */
 .ms-lettrages{ display:flex; gap:7px; }
 .ms-lettrage{ flex:1; padding:9px 6px; border-radius:9px; text-align:center; background:var(--surface);
@@ -155,13 +140,11 @@
 .ms-lettrage.is-sel > span:first-child{ color:var(--ms-action); }
 .ms-lettrage-n{ font-size:9px; color:var(--ms-ink-faint); }
 
-.ms-fili-sliders{ display:flex; gap:12px; }
 .ms-slider{ flex:1; display:flex; flex-direction:column; gap:6px; }
 .ms-slider-head{ display:flex; align-items:baseline; gap:6px; }
 .ms-slider-head > span:last-child{ margin-left:auto; font-size:11px; font-weight:600; color:var(--ink); }
 .ms-slider input[type=range]{ width:100%; margin:0; accent-color:var(--ms-action); }
 
-.ms-fili-snaps{ display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
 .ms-snap{ padding:6px 9px; border:1px solid var(--ms-field-line); border-radius:7px; background:var(--surface);
   font-size:10.5px; color:var(--ms-ink-2); cursor:pointer; }
 .ms-snap:hover:not(:disabled){ border-color:var(--ms-action); color:var(--ms-action); }

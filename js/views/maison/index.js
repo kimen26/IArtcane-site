@@ -2,10 +2,9 @@
 // IArtcane — views/maison/index.js : territoire Maison (D-039 / D-041).
 //
 // Page des propriétaires, ouverte depuis le tiroir. Barre commune (retour
-// « ‹ Collection », titre, bandeau d'onglets toujours visible) + trois onglets
+// « ‹ Collection », titre, bandeau d'onglets toujours visible) + deux onglets
 // en navigation LOCALE (pas de changement de route) :
 //   • identite.js   M1 — hero, renommage, couleur du ruban
-//   • filigrane.js  M2 — placement au doigt, lettrage, cibles
 //   • membres.js    M3 — membres, rôles, invitations
 //
 // etat.js porte l'état partagé (M) + les helpers roue/luminance. index.js
@@ -15,13 +14,12 @@ import { $, esc, toast } from '../../core/dom.js';
 import { S } from '../../core/state.js';
 import { sb } from '../../core/data.js';
 import { loadViewCss } from '../../core/css.js';
-import { M, hooks, filigraneAvecDefauts } from './etat.js';
+import { M, hooks } from './etat.js';
 
 await loadViewCss('maison');
 
 const ONGLETS = [
   { id: 'identite', label: 'Identité' },
-  { id: 'filigrane', label: 'Filigrane' },
   { id: 'membres', label: 'Membres' },
 ];
 
@@ -35,12 +33,11 @@ async function chargerMaison() {
   const body = $('#maison-body');
   body.innerHTML = '<div class="skeleton" style="height:260px"></div>';
 
-  const [{ data: t, error: eT }, { data: membres, error: eM }, { data: invits }, { data: objets }, cover] = await Promise.all([
-    sb.from('tenants').select('name, couleur, filigrane').eq('owner_id', S.tenantId).maybeSingle(),
+  const [{ data: t, error: eT }, { data: membres, error: eM }, { data: invits }, { data: objets }] = await Promise.all([
+    sb.from('tenants').select('name, couleur').eq('owner_id', S.tenantId).maybeSingle(),
     sb.from('collection_members').select('member_id, role, created_at').eq('owner_id', S.tenantId).order('created_at'),
     sb.from('maison_invitations').select('id, email, role, created_at, relance_le').eq('owner_id', S.tenantId).order('created_at', { ascending: false }),
     sb.from('objets').select('id, auteur, created_at').eq('owner_id', S.tenantId).order('created_at'),
-    premiereCouverture(),
   ]);
 
   if (eT || eM) { toast((eT ?? eM).message, true); body.innerHTML = ''; return; }
@@ -55,37 +52,19 @@ async function chargerMaison() {
   M.tenant = {
     name: t?.name ?? '',
     couleur: t?.couleur ?? null,
-    filigrane: filigraneAvecDefauts(t?.filigrane),
   };
   M.membres = (membres ?? []).map(m => ({ ...m, nom: nomDe(m.member_id) }));
   M.invitations = invits ?? [];
   M.nObjets = (objets ?? []).length;
   M.nArtistes = new Set((objets ?? []).map(o => o.auteur).filter(Boolean)).size;
-  M.coverPath = cover;
 
   rendre();
-}
-
-// Photo de couverture du premier objet de la collection (aperçu du filigrane).
-// Fallback : null → l'onglet M2 affiche un bloc placeholder.
-async function premiereCouverture() {
-  const { data: objets } = await sb.from('objets')
-    .select('id').eq('owner_id', S.tenantId).order('created_at').limit(1);
-  const oid = objets?.[0]?.id;
-  if (!oid) return null;
-  const { data: ph } = await sb.from('photos')
-    .select('storage_path, couverture, ordre, created_at')
-    .eq('owner_id', S.tenantId).eq('objet_id', oid)
-    .order('ordre', { nullsFirst: false }).order('created_at');
-  if (!ph?.length) return null;
-  return (ph.find(p => p.couverture) ?? ph[0]).storage_path ?? null;
 }
 
 // ─── Navigation locale (pas de route) ──────────────────────────────────────
 
 async function importerOnglet(onglet) {
   if (onglet === 'identite') return import('./identite.js');
-  if (onglet === 'filigrane') return import('./filigrane.js');
   if (onglet === 'membres') return import('./membres.js');
   return null;
 }
