@@ -19,9 +19,9 @@
      propre module via core/css.js → un chantier de vue ne touche plus ce fichier.
      Cache-buster ?v= : NE PAS éditer à la main — `node infra/bump-version.mjs <version>`
      écrit ici, dans js/core/version.js et dans sw.js d'un seul coup (L-013). -->
-<link rel="stylesheet" href="styles/tokens.css?v=2026-08-29x-ho103">
-<link rel="stylesheet" href="styles/base.css?v=2026-08-29x-ho103">
-<link rel="stylesheet" href="styles/components.css?v=2026-08-29x-ho103">
+<link rel="stylesheet" href="styles/tokens.css?v=2026-08-30a-ho104">
+<link rel="stylesheet" href="styles/base.css?v=2026-08-30a-ho104">
+<link rel="stylesheet" href="styles/components.css?v=2026-08-30a-ho104">
 </head>
 <body>
 
@@ -109,58 +109,47 @@
 
   <!-- ═══════════ VUE RAYON (catégorie plein écran, HO-043) ═══════════ -->
   <section class="view" id="view-rayon">
-    <button class="back js-back">← Collection</button>
     <div id="rayon-body"></div>
   </section>
 
   <!-- ═══════════ VUE OBJET ═══════════ -->
   <section class="view" id="view-objet">
-    <button class="back" id="obj-back">← Collection</button>
     <div id="objet-body"></div>
   </section>
 
   <!-- ═══════════ VUE ACTIVITÉ (quoi de neuf + actions manuelles, D-025) ═══════════ -->
   <section class="view" id="view-activite">
-    <button class="back js-back">← Collection</button>
     <div id="activite-body"></div>
   </section>
 
   <!-- ═══════════ VUE MAISON (membres, rôles, nom — owner + admin) ═══════════ -->
   <section class="view" id="view-maison">
-    <button class="back js-back">← Collection</button>
-    <div class="sec-title page-title">Maison</div>
     <div id="maison-body"></div>
   </section>
 
   <!-- ═══════════ VUE ARTISTES (menu gouvernance, D-028) ═══════════ -->
   <section class="view" id="view-artistes">
-    <button class="back js-back">← Collection</button>
-    <div class="sec-title page-title">Artistes</div>
     <div id="artistes-body"></div>
   </section>
 
   <!-- ═══════════ VUE ARTISTE (détail) ═══════════ -->
   <section class="view" id="view-artiste">
-    <button class="back js-back">← Collection</button>
     <div id="artiste-body"></div>
   </section>
 
   <!-- ═══════════ VUE SOURCES ═══════════ -->
   <section class="view" id="view-sources">
-    <button class="back js-back">← Collection</button>
     <div id="sources-body"></div>
   </section>
 
   <!-- ═══════════ VUE CATÉGORIES & FAMILLES ═══════════ -->
   <section class="view" id="view-categories">
-    <button class="back js-back">← Collection</button>
     <div class="sec-title page-title">Catégories & familles de prompts</div>
     <div id="categories-body"></div>
   </section>
 
   <!-- ═══════════ VUE DEMANDES (retours & évolutions, D-072) ═══════════ -->
   <section class="view" id="view-demandes">
-    <button class="back js-back">← Collection</button>
     <div id="demandes-body"></div>
   </section>
 
@@ -266,7 +255,7 @@
   </div>
 </div>
 
-<script src="config.js?v=2026-08-29x-ho103"></script>
-<script type="module" src="app.js?v=2026-08-29x-ho103"></script>
+<script src="config.js?v=2026-08-30a-ho104"></script>
+<script type="module" src="app.js?v=2026-08-30a-ho104"></script>
 </body>
 </html>

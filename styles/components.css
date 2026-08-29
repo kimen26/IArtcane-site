@@ -153,22 +153,6 @@
 .st-validee{background:var(--green-soft);color:var(--green)}
 
 /* ─── Panneaux & navigation transverse ────────────────────── */
-/* HO-098 : barre discrète — la zone cliquable reste ≥44px (padding vertical),
-   c'est l'encombrement visuel qui diminue (marge basse ~10px, pas de gras). */
-.back{display:inline-flex;align-items:center;gap:7px;background:none;border:none;color:var(--ink-2);font-size:.875rem;font-weight:500;margin-bottom:10px;padding:12px 10px 12px 0}
-.back:hover{color:var(--blue-deep)}
-/* Une vue qui porte son propre bouton de RETOUR n'affiche pas EN PLUS la
-   rangée de retour du shell : c'est le doublon relevé sur artiste (3 boutons
-   « ← Artistes »), maison et sources (audit Yann 2026-08-29). L'exception ne
-   se rajoute plus vue par vue — la présence d'une nav interne suffit (HO-098,
-   remplace l'exception en dur #view-objet > .back, limitée à une seule vue).
-   ⚠️ Le sélecteur cible le BOUTON de retour, jamais la barre qui le contient :
-   `.act-barre` (Activité) est une barre de titre + filtres + onglets SANS
-   retour (`views/activite/index.js:52-69`) — la masquer sur sa seule présence
-   privait l'écran de toute sortie hors du menu ☰ (revue cerveau HO-098). */
-.view:has(.obj-nav-back) > .back,
-.view:has(.ms-back) > .back,
-.view:has(.art-nav-back) > .back{ display:none }
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow)}
 .panel-pad{padding:20px 22px}
 .page-title{margin-bottom:18px}

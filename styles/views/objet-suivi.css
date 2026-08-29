@@ -3,19 +3,12 @@
    Description (2e) et Historique (2f). Tokens uniquement.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ─── Layout partagé des sous-écrans ─── */
-.suivi-screen{
-  background:var(--bg);
-}
+/* ─── Layout partagé des sous-écrans (corps posé dans `ui/page.js`, HO-104) ─── */
 .suivi-body{
+  display:flex;
+  flex-direction:column;
   padding:12px;
   gap:11px;
-  /* .obj-screen-body (objet.css) pose déjà cette réserve, mais le raccourci
-     padding:12px ci-dessus écraserait son padding-bottom dans la cascade
-     (même spécificité, cette feuille chargée après) — on la répète donc ici.
-     Hauteur mesurée de la barre à 1 rangée (Ventes/Description/Historique,
-     66,8 px) + marge de zoom texte (HO-097). Jamais une constante en dur. */
-  padding-bottom:calc(var(--barre-h, 82px) + 16px + env(safe-area-inset-bottom, 0px));
 }
 
 /* ─── Bloc fourchette (2d) ─── */
@@ -415,9 +408,6 @@
   background:var(--blue);
   color:var(--surface);
 }
-
-/* Barre basse 2e */
-.obj-action-full{flex:1}
 
 /* ─── Dictée ─── */
 .mic-wrap{

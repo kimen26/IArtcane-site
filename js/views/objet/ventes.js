@@ -8,6 +8,7 @@ import { sb, logEvent } from '../../core/data.js';
 import { enregistrer } from '../../core/feedback.js';
 import { marquerUtile } from '../../core/consultations.js';
 import { loadViewCss } from '../../core/css.js';
+import { page } from '../../ui/page.js';
 import { O, hooks, pastilleHtml } from './etat.js';
 
 await loadViewCss('objet-suivi');
@@ -50,56 +51,53 @@ export function rendre(el) {
   const visible = toutVoir ? liste : liste.slice(0, 4);
   const reste = totalFiltre - visible.length;
 
-  el.innerHTML = `
-    <div class="obj-screen suivi-screen">
-      <nav class="obj-nav">
-        <button class="obj-nav-back" data-action="nav" data-ecran="hub">← Fiche</button>
-        <span class="obj-nav-title">Ventes</span>
-        <span class="obj-nav-meta">#${esc(o.id)}</span>
-      </nav>
+  const corps = page(el, {
+    titre: 'Ventes',
+    meta: `#${o.id}`,
+    fil: [...S.fil, { label: 'Ventes' }],
+  });
 
-      <div class="obj-screen-body suivi-body">
-        <section class="fork-block">
-          <div class="fork-header">
-            <span class="fork-label">Fourchette retenue</span>
-            <span class="fork-tag">${esc(provenance)}</span>
-            ${pastilleHtml('prix')}
+  corps.innerHTML = `
+    <div class="suivi-body">
+      <section class="fork-block">
+        <div class="fork-header">
+          <span class="fork-label">Fourchette retenue</span>
+          <span class="fork-tag">${esc(provenance)}</span>
+          ${pastilleHtml('prix')}
+        </div>
+        <div class="fork-inputs">
+          <div class="fork-field">
+            <input type="text" inputmode="decimal" class="fork-num" id="fork-bas" value="${o.prix_bas != null ? fmtNum(o.prix_bas) : ''}" aria-label="Prix bas">
+            <span class="fork-eur">€</span>
           </div>
-          <div class="fork-inputs">
-            <div class="fork-field">
-              <input type="text" inputmode="decimal" class="fork-num" id="fork-bas" value="${o.prix_bas != null ? fmtNum(o.prix_bas) : ''}" aria-label="Prix bas">
-              <span class="fork-eur">€</span>
-            </div>
-            <span class="fork-dash">–</span>
-            <div class="fork-field">
-              <input type="text" inputmode="decimal" class="fork-num" id="fork-haut" value="${o.prix_haut != null ? fmtNum(o.prix_haut) : ''}" aria-label="Prix haut">
-              <span class="fork-eur">€</span>
-            </div>
+          <span class="fork-dash">–</span>
+          <div class="fork-field">
+            <input type="text" inputmode="decimal" class="fork-num" id="fork-haut" value="${o.prix_haut != null ? fmtNum(o.prix_haut) : ''}" aria-label="Prix haut">
+            <span class="fork-eur">€</span>
           </div>
-          <div class="fork-meta">
-            <span>${nVendues} adjudication${nVendues > 1 ? 's' : ''} · ${nEnVente} en vente · confiance ${esc(o.confiance || '—')}</span>
-            <button class="fork-reload" data-action="recalculer">↻ recalculer</button>
-          </div>
-          <div class="comp-filters">
-            <button class="filter-chip ${filtre === 'toutes' ? 'active' : ''}" data-action="filtrer" data-filtre="toutes">Toutes ${nToutes}</button>
-            <button class="filter-chip ${filtre === 'vendues' ? 'active' : ''}" data-action="filtrer" data-filtre="vendues">Vendues ${nVendues}</button>
-            <button class="filter-chip ${filtre === 'envente' ? 'active' : ''}" data-action="filtrer" data-filtre="envente">En vente ${nEnVente}</button>
-          </div>
-        </section>
+        </div>
+        <div class="fork-meta">
+          <span>${nVendues} adjudication${nVendues > 1 ? 's' : ''} · ${nEnVente} en vente · confiance ${esc(o.confiance || '—')}</span>
+          <button class="fork-reload" data-action="recalculer">↻ recalculer</button>
+        </div>
+        <div class="comp-filters">
+          <button class="filter-chip ${filtre === 'toutes' ? 'active' : ''}" data-action="filtrer" data-filtre="toutes">Toutes ${nToutes}</button>
+          <button class="filter-chip ${filtre === 'vendues' ? 'active' : ''}" data-action="filtrer" data-filtre="vendues">Vendues ${nVendues}</button>
+          <button class="filter-chip ${filtre === 'envente' ? 'active' : ''}" data-action="filtrer" data-filtre="envente">En vente ${nEnVente}</button>
+        </div>
+      </section>
 
-        <section class="comp-list">
-          ${visible.map(c => carteComparable(c, o)).join('')}
-          ${!visible.length ? '<div class="obj-stub">Aucun comparable à afficher.</div>' : ''}
-        </section>
+      <section class="comp-list">
+        ${visible.map(c => carteComparable(c, o)).join('')}
+        ${!visible.length ? '<div class="obj-stub">Aucun comparable à afficher.</div>' : ''}
+      </section>
 
-        ${reste > 0 ? `<button class="comp-more" data-action="voir-plus">Voir les ${reste} autre${reste > 1 ? 's' : ''}</button>` : ''}
-      </div>
+      ${reste > 0 ? `<button class="comp-more" data-action="voir-plus">Voir les ${reste} autre${reste > 1 ? 's' : ''}</button>` : ''}
     </div>`;
 
-  el.querySelector('[data-action="nav"]')?.addEventListener('click', () => hooks.naviguer('hub'));
-  el.querySelector('#fork-bas')?.addEventListener('change', e => onForkChange(e, 'prix_bas'));
-  el.querySelector('#fork-haut')?.addEventListener('change', e => onForkChange(e, 'prix_haut'));
-  el.addEventListener('click', onClick);
+  corps.querySelector('#fork-bas')?.addEventListener('change', e => onForkChange(e, 'prix_bas'));
+  corps.querySelector('#fork-haut')?.addEventListener('change', e => onForkChange(e, 'prix_haut'));
+  corps.addEventListener('click', onClick);
 }
 
 function carteComparable(c, o) {
@@ -196,10 +194,6 @@ async function onClick(e) {
   if (!el) return;
   const act = el.dataset.action;
 
-  if (act === 'nav') {
-    hooks.naviguer('hub');
-    return;
-  }
   if (act === 'filtrer') {
     filtre = el.dataset.filtre;
     toutVoir = false;

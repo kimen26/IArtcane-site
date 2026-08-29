@@ -1,23 +1,13 @@
 /* ═══ Écran Photos de la fiche objet (HO-047) ═══ */
-
-/* Barre à 2 rangées (statut + 3 boutons) : la plus haute du site (91,3 px
-   mesurés au CDP, HO-097). Surcharge du --barre-h générique de .obj-screen
-   (objet.css) — :has() supporté par Chrome/Brave 105+ et le WebView Android
-   d'Alain, aucun autre garde-fou de compat sur ce site. */
-.obj-screen:has(> .obj-photos-actions){ --barre-h:104px; }
+/* En-tête + fil d'Ariane posés par `ui/page.js` (HO-104) ; la réserve pour la
+   barre basse fixe est faite automatiquement par la brique (page.css). */
 
 .obj-photos-body{
   flex:1;
-  padding:11px 12px;
+  padding:11px 12px 16px;
   display:flex;
   flex-direction:column;
   gap:11px;
-  /* .obj-screen-body (objet.css) pose déjà cette réserve, mais le raccourci
-     padding:11px 12px ci-dessus écraserait son padding-bottom dans la cascade
-     (même spécificité, cette feuille chargée après) — on la répète donc ici.
-     --barre-h vaut 104px sur cet écran (surcharge :has() ci-dessus, barre à
-     2 rangées, 91,3 px mesurés). Jamais une constante en dur (HO-097). */
-  padding-bottom:calc(var(--barre-h, 104px) + 16px + env(safe-area-inset-bottom, 0px));
 }
 
 /* ─── Tiroir vues manquantes ─── */
@@ -465,33 +455,13 @@
   box-shadow:var(--shadow-hover);
 }
 
-/* ─── Barre d'actions basse spécifique ─── */
-.obj-photos-actions{
-  flex-direction:column;
-  gap:8px;
-  padding:10px 13px calc(11px + env(safe-area-inset-bottom, 0px));
-}
+/* Statut de la pile de photos (déplacé dans le corps, HO-104 — les actions
+   vivent désormais dans la barre basse uniforme `ui/barre-basse.js`). */
 .obj-photos-status{
   font-size:.65625rem;
   color:var(--ink-3);
+  padding-top:2px;
 }
-.obj-photos-buttons{
-  display:flex;
-  gap:8px;
-}
-.obj-photos-buttons button{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:4px;
-  border-radius:11px;
-  padding:11px 12px;
-  font-size:.84375rem;
-  font-weight:700;
-  cursor:pointer;
-  min-height:44px;
-}
-.obj-photos-buttons .obj-action-primary{flex:1}
 
 /* ─── État vide ─── */
 .photos-empty{
@@ -575,8 +545,5 @@
   font-size: .8125rem;
   text-align: center;
 }
-/* Barre d'actions : `.obj-actions` (objet.css, gelé) garantit déjà 44px mini
-   par bouton — remplace `.cut-bar`/`.btn.small` (31,6-33,2px mesurés, HO-099). */
-.obj-edit-actions [data-rot] { order: 1; }
-.obj-edit-actions [data-ok] { order: 2; flex: 1; }
-.obj-edit-actions [data-cancel] { order: 3; }
+/* La barre d'actions (rotation/enregistrer/annuler) est désormais posée par
+   `ui/barre-basse.js` (HO-104), qui garantit déjà 44px mini par bouton. */

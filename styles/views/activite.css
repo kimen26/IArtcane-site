@@ -55,19 +55,6 @@
   padding: 9px 14px 0;
 }
 
-.act-barre-top {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.act-barre-title {
-  font-family: var(--serif);
-  font-size: 17px;
-  color: var(--act-ink);
-  flex: 1;
-}
-
 .act-fenetres {
   display: flex;
   border: 1px solid var(--act-line-strong);

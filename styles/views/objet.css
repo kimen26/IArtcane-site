@@ -1,58 +1,19 @@
 /* ─── Vue Objet : hub + navigation interne + styles partagés du territoire ─── */
-
-/* ═══ Nav partagée par tous les sous-écrans ═══ */
-.obj-nav{
-  display:flex;
-  align-items:center;
-  gap:11px;
-  padding:9px 14px 8px;
-  background:var(--surface);
-  border-bottom:1px solid var(--line-soft);
-}
-.obj-nav-back{
-  background:none;
-  border:none;
-  padding:4px 0;
-  font-size:.8125rem;
-  color:var(--ink-2);
-  cursor:pointer;
-  min-height:44px;
-}
-.obj-nav-back:hover{color:var(--blue-deep)}
-.obj-nav-title{
-  font-family:var(--serif);
-  font-size:.9375rem;
-  margin-left:3px;
-}
-.obj-nav-meta{
-  margin-left:auto;
-  font-size:.6875rem;
-  font-weight:700;
-  letter-spacing:.06em;
-  color:var(--ink-3);
-  white-space:nowrap;
-}
+/* L'en-tête (titre/méta) et le fil d'Ariane sont désormais posés par la brique
+   `ui/page.js` (HO-104) — plus de nav ni de retour propres à cette vue. */
 
 /* ═══ Hub ═══ */
 .obj-hub{
   display:flex;
   flex-direction:column;
   min-height:100%;
-  /* Hauteur mesurée de .obj-actions (barre à 1 rangée) + marge de zoom texte
-     (HO-097). Une variable ne remonte pas d'un enfant à son voisin : elle est
-     déclarée ici, sur l'ancêtre commun à la barre et au body à compenser. */
-  --barre-h:86px;
 }
 .obj-hub-body{
   flex:1;
-  padding:12px;
+  padding:12px 12px 16px;
   display:flex;
   flex-direction:column;
   gap:9px;
-  /* Réserve = hauteur réelle de la barre fixe (--barre-h, déclarée sur le
-     conteneur d'écran) + respiration + zone de gestes. Jamais une constante :
-     la barre grandit avec le zoom texte d'Alain (HO-097). */
-  padding-bottom:calc(var(--barre-h, 92px) + 16px + env(safe-area-inset-bottom, 0px));
 }
 
 /* Bandeau photo pleine largeur (en-tête 3c, HO-092 ; bord à bord + cadrage desktop, HO-093) */
@@ -62,7 +23,11 @@
   background:var(--ink);
   cursor:pointer;
   clip-path:inset(0 0 -1px 0);
-  margin:-28px -24px 0;   /* annule le padding haut et latéral de main (base.css:107) */
+  /* Le bandeau n'est plus le premier élément de l'écran (HO-104 : l'en-tête
+     et le fil d'Ariane le précèdent désormais, posés par `ui/page.js`) — seul
+     le padding LATÉRAL de main (base.css) est encore à annuler pour rester
+     bord à bord ; le haut ne doit plus remonter sous le fil. */
+  margin:0 -24px 0;
 }
 /* Desktop : le bandeau reste pleine largeur (aligné sur le reste de la page) ;
    c'est l'IMAGE qu'on borne, pour qu'elle ne soit ni perdue au centre d'un aplat
@@ -84,28 +49,6 @@
   height:100%;
   font-size:3rem;
   color:var(--icone-sur-fonce);
-}
-.obj-photo-band-voile-top{
-  position:absolute;
-  left:0; right:0; top:0;
-  padding:9px 12px;
-  background:linear-gradient(180deg, var(--voile-photo-haut), var(--voile-photo-transparent));
-  display:flex;
-  align-items:center;
-  gap:9px;
-}
-.obj-photo-band-voile-top .obj-nav-back{
-  font-size:.78125rem;
-  color:#fff;
-  text-shadow:0 1px 3px var(--ombre-texte-photo);
-  min-height:0;
-  padding:0;
-}
-.obj-photo-band-voile-top .obj-nav-meta{
-  font-size:.71875rem;
-  font-weight:700;
-  color:var(--texte-clair-photo);
-  text-shadow:0 1px 3px var(--ombre-texte-photo);
 }
 .obj-photo-band-voile-bottom{
   position:absolute;
@@ -378,70 +321,6 @@
 }
 .obj-desc .miss{color:var(--ink-3)}
 
-/* Barre d'actions basse */
-.obj-actions{
-  position:fixed;
-  left:0; right:0; bottom:0;
-  background:var(--surface);
-  border-top:1px solid var(--line);
-  padding:11px 13px calc(11px + env(safe-area-inset-bottom, 0px));
-  display:flex;
-  gap:8px;
-  box-shadow:0 -3px 12px var(--ombre-barre-basse);
-  z-index:100;
-}
-.obj-actions button{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:4px;
-  border-radius:11px;
-  padding:12px;
-  font-size:.84375rem;
-  font-weight:700;
-  cursor:pointer;
-  min-height:44px;
-}
-.obj-action-primary{
-  flex:1;
-  background:var(--blue);
-  color:#fff;
-  border:none;
-}
-.obj-action-primary:disabled{
-  opacity:.65;
-  cursor:not-allowed;
-}
-.obj-actions button.obj-action-outline{
-  border:1px solid var(--line);
-  background:var(--surface);
-  color:var(--ink);
-  font-size:.78125rem;
-  font-weight:600;
-}
-.obj-action-ia{
-  border:1px solid var(--line-strong);
-  background:var(--blue-softer);
-  color:var(--ink);
-  padding-left:11px; padding-right:11px;
-}
-.obj-action-ia-logo{
-  display:flex;
-  align-items:baseline;
-  font-family:var(--serif);
-  font-weight:700;
-  font-size:.875rem;
-  color:var(--ink);
-}
-.obj-action-ia-logo .ia-i{color:var(--blue)}
-.obj-action-ia-logo img{
-  height:.72em;
-  width:auto;
-  align-self:center;
-  margin-left:.04em;
-  display:block;
-}
-
 /* Pastille de validation */
 .pastille{
   width:20px; height:20px;
@@ -470,27 +349,18 @@
   font-weight:700;
 }
 
-/* Écran stub + body */
-.obj-screen{
-  display:flex;
-  flex-direction:column;
-  min-height:100%;
-  /* Hauteur mesurée de la barre à 1 rangée (Description/Ventes/Historique) +
-     marge de zoom texte (HO-097). L'écran Photos a une barre plus haute
-     (2 rangées) : voir la surcharge :has() dans objet-photos.css. */
-  --barre-h:82px;
-}
+/* Conteneur générique flex-colonne + padding pour un corps d'écran objet
+   (encore utilisé par edition-photo.js, dont le canvas a besoin de flex:1
+   sur son parent direct). */
 .obj-screen-body{
   flex:1;
   padding:12px;
   display:flex;
   flex-direction:column;
   gap:11px;
-  /* Réserve = hauteur réelle de la barre fixe (--barre-h, déclarée sur le
-     conteneur d'écran) + respiration + zone de gestes. Jamais une constante :
-     la barre grandit avec le zoom texte d'Alain (HO-097). */
-  padding-bottom:calc(var(--barre-h, 92px) + 16px + env(safe-area-inset-bottom, 0px));
 }
+
+/* Écran stub */
 .obj-stub{
   padding:16px;
   text-align:center;

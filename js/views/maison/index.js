@@ -14,6 +14,7 @@ import { $, esc, toast } from '../../core/dom.js';
 import { S } from '../../core/state.js';
 import { sb } from '../../core/data.js';
 import { loadViewCss } from '../../core/css.js';
+import { page } from '../../ui/page.js';
 import { M, hooks } from './etat.js';
 
 await loadViewCss('maison');
@@ -82,18 +83,18 @@ function memoriserScroll() {
 }
 
 function rendre() {
-  const body = $('#maison-body');
-  body.innerHTML = `
+  const corps = page($('#maison-body'), { titre: 'Maison', fil: S.fil });
+  corps.innerHTML = `
     <div class="ms-shell">
-      ${rendreBarre()}
+      ${rendreTabs()}
       <div class="ms-onglet" id="maison-onglet"></div>
     </div>`;
 
-  body.querySelectorAll('[data-onglet]').forEach(b => {
+  corps.querySelectorAll('[data-onglet]').forEach(b => {
     b.addEventListener('click', () => naviguer(b.dataset.onglet));
   });
 
-  const zone = $('#maison-onglet');
+  const zone = corps.querySelector('#maison-onglet');
   importerOnglet(M.onglet).then(mod => {
     if (mod?.rendre) mod.rendre(zone);
     // Restaure la position de défilement mémorisée (best effort).
@@ -101,35 +102,18 @@ function rendre() {
   });
 }
 
-// Barre du haut commune : retour Collection + titre + bandeau d'onglets.
-// La <section id="view-maison"> d'index.html porte déjà un bouton retour et un
-// titre « Maison » (transverse gelé) : on les neutralise en CSS (.view#view-maison
-// .back / .page-title { display:none }) et on rend NOTRE barre ici, fidèle à la
-// maquette (onglets, filet 2 px bleu action).
-function rendreBarre() {
+// Bandeau d'onglets (HO-104) : le titre « Maison » et le retour vivent
+// désormais dans le chrome uniforme (`ui/page.js`) — cette barre ne porte
+// plus que les deux onglets, fidèle à la maquette (filet 2 px bleu action).
+function rendreTabs() {
   const onglets = ONGLETS.map(o => `
     <button class="ms-tab ${o.id === M.onglet ? 'is-active' : ''}" data-onglet="${o.id}"
             role="tab" aria-selected="${o.id === M.onglet}">
       <span>${esc(o.label)}</span>
       <span class="ms-tab-filet"></span>
     </button>`).join('');
-  return `
-    <header class="ms-bar">
-      <div class="ms-bar-top">
-        <button class="ms-back" data-hash-back aria-label="Retour à la Collection">
-          <span class="ms-back-chev"></span>Collection
-        </button>
-        <div class="ms-bar-title">Maison</div>
-        <div class="ms-bar-spacer"></div>
-      </div>
-      <div class="ms-tabs" role="tablist">${onglets}</div>
-    </header>`;
+  return `<div class="ms-tabs" role="tablist">${onglets}</div>`;
 }
-
-// Le retour « ‹ Collection » : même cible que le bouton .js-back du shell.
-$('#maison-body').addEventListener('click', e => {
-  if (e.target.closest('[data-hash-back]')) location.hash = '#/';
-});
 
 // Branchement des hooks partagés (sous-onglets → index, sans import direct).
 hooks.recharger = chargerMaison;

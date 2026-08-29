@@ -12,6 +12,7 @@ import { enregistrer } from '../../core/feedback.js';
 import { catCanon } from '../../core/format.js';
 import { SOUS, CATS_CANON, CATS_PROMPT } from '../../core/taxonomie.js';
 import { openCamera } from '../../core/camera.js';
+import { page } from '../../ui/page.js';
 import { O, hooks, pastilleHtml, toggleValidation, estValide } from './etat.js';
 
 const LABELS = {
@@ -40,25 +41,24 @@ export function rendre(el) {
   const o = S.currentObjet;
   if (!o) { el.innerHTML = ''; return; }
 
-  el.innerHTML = `
-    <div class="obj-screen obj-id-screen">
-      <nav class="obj-nav">
-        <button class="obj-nav-back" data-action="nav" data-ecran="hub">← Fiche</button>
-        <span class="obj-nav-title">Identification</span>
-        <span class="obj-nav-meta">#${esc(o.id)}</span>
-      </nav>
-      <div class="obj-screen-body obj-id-body">
-        ${renderBloc('Indispensable pour valoriser', BLOC1, o)}
-        ${renderBloc('Indispensable pour valider', BLOC2, o)}
-        ${renderComplements(o)}
-      </div>
+  const corps = page(el, {
+    titre: 'Identification',
+    meta: `#${o.id}`,
+    fil: [...S.fil, { label: 'Identification' }],
+  });
+
+  corps.innerHTML = `
+    <div class="obj-id-body">
+      ${renderBloc('Indispensable pour valoriser', BLOC1, o)}
+      ${renderBloc('Indispensable pour valider', BLOC2, o)}
+      ${renderComplements(o)}
     </div>`;
 
-  attachListeners(el);
-  loadArtistSuggestions().then(() => refreshAuthorSuggestions(el));
+  attachListeners(corps);
+  loadArtistSuggestions().then(() => refreshAuthorSuggestions(corps));
 
   if (O.focus?.champ) {
-    const target = el.querySelector(`[data-champ="${O.focus.champ}"]`);
+    const target = corps.querySelector(`[data-champ="${O.focus.champ}"]`);
     if (target) {
       target.scrollIntoView({ behavior: 'smooth', block: 'center' });
       target.classList.add('focus-target');
@@ -273,10 +273,6 @@ function refreshAuthorSuggestions(el) {
 // ─── Listeners & persistance ────────────────────────────────────────────────
 
 function attachListeners(el) {
-  // Navigation
-  el.querySelectorAll('[data-action="nav"]').forEach(b =>
-    b.addEventListener('click', () => hooks.naviguer(b.dataset.ecran)));
-
   // Pastilles
   el.querySelectorAll('[data-action="toggle-val"]').forEach(b =>
     b.addEventListener('click', () => toggleValidation(b.dataset.champ)));

@@ -7,6 +7,7 @@ import { loadViewCss } from '../../core/css.js';
 import { sb, logEvent, deleteStoredPhoto, makeThumbBlob } from '../../core/data.js';
 import { toast, enregistrer, withBusy } from '../../core/feedback.js';
 import { createOverlay } from '../../core/lightbox.js';
+import { page } from '../../ui/page.js';
 import { micButton } from '../mic.js';
 import { A, hooks } from './etat.js';
 import { insererArtistePhoto } from './uploads.js';
@@ -68,18 +69,31 @@ export function rendre() {
   const sel = images[currentIndex];
   const sansZone = images.filter(p => !p.zone).length;
 
-  body.innerHTML = `
-    <div class="art-images-screen">
-      ${rendreNav(n)}
-      <div class="art-images-body">
-        ${sel ? rendreCarte(sel, n, currentIndex) : rendreSansImage()}
-        ${n ? rendreGrille(images, sel) : ''}
-      </div>
-      ${rendreBarre(n, sansZone)}
+  const corps = page(body, {
+    titre: 'Images',
+    meta: String(n),
+    fil: [...S.fil, { label: 'Images' }],
+    barre: {
+      actions: [
+        { label: '📷 Ajouter', type: 'plat', desactive: !canWrite(), onClick: onAjouter },
+        { label: 'Enregistrer', type: 'primaire', plein: true, onClick: onEnregistrer },
+      ],
+    },
+  });
+
+  corps.innerHTML = `
+    <div class="art-images-body">
+      ${sel ? rendreCarte(sel, n, currentIndex) : rendreSansImage()}
+      ${n ? rendreGrille(images, sel) : ''}
+      ${sansZone ? `<div class="art-images-status">${sansZone} image${sansZone > 1 ? 's' : ''} attendent leur zone d'apparition</div>` : ''}
     </div>`;
 
-  brancher(body);
+  brancher(corps);
 }
+
+function onAjouter() { if (canWrite()) fileInput.click(); }
+
+function onEnregistrer() { toast('✓ Images enregistrées'); hooks.naviguer('fiche'); }
 
 function imagesTriees() {
   return A.images.slice().sort((a, b) => {
@@ -92,17 +106,6 @@ function imagesTriees() {
 
 function imageCourante() {
   return imagesTriees()[currentIndex];
-}
-
-// ─── Navigation ─────────────────────────────────────────────────────────────
-
-function rendreNav(n) {
-  return `
-    <nav class="art-nav art-images-nav">
-      <button class="art-nav-back" data-action="nav-fiche">← Artiste</button>
-      <span class="art-nav-title">Images</span>
-      <span class="art-nav-meta">${n}</span>
-    </nav>`;
 }
 
 // ─── Carte d'édition ──────────────────────────────────────────────────────────
@@ -227,37 +230,9 @@ function rendreThumb(p, i, selected) {
     </div>`;
 }
 
-// ─── Barre basse ──────────────────────────────────────────────────────────────
-
-function rendreBarre(n, sansZone) {
-  const statut = sansZone
-    ? `<div class="art-images-status">${sansZone} image${sansZone > 1 ? 's' : ''} attendent leur zone d'apparition</div>`
-    : '';
-  return `
-    <div class="art-images-bar">
-      ${statut}
-      <div class="art-images-bar-buttons">
-        <button class="art-images-bar-icon" data-action="ajouter" title="Importer une image" ${!canWrite() ? 'disabled' : ''}>📷</button>
-        <button class="art-images-bar-primary" data-action="enregistrer">Enregistrer</button>
-      </div>
-    </div>`;
-}
-
 // ─── Branchement des événements ───────────────────────────────────────────────
 
 function brancher(el) {
-  // Navigation
-  el.querySelector('[data-action="nav-fiche"]')?.addEventListener('click', () => hooks.naviguer('fiche'));
-
-  // Barre basse
-  el.querySelector('[data-action="ajouter"]')?.addEventListener('click', () => {
-    fileInput.click();
-  });
-  el.querySelector('[data-action="enregistrer"]')?.addEventListener('click', () => {
-    toast('✓ Images enregistrées');
-    hooks.naviguer('fiche');
-  });
-
   // Coins de la carte
   el.querySelector('[data-action="recadrer"]')?.addEventListener('click', () => recadrer());
   el.querySelector('[data-action="supprimer"]')?.addEventListener('click', () => supprimerImage());

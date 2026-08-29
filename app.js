@@ -9,7 +9,7 @@ import { S, canWrite } from './js/core/state.js';
 import { catCanon, catEmoji } from './js/core/format.js';
 import { sb } from './js/core/data.js';
 import { withBusy } from './js/core/feedback.js';
-import { viewLabel, viewParent } from './js/core/nav.js';
+import { viewLabel, filDe } from './js/core/nav.js';
 
 // ─── Service worker (D-013) : shell offline + réception « Partager avec » ───
 // http(s) uniquement (pas de SW en file://) ; échec silencieux — l'app marche sans.
@@ -347,40 +347,30 @@ async function route() {
   // nue le temps que la feuille arrive (D-041).
   if (!r) {
     const m = await import('./js/views/collection.js');
+    S.fil = filDe('collection', []);
     show('collection');
     m.mount();
-    prevView = currentView;
     currentView = { view: 'collection', tab: 'collection', hash: '#/', label: 'Collection', params: [] };
-    updateBackButtons();
+    S.currentView = currentView; // D-072 : la feuille de demande connaît la page courante
     return;
   }
   // Gardes d'écriture : capture et maison interdites au lecteur (RLS 0012, UI masquée)
   if (r.write && !canWrite()) { location.replace('#/'); return; }
   const meta = computeViewMeta(r, h);
+  // Fil d'Ariane posé AVANT le montage (HO-104) : la vue le lit dans S.fil au
+  // montage — seule navigation ascendante depuis l'arbitrage Yann 2026-08-29
+  // (le bouton retour disparaît, il ne se déplace pas).
+  S.fil = filDe(meta.view, meta.params);
   const m = await r.load();
   show(r.view);
   m[r.fn ?? 'mount'](...meta.params);
-  prevView = currentView;
   currentView = meta;
-  updateBackButtons();
+  S.currentView = currentView; // D-072 : la feuille de demande connaît la page courante
 }
 window.addEventListener('hashchange', route);
 $('#logo-home').addEventListener('click', () => { location.hash = '#/'; });
-$('#obj-back').addEventListener('click', () => { location.hash = prevView?.hash ?? '#/'; });
-$$('.js-back').forEach(b => b.addEventListener('click', () => { location.hash = b.dataset.hash ?? '#/'; }));
 
-// ─── Bouton retour hiérarchique (HO-098) : viewParent() donne le PARENT, jamais la page précédente. prevView sert encore #obj-back.
 let currentView = null;
-let prevView = null;
-
-function updateBackButtons() {
-  S.currentView = currentView; // D-072 : la feuille de demande connaît la page courante
-  const parent = currentView ? viewParent(currentView.view, currentView.params) : null;
-  $$('.js-back').forEach(b => {
-    b.hidden = !parent;
-    if (parent) { b.textContent = '← ' + parent.label; b.dataset.hash = parent.hash; }
-  });
-}
 
 function computeViewMeta(r, h) {
   const params = (h.match(r.re) ?? []).slice(1).map(decodeURIComponent);

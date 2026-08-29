@@ -9,6 +9,7 @@ import { loadViewCss } from '../../core/css.js';
 import { sb, logEvent, deleteStoredPhoto } from '../../core/data.js';
 import { openCamera } from '../../core/camera.js';
 import { openViewer } from '../../core/lightbox.js';
+import { page } from '../../ui/page.js';
 import { micButton } from '../mic.js';
 import { O, hooks } from './etat.js';
 
@@ -55,33 +56,28 @@ export function rendre(el) {
   const vuesAFaire = vues.filter(v => v.statut !== 'absente');
   const vuesAbsentes = vues.filter(v => v.statut === 'absente');
 
-  el.innerHTML = `
-    <div class="obj-screen">
-      <nav class="obj-nav">
-        <button class="obj-nav-back" data-action="nav" data-ecran="hub">← Fiche</button>
-        <span class="obj-nav-title">Photos</span>
-        <span class="obj-nav-meta">#${esc(o.id)}</span>
-      </nav>
+  const corps = page(el, {
+    titre: 'Photos',
+    meta: `#${o.id}`,
+    fil: [...S.fil, { label: 'Photos' }],
+    barre: {
+      actions: [
+        { label: '📷 Ajouter', type: 'plat', onClick: onAjouter },
+        { label: 'Enregistrer', type: 'primaire', plein: true, onClick: onEnregistrer },
+        { label: '↻ Relancer les recherches', type: 'plat', onClick: onRelancer },
+      ],
+    },
+  });
 
-      <div class="obj-screen-body obj-photos-body">
-        ${rendreTiroirVues(vues, vuesAFaire, vuesAbsentes)}
-        ${sel ? rendreCartePhoto(sel, n, currentIndex) : rendreSansPhoto()}
-        ${rendreGrille(photos, sel)}
-      </div>
-
-      <div class="obj-actions obj-photos-actions">
-        <div class="obj-photos-status">${nActions ? `${nActions} photo${nActions > 1 ? 's' : ''} demandent encore une action` : 'Toutes les photos sont en ordre'}</div>
-        <div class="obj-photos-buttons">
-          <button class="obj-action-outline" data-action="ajouter">📷 Ajouter</button>
-          <button class="obj-action-primary" data-action="enregistrer">Enregistrer</button>
-          <button class="obj-action-ia" data-action="relancer" title="Relancer les recherches">
-            <span>↻</span><span class="obj-action-ia-logo"><span class="ia-i">I</span><img src="assets/logo-glyph.png" alt="AR"></span>
-          </button>
-        </div>
-      </div>
+  corps.innerHTML = `
+    <div class="obj-photos-body">
+      ${rendreTiroirVues(vues, vuesAFaire, vuesAbsentes)}
+      ${sel ? rendreCartePhoto(sel, n, currentIndex) : rendreSansPhoto()}
+      ${rendreGrille(photos, sel)}
+      <div class="obj-photos-status">${nActions ? `${nActions} photo${nActions > 1 ? 's' : ''} demandent encore une action` : 'Toutes les photos sont en ordre'}</div>
     </div>`;
 
-  brancher(el);
+  brancher(corps);
 }
 
 function rendreTiroirVues(vues, aFaire, absente) {
@@ -223,34 +219,32 @@ function rendreThumb(p, i, selected) {
 
 // ─── Branchement des événements ─────────────────────────────────────────────
 
+function onAjouter() { $('#file-add-photo').click(); }
+
+function onEnregistrer() { toast('✓ Photos enregistrées'); hooks.naviguer('hub'); }
+
+async function onRelancer(evt) {
+  const btn = evt.target?.closest ? evt.target.closest('[data-ui-action]') : null;
+  const o = S.currentObjet;
+  if (!o) return;
+  if (!confirm(`Relancer les recherches de #${o.id} ?\n\nR1 (Kimi, ~40 s) repart si des photos ont changé, puis R2 (Lens) est enfilée — le cron la prend sous ~2 min.`)) return;
+  if (btn) btn.disabled = true;
+  const { lancerRecherches, enqueueJobs } = await import('../../core/data.js');
+  const force = o.statut === 'validee';
+  const r = await lancerRecherches(o.id, { force });
+  if (r.ok) {
+    logEvent('relance', { force, certain: r.certain ?? null });
+    toast(r.skip
+      ? `R1 sautée (${r.skip}) — R2 (Lens) en file`
+      : `R1 terminée${r.certain ? ' — auteur certain ✓' : ' — doute : analyse versée à la description'} · R2 (Lens) en file`);
+  } else if (r.reseau) {
+    const n = await enqueueJobs([o.id], 'r1');
+    if (n) toast('R1 en file — le cron la prend sous ~2 min');
+  }
+  hooks.recharger(o.id);
+}
+
 function brancher(el) {
-  // Navigation
-  el.querySelector('[data-action="nav"]')?.addEventListener('click', () => hooks.naviguer('hub'));
-
-  // Boutons barre du bas
-  el.querySelector('[data-action="ajouter"]')?.addEventListener('click', () => { $('#file-add-photo').click(); });
-  el.querySelector('[data-action="enregistrer"]')?.addEventListener('click', () => { toast('✓ Photos enregistrées'); hooks.naviguer('hub'); });
-  el.querySelector('[data-action="relancer"]')?.addEventListener('click', async e => {
-    const btn = e.currentTarget;
-    const o = S.currentObjet;
-    if (!o) return;
-    if (!confirm(`Relancer les recherches de #${o.id} ?\n\nR1 (Kimi, ~40 s) repart si des photos ont changé, puis R2 (Lens) est enfilée — le cron la prend sous ~2 min.`)) return;
-    btn.disabled = true;
-    const { lancerRecherches, enqueueJobs } = await import('../../core/data.js');
-    const force = o.statut === 'validee';
-    const r = await lancerRecherches(o.id, { force });
-    if (r.ok) {
-      logEvent('relance', { force, certain: r.certain ?? null });
-      toast(r.skip
-        ? `R1 sautée (${r.skip}) — R2 (Lens) en file`
-        : `R1 terminée${r.certain ? ' — auteur certain ✓' : ' — doute : analyse versée à la description'} · R2 (Lens) en file`);
-    } else if (r.reseau) {
-      const n = await enqueueJobs([o.id], 'r1');
-      if (n) toast('R1 en file — le cron la prend sous ~2 min');
-    }
-    hooks.recharger(o.id);
-  });
-
   // Coins de la carte photo
   el.querySelector('[data-action="modifier"]')?.addEventListener('click', () => {
     const p = photoCourante();

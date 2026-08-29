@@ -19,6 +19,8 @@ import { loadViewCss } from '../../core/css.js';
 import { withBusy } from '../../core/feedback.js';
 import { S } from '../../core/state.js';
 import { sb, logEvent, makeVariantBlob, signPaths } from '../../core/data.js';
+import { page } from '../../ui/page.js';
+import { catCanon } from '../../core/format.js';
 
 await loadViewCss('objet-photos');
 
@@ -46,6 +48,16 @@ export async function mount(objetId, photoId) {
     if (o) S.currentObjet = o;
   }
 
+  // Fil d'Ariane (HO-104) : cet écran arrive par une VRAIE navigation de hash
+  // (contrairement aux sous-écrans internes de la fiche) — le segment #<id>
+  // peut donc porter un hash réel vers le hub, et la catégorie (inconnue de
+  // filDe('objet', …) au moment du routage) est complétée ici.
+  if (S.currentObjet?.categorie) {
+    const cat = catCanon(S.currentObjet.categorie);
+    S.fil[1] = { label: cat, hash: `#/rayon/${encodeURIComponent(cat)}` };
+  }
+  S.fil[2] = { label: `#${objetId}`, hash: `#/objet/${encodeURIComponent(objetId)}` };
+
   const retour = () => { location.hash = `#/objet/${encodeURIComponent(objetId)}`; };
 
   const bruteUrl = (await signPaths([photo.storage_path]))[photo.storage_path];
@@ -69,33 +81,33 @@ export async function mount(objetId, photoId) {
   };
   redresser();
 
-  body.innerHTML = `
-    <div class="obj-screen">
-      <nav class="obj-nav">
-        <button class="obj-nav-back" data-action="annuler">← Photos</button>
-        <span class="obj-nav-title">Modifier la photo</span>
-      </nav>
-      <div class="obj-screen-body">
-        <div class="obj-edit-hint">Recadre avec les poignées, ou pivote — puis enregistre</div>
-        <div class="obj-edit-canvas"></div>
-      </div>
-      <div class="obj-actions obj-edit-actions">
-        <button class="obj-action-outline" data-rot>↻ 90°</button>
-        <button class="obj-action-primary" data-ok disabled>Enregistrer</button>
-        <button class="obj-action-outline" data-cancel>Annuler</button>
-      </div>
+  const corps = page(body, {
+    titre: 'Modifier la photo',
+    fil: [...S.fil, { label: 'Modifier la photo' }],
+    barre: {
+      actions: [
+        { label: '↻ 90°', type: 'plat', onClick: onRotClick },
+        { label: 'Enregistrer', type: 'primaire', plein: true, onClick: onSaveClick },
+        { label: 'Annuler', type: 'plat', onClick: retour },
+      ],
+    },
+  });
+  corps.innerHTML = `
+    <div class="obj-screen-body">
+      <div class="obj-edit-hint">Recadre avec les poignées, ou pivote — puis enregistre</div>
+      <div class="obj-edit-canvas"></div>
     </div>`;
-  body.querySelector('.obj-edit-canvas').append(straight);
-  body.querySelector('[data-action="annuler"]').addEventListener('click', retour);
+  corps.querySelector('.obj-edit-canvas').append(straight);
 
   const img = straight;
-  const ok = body.querySelector('[data-ok]');
-  const rot = body.querySelector('[data-rot]');
+  // barreBasse() rend les actions dans l'ordre : 0 = rotation, 1 = enregistrer, 2 = annuler.
+  const ok = body.querySelector('[data-ui-action="1"]');
+  ok.disabled = true; // rien à enregistrer tant qu'aucune modif (recadrage/rotation)
   let sel = { x0: 0, y0: 0, x1: 1, y1: 1 };
   let box = null;
   let drag = null;
   const MIN = 0.05;
-  const canvasZone = body.querySelector('.obj-edit-canvas');
+  const canvasZone = corps.querySelector('.obj-edit-canvas');
   const toRel = e => {
     const r = img.getBoundingClientRect();
     return { x: Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1), y: Math.min(Math.max((e.clientY - r.top) / r.height, 0), 1) };
@@ -137,19 +149,16 @@ export async function mount(objetId, photoId) {
     ok.disabled = false;
   });
   canvasZone.addEventListener('pointerup', () => { drag = null; });
-  body.querySelector('[data-cancel]').addEventListener('click', e => { e.stopPropagation(); retour(); });
 
-  rot.addEventListener('click', e => {
-    e.stopPropagation();
+  function onRotClick() {
     rotLocale = (rotLocale + 90) % 360;
     redresser();
     sel = { x0: 0, y0: 0, x1: 1, y1: 1 };
     draw();
     ok.disabled = false;
-  });
+  }
 
-  ok.addEventListener('click', async e => {
-    e.stopPropagation();
+  async function onSaveClick() {
     if (!confirm("Enregistrer les modifications ?\n\nLa photo d'origine sera remplacée définitivement — cette action est irréversible.")) return;
     ok.disabled = true; ok.textContent = 'Enregistrement…';
     try {
@@ -194,5 +203,5 @@ export async function mount(objetId, photoId) {
       toast(`Enregistrement échoué : ${err.message ?? err}`, true);
       ok.disabled = false; ok.textContent = 'Enregistrer';
     }
-  });
+  }
 }

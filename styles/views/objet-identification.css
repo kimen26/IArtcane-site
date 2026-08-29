@@ -1,13 +1,11 @@
 /* ═══ Écran Identification (2c) ═══ */
 
-.obj-id-screen{
-  background:var(--bg);
-}
 .obj-id-body{
+  background:var(--bg);
   display:flex;
   flex-direction:column;
   gap:9px;
-  padding-bottom:24px;
+  padding:12px 12px 24px;
 }
 
 /* ─── Blocs valoriser / valider ─── */

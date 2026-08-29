@@ -33,3 +33,28 @@ export function viewParent(view, params = []) {
     default:           return { label: 'Collection', hash: '#/' };
   }
 }
+
+/** Segments hiérarchiques d'un écran, racine → page courante (HO-104).
+ *  Le dernier segment n'a pas de `hash` : c'est la page courante (non cliquable).
+ *  Pour `objet`, le libellé de catégorie (2e segment) n'est pas connu ici — la
+ *  vue le complète une fois l'objet chargé (catCanon(o.categorie)) ; cette
+ *  fonction ne fournit que la forme (docs/architecture-briques.md §2.1).
+ *  @returns {Array<{label:string, hash?:string}>}
+ */
+export function filDe(view, params = []) {
+  const COLLECTION = { label: 'Collection', hash: '#/' };
+  switch (view) {
+    case 'collection': return [{ label: 'Collection' }];
+    case 'rayon':      return [COLLECTION, { label: params[0] || 'Rayon' }];
+    case 'objet':      return [COLLECTION, { label: 'Objet' }, { label: `#${params[0] ?? ''}` }];
+    case 'capture':    return [COLLECTION, { label: 'Capturer' }];
+    case 'artistes':   return [COLLECTION, { label: 'Artistes' }];
+    case 'artiste':    return [COLLECTION, { label: 'Artistes', hash: '#/artistes' }, { label: params[0] || 'Artiste' }];
+    case 'maison':     return [COLLECTION, { label: 'Maison' }];
+    case 'activite':   return [COLLECTION, { label: 'Activité' }];
+    case 'sources':    return [COLLECTION, { label: 'Sources' }];
+    case 'categories': return [COLLECTION, { label: 'Catégories & familles' }];
+    case 'demandes':   return [COLLECTION, { label: 'Demandes' }];
+    default:           return [{ label: 'Collection' }];
+  }
+}

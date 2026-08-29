@@ -20,6 +20,7 @@ import {
 } from '../../core/format.js';
 import { sb, signPaths, logEvent, lancerRecherches, enqueueJobs } from '../../core/data.js';
 import { loadViewCss } from '../../core/css.js';
+import { page } from '../../ui/page.js';
 import { O, hooks, CHAMPS_VALIDABLES, estValide, toggleValidation, chargerNLens } from './etat.js';
 import { brancherUploads } from './uploads.js';
 
@@ -40,6 +41,13 @@ async function loadObjet(id) {
   S.currentObjet = o;
   O.ecran = 'hub';
   O.focus = null;
+  // Fil d'Ariane (HO-104) : filDe('objet', …) fournit la forme (S.fil posé par
+  // le shell avant mount()) sans connaître la catégorie — cette vue la complète.
+  if (S.fil) {
+    S.fil[1] = o.categorie
+      ? { label: catCanon(o.categorie), hash: `#/rayon/${encodeURIComponent(catCanon(o.categorie))}` }
+      : S.fil[1];
+  }
   const [{ data: photos }, { data: comps }, { data: fiches }, { data: events }, { data: artiste }, { data: jobs }, nLens] = await Promise.all([
     sb.from('photos').select('*').eq('owner_id', S.tenantId).eq('objet_id', id).order('ordre', { nullsFirst: false }).order('created_at'),
     sb.from('comparables').select('*').eq('owner_id', S.tenantId).eq('objet_id', id).order('date_vente', { ascending: false, nullsFirst: false }),
@@ -83,7 +91,6 @@ async function deleteObjet() {
   toast(`Objet #${o.id} supprimé`);
   location.hash = '#/';
 }
-
 // Indicateur d'avancement R1/R2/R3/Valorisation (D-057)
 const R2_ACTIONS = ['lens', 'lens R2', 'grok', 'gpt', 'grok R2', 'gpt R2', 'llm_appoint'];
 function computePipe(events, jobs, o) {
@@ -110,7 +117,6 @@ function pipeBadge(short, long, { state, date }) {
     : `${long} — ${state === 'done' ? 'terminé' : state === 'pending' ? 'en cours / en file' : 'pas encore'}`;
   return `<span class="pipe-badge ${cls}" role="listitem" title="${esc(title)}">${icon} ${esc(short)}</span>`;
 }
-
 // Dimensions (conservé de l'ancienne fiche, D-053).
 function fmtDims(o) {
   const parts = [];
@@ -121,7 +127,6 @@ function fmtDims(o) {
 }
 
 // ─── Navigation interne ────────────────────────────────────────────────────
-
 async function importerEcran(ecran) {
   if (ecran === 'photos') return import('./photos.js');
   if (ecran === 'identification') return import('./identification.js');
@@ -136,17 +141,40 @@ function naviguer(ecran, focus = null) {
   O.focus = focus;
   renderObjet();
 }
-
 function renderObjet() {
   const body = $('#objet-body');
   if (O.ecran === 'hub') {
-    body.innerHTML = rendreHub();
-    loadSimilar(S.currentObjet);
+    renderHubEcran(body);
     return;
   }
   importerEcran(O.ecran).then(mod => {
     if (mod?.rendre) mod.rendre(body);
   });
+}
+
+// Chrome uniforme (HO-104) : titre + méta dans l'en-tête, fil d'Ariane au-dessus
+// du bandeau photo — plus rien n'est posé sur la photo (arbitrage Yann 2026-08-29).
+function renderHubEcran(body) {
+  const o = S.currentObjet;
+  let posMeta = '';
+  if (S.collection?.length) {
+    const idx = S.collection.findIndex(x => String(x.id) === String(o.id));
+    if (idx >= 0) posMeta = ` · ${idx + 1}/${S.collection.length}`;
+  }
+  const corps = page(body, {
+    titre: titreSansAuteur(o.titre, o.auteur) || 'Sans titre',
+    meta: `#${o.id}${posMeta}`,
+    fil: S.fil,
+    barre: {
+      actions: [
+        { label: '✓ Valider la fiche', type: 'primaire', desactive: o.statut === 'validee', onClick: onValiderFiche },
+        { label: '✎ Corriger', type: 'plat', onClick: () => naviguer('identification') },
+        { label: '↻ Relancer les recherches', type: 'plat', onClick: onRelancerHub },
+      ],
+    },
+  });
+  corps.innerHTML = rendreHub(o);
+  loadSimilar(o);
 }
 
 // ─── Hub ───────────────────────────────────────────────────────────────────
@@ -159,18 +187,10 @@ function titreSansAuteur(titre, auteur) {
   return t.toLowerCase().endsWith(suf) ? t.slice(0, t.length - suf.length).replace(/[\s—]+$/, '').trim() : titre;
 }
 
-function rendreHub() {
-  const o = S.currentObjet;
+function rendreHub(o) {
   const cover = O.photos.find(p => p.couverture) ?? O.photos[0];
   const nVendus = O.comps.filter(c => !c.exclu && c.source_type !== 'en_vente').length;
   const nVente = O.comps.filter(c => !c.exclu && c.source_type === 'en_vente').length;
-
-  // Position dans la collection triée created_at (si S.collection chargée).
-  let posMeta = '';
-  if (S.collection?.length) {
-    const idx = S.collection.findIndex(x => String(x.id) === String(o.id));
-    if (idx >= 0) posMeta = ` · ${idx + 1}/${S.collection.length}`;
-  }
 
   const auteurHtml = o.auteur
     ? (O.artiste
@@ -187,10 +207,6 @@ function rendreHub() {
       ${cover?.thumbUrl
         ? `<img src="${esc(cover.thumbUrl)}" alt="${esc(o.titre || 'objet')}" loading="eager" decoding="async">`
         : `<div class="obj-photo-band-placeholder">${catEmoji(o.categorie)}</div>`}
-      <div class="obj-photo-band-voile-top">
-        <button class="obj-nav-back" data-action="nav-back">← ${o.categorie ? esc(catCanon(o.categorie)) : 'Accueil'}</button>
-        <span class="obj-nav-meta">#${esc(o.id)}${esc(posMeta)}</span>
-      </div>
       <div class="obj-photo-band-voile-bottom">
         <h1 class="obj-title">${esc(titreAffiche || 'Sans titre')}</h1>
         ${auteurHtml}
@@ -223,14 +239,6 @@ function rendreHub() {
         Aide à l'estimation et au catalogage — ne constitue pas une expertise certifiée. Au-delà de 2 000 € estimés, une expertise humaine est recommandée (CNES/CNE, commissaire-priseur).
       </div>
     </div>
-
-    <div class="obj-actions">
-      <button class="obj-action-primary" data-action="valider" ${o.statut === 'validee' ? 'disabled' : ''}>✓ Valider la fiche</button>
-      <button class="obj-action-outline" data-action="nav" data-ecran="identification">✎ Corriger</button>
-      <button class="obj-action-ia" data-action="relancer" title="Relancer les recherches">
-        <span>↻</span><span class="obj-action-ia-logo"><span class="ia-i">I</span><img src="assets/logo-glyph.png" alt="AR"></span>
-      </button>
-    </div>
   </div>`;
 }
 
@@ -239,7 +247,6 @@ function rendreRuban(o) {
   return `
     <button class="obj-ruban" data-action="nav" data-ecran="ventes">${fmtNum(o.prix_bas)} – ${fmtNum(o.prix_haut)} €</button>`;
 }
-
 function rendreCarteIdentification(o) {
   const aValider = CHAMPS_VALIDABLES.filter(ch => champRempli(ch, o) && !estValide(ch)).length;
   const dims = fmtDims(o);
@@ -271,7 +278,6 @@ function champRempli(champ, o) {
   if (champ === 'categorie') return Boolean(o.categorie);
   return Boolean(o[champ]);
 }
-
 function rendreTiroirAlertes(o) {
   const alertes = calculerAlertes(o);
   const refus = o.alertes_refusees ?? {};
@@ -304,7 +310,6 @@ function rendreTiroirAlertes(o) {
       </div>
     </details>`;
 }
-
 function calculerAlertes(o) {
   const alertes = [];
   if (o.hauteur_cm == null) {
@@ -325,7 +330,6 @@ function calculerAlertes(o) {
   const refus = S.currentObjet.alertes_refusees ?? {};
   return alertes.filter(a => !refus[a.cle]);
 }
-
 function rendreCarteDescription(o) {
   return `
     <section class="obj-card" data-action="nav" data-ecran="description">
@@ -336,7 +340,6 @@ function rendreCarteDescription(o) {
       <div class="obj-desc">${o.description ? esc(o.description) : '<span class="miss">Pas encore de description</span>'}</div>
     </section>`;
 }
-
 async function loadSimilar(o) {
   const panel = $('#similar-panel');
   if (!panel) return;
@@ -363,16 +366,12 @@ async function loadSimilar(o) {
 
 // ─── Actions de la vue Objet (délégation) ───────────────────────────────────
 
-const ACTIONS_MUTANTES = new Set([
-  'valider', 'relancer', 'del-objet', 'toggle-val',
-]);
-
+const ACTIONS_MUTANTES = new Set(['del-objet', 'toggle-val']);
 $('#objet-body').addEventListener('click', async e => {
   const el = e.target.closest('[data-action]');
   if (!el) return;
   const act = el.dataset.action;
   if (ACTIONS_MUTANTES.has(act) && !canWrite()) return;
-  const o = S.currentObjet;
 
   if (act === 'nav') {
     let focus = null;
@@ -381,51 +380,11 @@ $('#objet-body').addEventListener('click', async e => {
     }
     naviguer(el.dataset.ecran, focus);
   }
-  else if (act === 'nav-back') {
-    location.hash = o?.categorie ? `#/rayon/${encodeURIComponent(catCanon(o.categorie))}` : '#/';
-  }
   else if (act === 'similar') {
     location.hash = '#/objet/' + encodeURIComponent(el.dataset.oid);
   }
   else if (act === 'toggle-val') {
     await toggleValidation(el.dataset.champ);
-  }
-  else if (act === 'valider') {
-    if (!await enregistrer(() => sb.from('objets').update({ statut: 'validee' }).eq('owner_id', S.tenantId).eq('id', o.id), 'Fiche validée', { silencieuxSiOk: true })) return;
-    logEvent('validation', { note: 'confiance 4/4 (ground truth)' });
-    toast(`#${o.id} validée ✓ — confiance 4/4 (ground truth)`);
-    loadObjet(o.id);
-    S.refreshHeader?.();
-  }
-  else if (act === 'relancer') {
-    if (!confirm(`Relancer les recherches de #${o.id} ?\n\nR1 (Kimi, ~40 s) repart si des photos ont changé, puis R2 (Lens) est enfilée — le cron la prend sous ~2 min.`)) return;
-    el.disabled = true;
-    const force = o.statut === 'validee';
-    // lancerRecherches est un fetch unique, non interruptible en cours de route
-    // (pas de callback de progression comme uploadPhotosFor) : withBusy attend
-    // sa fin réelle avant de résoudre, même après un clic Annuler. On agit donc
-    // sur l'annulation via ctx.estAnnule() polé DANS fn, sans attendre le fetch.
-    const { valeur: r, annule } = await withBusy(async ({ estAnnule }) => {
-      const promesse = lancerRecherches(o.id, { force });
-      while (!estAnnule()) {
-        const gagnant = await Promise.race([promesse, new Promise(res => setTimeout(() => res('poll'), 150))]);
-        if (gagnant !== 'poll') return gagnant;
-      }
-      const n = await enqueueJobs([o.id], 'r1');
-      if (n) toast('Recherche remise en file — le cron la reprend sous ~2 min.');
-      return null;
-    }, { titre: 'Recherche R1 en cours…', seuilLent: 20000 });
-    if (!annule && r?.ok) {
-      logEvent('relance', { force, certain: r.certain ?? null });
-      toast(r.skip
-        ? `R1 sautée (${r.skip}) — R2 (Lens) en file`
-        : `R1 terminée${r.certain ? ' — auteur certain ✓' : ' — doute : analyse versée à la description'} · R2 (Lens) en file`);
-    } else if (!annule && r?.reseau) {
-      const n = await enqueueJobs([o.id], 'r1');
-      if (n) toast('R1 en file — le cron la prend sous ~2 min');
-    }
-    el.disabled = false;
-    loadObjet(o.id);
   }
   else if (act === 'del-objet') { deleteObjet(); }
   else if (act === 'alerte-refuser') {
@@ -437,6 +396,49 @@ $('#objet-body').addEventListener('click', async e => {
   }
 });
 
+// ─── Barre basse du hub (HO-104) : câblées via barreBasse(), plus par délégation ──
+async function onValiderFiche() {
+  const o = S.currentObjet;
+  if (!o || !canWrite()) return;
+  if (!await enregistrer(() => sb.from('objets').update({ statut: 'validee' }).eq('owner_id', S.tenantId).eq('id', o.id), 'Fiche validée', { silencieuxSiOk: true })) return;
+  logEvent('validation', { note: 'confiance 4/4 (ground truth)' });
+  toast(`#${o.id} validée ✓ — confiance 4/4 (ground truth)`);
+  loadObjet(o.id);
+  S.refreshHeader?.();
+}
+async function onRelancerHub(evt) {
+  const o = S.currentObjet;
+  if (!o || !canWrite()) return;
+  if (!confirm(`Relancer les recherches de #${o.id} ?\n\nR1 (Kimi, ~40 s) repart si des photos ont changé, puis R2 (Lens) est enfilée — le cron la prend sous ~2 min.`)) return;
+  const btn = evt?.target?.closest ? evt.target.closest('[data-ui-action]') : null;
+  if (btn) btn.disabled = true;
+  const force = o.statut === 'validee';
+  // lancerRecherches est un fetch unique, non interruptible en cours de route
+  // (pas de callback de progression comme uploadPhotosFor) : withBusy attend
+  // sa fin réelle avant de résoudre, même après un clic Annuler. On agit donc
+  // sur l'annulation via ctx.estAnnule() polé DANS fn, sans attendre le fetch.
+  const { valeur: r, annule } = await withBusy(async ({ estAnnule }) => {
+    const promesse = lancerRecherches(o.id, { force });
+    while (!estAnnule()) {
+      const gagnant = await Promise.race([promesse, new Promise(res => setTimeout(() => res('poll'), 150))]);
+      if (gagnant !== 'poll') return gagnant;
+    }
+    const n = await enqueueJobs([o.id], 'r1');
+    if (n) toast('Recherche remise en file — le cron la reprend sous ~2 min.');
+    return null;
+  }, { titre: 'Recherche R1 en cours…', seuilLent: 20000 });
+  if (!annule && r?.ok) {
+    logEvent('relance', { force, certain: r.certain ?? null });
+    toast(r.skip
+      ? `R1 sautée (${r.skip}) — R2 (Lens) en file`
+      : `R1 terminée${r.certain ? ' — auteur certain ✓' : ' — doute : analyse versée à la description'} · R2 (Lens) en file`);
+  } else if (!annule && r?.reseau) {
+    const n = await enqueueJobs([o.id], 'r1');
+    if (n) toast('R1 en file — le cron la prend sous ~2 min');
+  }
+  if (btn) btn.disabled = false;
+  loadObjet(o.id);
+}
 async function refuserAlerte(cle) {
   const o = S.currentObjet;
   if (!o || !cle) return;
@@ -447,7 +449,6 @@ async function refuserAlerte(cle) {
   logEvent('alerte_refusee', { cle });
   hooks.rendre();
 }
-
 async function restaurerAlertes() {
   const o = S.currentObjet;
   if (!o) return;
@@ -458,7 +459,6 @@ async function restaurerAlertes() {
 }
 
 brancherUploads(loadObjet);
-
 // Branchement des hooks partagés.
 hooks.recharger = loadObjet;
 hooks.rendre = renderObjet;

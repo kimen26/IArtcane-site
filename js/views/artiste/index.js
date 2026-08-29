@@ -12,6 +12,7 @@ import { sb, signPaths, logEvent, ensureCollection, loadPhotoMap } from '../../c
 import { toast, enregistrer } from '../../core/feedback.js';
 import { openViewer } from '../../core/lightbox.js';
 import { loadViewCss } from '../../core/css.js';
+import { page } from '../../ui/page.js';
 import { micButton } from '../mic.js';
 import { A, hooks } from './etat.js';
 import { insererArtistePhoto } from './uploads.js';
@@ -32,19 +33,20 @@ export function mountDetail(nom) {
 
 // ─── Liste des fiches artistes (#/artistes) ─────────────────────────────────
 async function loadArtistesList() {
-  const body = $('#artistes-body');
-  body.innerHTML = '<div class="skeleton" style="height:220px"></div>';
+  const el = $('#artistes-body');
+  el.innerHTML = '<div class="skeleton" style="height:220px"></div>';
   const [{ data, error }] = await Promise.all([
     sb.from('artistes').select('*').eq('owner_id', S.tenantId).order('nom'),
     ensureCollection(),
   ]);
-  if (error) { toast(error.message, true); body.innerHTML = ''; return; }
+  const corps = page(el, { titre: 'Artistes', fil: S.fil });
+  if (error) { toast(error.message, true); corps.innerHTML = ''; return; }
   if (!data?.length) {
-    body.innerHTML = emptyHtml('Aucune fiche artiste pour l\'instant', 'Le cron les crée lors des passes d\'identification.');
+    corps.innerHTML = emptyHtml('Aucune fiche artiste pour l\'instant', 'Le cron les crée lors des passes d\'identification.');
     return;
   }
   const nbObjets = nom => S.collection.filter(o => auteurMatch(o.auteur, nom)).length;
-  body.innerHTML = `<div class="grid">${data.map(a => {
+  corps.innerHTML = `<div class="grid">${data.map(a => {
     const extrait = String(a.bio_md ?? '')
       .replace(/^\s*#{1,4}\s+/gm, '')
       .replace(/^\s*[-*]\s+/gm, '')
@@ -61,7 +63,7 @@ async function loadArtistesList() {
       </div>
     </article>`;
   }).join('')}</div>`;
-  $$('.card', body).forEach(c => c.addEventListener('click', () => {
+  $$('.card', corps).forEach(c => c.addEventListener('click', () => {
     location.hash = '#/artiste/' + encodeURIComponent(c.dataset.nom);
   }));
 }
@@ -139,11 +141,26 @@ async function loadArtiste(nom) {
 function renderArtiste() {
   const body = $('#artiste-body');
   if (A.ecran === 'fiche') {
-    body.innerHTML = rendreFiche();
+    const a = A.artiste;
+    const corps = page(body, {
+      titre: a?.nom ?? A.nom,
+      meta: `${A.objets.length} objet${A.objets.length > 1 ? 's' : ''}`,
+      fil: S.fil,
+      barre: {
+        actions: [
+          { label: `Voir les ${A.objets.length} objet${A.objets.length > 1 ? 's' : ''}`, type: 'primaire', onClick: () => $('#art-objets')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) },
+          ...(canWrite() ? [
+            { label: '✎ Note', type: 'plat', onClick: () => { $('#art-note-text')?.focus(); $('#art-composer')?.classList.add('focused'); } },
+            { label: `🖼 Images · ${A.images.length}`, type: 'plat', onClick: () => hooks.naviguer('images') },
+          ] : []),
+        ],
+      },
+    });
+    corps.innerHTML = rendreFiche();
     brancherComposer();
     // Les cartes objet rendues par cardHtml n’ont pas de data-action ; on les
     // rend cliquables ici (même comportement que l’ancien artistes.js).
-    $$('.card[data-oid]', body).forEach(c => {
+    $$('.card[data-oid]', corps).forEach(c => {
       const go = () => { location.hash = '#/objet/' + encodeURIComponent(c.dataset.oid); };
       c.addEventListener('click', go);
       c.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
@@ -199,12 +216,6 @@ function rendreFiche() {
   const d = dossier();
   const id = identite();
 
-  const nav = `
-    <nav class="art-nav">
-      <button class="art-nav-back" data-action="nav-back">← Artistes</button>
-      <span class="art-nav-meta">${A.objets.length} objet${A.objets.length > 1 ? 's' : ''}</span>
-    </nav>`;
-
   const blocs = [
     rendreHero(a, d, id),
     rendreCote(d),
@@ -227,16 +238,7 @@ function rendreFiche() {
         : '<div class="art-empty">Aucun objet rattaché à cet artiste pour l\'instant.</div>'}
     </section>`;
 
-  const barre = `
-    <div class="art-bar">
-      <button class="art-bar-primary" data-action="scroll-objets">Voir les ${A.objets.length} objet${A.objets.length > 1 ? 's' : ''}</button>
-      ${canWrite()
-        ? `<button class="art-bar-outline" data-action="focus-note">✎ Note</button>
-           <button class="art-bar-outline" data-action="nav-images" title="Gérer les images">🖼 Images · ${A.images.length}</button>`
-        : ''}
-    </div>`;
-
-  return `${nav}<div class="art-body">${blocs.join('')}${objetsSection}</div>${barre}`;
+  return `<div class="art-body">${blocs.join('')}${objetsSection}</div>`;
 }
 
 // 1. Hero identité
@@ -608,18 +610,8 @@ $('#artiste-body').addEventListener('click', async e => {
   // Actions mutantes protégées en lecture seule
   if ((['add-note', 'attach-photo', 'quick-photo'].includes(act)) && !canWrite()) return;
 
-  if (act === 'nav-back') {
-    location.hash = '#/artistes';
-  } else if (act === 'nav-objet') {
+  if (act === 'nav-objet') {
     location.hash = '#/objet/' + encodeURIComponent(el.dataset.oid);
-  } else if (act === 'scroll-objets') {
-    const section = $('#art-objets');
-    if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  } else if (act === 'focus-note') {
-    const ta = $('#art-note-text');
-    if (ta) { ta.focus(); $('#art-composer')?.classList.add('focused'); }
-  } else if (act === 'nav-images') {
-    hooks.naviguer('images');
   } else if (act === 'zoom-artiste-photo') {
     e.stopPropagation();
     openArtistePhoto(el.dataset.pid);

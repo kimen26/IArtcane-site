@@ -3,7 +3,9 @@
 // Architecture territoire (HO-057) : onglets locaux, pas de route interne.
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, esc, toast, emptyHtml } from '../../core/dom.js';
+import { S } from '../../core/state.js';
 import { loadViewCss } from '../../core/css.js';
+import { page } from '../../ui/page.js';
 import {
   A, FENETRES, Onglets, loadActiviteData, setOnglet, setFenetre,
 } from './etat.js';
@@ -36,27 +38,25 @@ export function mount() {
 }
 
 function render() {
-  const body = $('#activite-body');
-  body.innerHTML = `
+  const corps = page($('#activite-body'), { titre: 'Activité', fil: S.fil });
+  corps.innerHTML = `
     <div class="act-view">
       ${barreHtml()}
       <div class="act-body" id="act-body"></div>
     </div>`;
-  bindBarre(body);
+  bindBarre(corps);
   renderOnglet();
 }
 
+// Le titre « Activité » vit désormais dans le chrome uniforme (`ui/page.js`,
+// HO-104) — cette barre ne porte plus que les fenêtres et les onglets.
 function barreHtml() {
-  const fen = FENETRES.find(f => f.id === A.fenetre) ?? FENETRES[2];
   return `
     <div class="act-barre">
-      <div class="act-barre-top">
-        <span class="act-barre-title">Activité</span>
-        <div class="act-fenetres">
-          ${FENETRES.map(f => `
-            <button class="act-fenetre ${f.id === A.fenetre ? 'active' : ''}" data-fenetre="${f.id}">${esc(f.label)}</button>
-          `).join('')}
-        </div>
+      <div class="act-fenetres">
+        ${FENETRES.map(f => `
+          <button class="act-fenetre ${f.id === A.fenetre ? 'active' : ''}" data-fenetre="${f.id}">${esc(f.label)}</button>
+        `).join('')}
       </div>
       <div class="act-onglets">
         ${Onglets.map(o => `

@@ -7,6 +7,7 @@ import { fmtDate } from '../../core/format.js';
 import { sb, logEvent, enqueueJobs } from '../../core/data.js';
 import { enregistrer } from '../../core/feedback.js';
 import { loadViewCss } from '../../core/css.js';
+import { page } from '../../ui/page.js';
 import { micButton } from '../mic.js';
 import { O, hooks, estValide, toggleValidation } from './etat.js';
 
@@ -23,73 +24,65 @@ export function rendre(el) {
   const relu = estValide('description') ? ' · relu' : '';
   const modele = O.fiche?.modele || 'IA';
 
-  el.innerHTML = `
-    <div class="obj-screen suivi-screen">
-      <nav class="obj-nav">
-        <button class="obj-nav-back" data-action="nav" data-ecran="hub">← Fiche</button>
-        <span class="obj-nav-title">Description</span>
-        <span class="obj-nav-meta">${signes} signe${signes > 1 ? 's' : ''}</span>
-      </nav>
+  const corps = page(el, {
+    titre: 'Description',
+    meta: `${signes} signe${signes > 1 ? 's' : ''}`,
+    fil: [...S.fil, { label: 'Description' }],
+    barre: { actions: [{ label: '✓ Textes validés', type: 'primaire', plein: true, onClick: onValiderTextes }] },
+  });
 
-      <div class="obj-screen-body suivi-body">
-        <div class="desc-reminder">
-          <div class="desc-reminder-thumb">
-            ${cover?.thumbUrl
-              ? `<img src="${esc(cover.thumbUrl)}" alt="" loading="lazy" decoding="async">`
-              : '<div class="desc-reminder-placeholder">🏺</div>'}
-          </div>
-          <p class="desc-reminder-txt">Texte de catalogue. Il reprend ce qui est déjà dans l’identification, ne le contredit jamais : les champs restent la source.</p>
+  corps.innerHTML = `
+    <div class="suivi-body">
+      <div class="desc-reminder">
+        <div class="desc-reminder-thumb">
+          ${cover?.thumbUrl
+            ? `<img src="${esc(cover.thumbUrl)}" alt="" loading="lazy" decoding="async">`
+            : '<div class="desc-reminder-placeholder">🏺</div>'}
         </div>
-
-        <section class="desc-card desc-ia">
-          <div class="desc-card-head">
-            <span class="desc-card-label">Rédigé par l’IA</span>
-            <span class="desc-card-tag">${esc(modele)}</span>
-          </div>
-          ${editIa ? renderIaEditor(o) : renderIaText(o)}
-          ${!editIa ? `
-            <div class="desc-card-foot">
-              <span class="desc-card-meta">généré le ${ficheDate}${relu}</span>
-              <button class="desc-action" data-action="regenerer">↻ Régénérer</button>
-              <button class="desc-action" data-action="edit-ia">✎</button>
-            </div>
-          ` : ''}
-        </section>
-
-        <section class="desc-card desc-maison">
-          <div class="desc-card-head">
-            <span class="desc-card-label">Description maison</span>
-            <span class="desc-card-hint">jamais réécrite par l’IA</span>
-          </div>
-          ${editMaison ? renderMaisonEditor(o) : renderMaisonText(o)}
-          ${!editMaison ? `
-            <div class="desc-card-foot">
-              <span class="desc-card-meta">${o.commentaire ? 'Modifiée le ' + fmtDate(o.updated_at) : '—'}</span>
-              <button class="desc-action" data-action="edit-maison">✎ Modifier</button>
-            </div>
-          ` : ''}
-        </section>
+        <p class="desc-reminder-txt">Texte de catalogue. Il reprend ce qui est déjà dans l’identification, ne le contredit jamais : les champs restent la source.</p>
       </div>
 
-      <div class="obj-actions">
-        <button class="obj-action-primary obj-action-full" data-action="valider-textes">✓ Textes validés</button>
-      </div>
+      <section class="desc-card desc-ia">
+        <div class="desc-card-head">
+          <span class="desc-card-label">Rédigé par l’IA</span>
+          <span class="desc-card-tag">${esc(modele)}</span>
+        </div>
+        ${editIa ? renderIaEditor(o) : renderIaText(o)}
+        ${!editIa ? `
+          <div class="desc-card-foot">
+            <span class="desc-card-meta">généré le ${ficheDate}${relu}</span>
+            <button class="desc-action" data-action="regenerer">↻ Régénérer</button>
+            <button class="desc-action" data-action="edit-ia">✎</button>
+          </div>
+        ` : ''}
+      </section>
+
+      <section class="desc-card desc-maison">
+        <div class="desc-card-head">
+          <span class="desc-card-label">Description maison</span>
+          <span class="desc-card-hint">jamais réécrite par l’IA</span>
+        </div>
+        ${editMaison ? renderMaisonEditor(o) : renderMaisonText(o)}
+        ${!editMaison ? `
+          <div class="desc-card-foot">
+            <span class="desc-card-meta">${o.commentaire ? 'Modifiée le ' + fmtDate(o.updated_at) : '—'}</span>
+            <button class="desc-action" data-action="edit-maison">✎ Modifier</button>
+          </div>
+        ` : ''}
+      </section>
     </div>`;
 
-  // Navigation
-  el.querySelector('[data-action="nav"]')?.addEventListener('click', () => hooks.naviguer('hub'));
   // Actions fixes
-  el.querySelector('[data-action="regenerer"]')?.addEventListener('click', onRegenerer);
-  el.querySelector('[data-action="edit-ia"]')?.addEventListener('click', () => { editIa = true; hooks.rendre?.(); });
-  el.querySelector('[data-action="edit-maison"]')?.addEventListener('click', () => { editMaison = true; hooks.rendre?.(); });
-  el.querySelector('[data-action="valider-textes"]')?.addEventListener('click', onValiderTextes);
+  corps.querySelector('[data-action="regenerer"]')?.addEventListener('click', onRegenerer);
+  corps.querySelector('[data-action="edit-ia"]')?.addEventListener('click', () => { editIa = true; hooks.rendre?.(); });
+  corps.querySelector('[data-action="edit-maison"]')?.addEventListener('click', () => { editMaison = true; hooks.rendre?.(); });
 
   // Édition IA
-  el.querySelector('[data-action="save-ia"]')?.addEventListener('click', saveIa);
-  el.querySelector('[data-action="cancel-ia"]')?.addEventListener('click', () => { editIa = false; hooks.rendre?.(); });
+  corps.querySelector('[data-action="save-ia"]')?.addEventListener('click', saveIa);
+  corps.querySelector('[data-action="cancel-ia"]')?.addEventListener('click', () => { editIa = false; hooks.rendre?.(); });
 
   // Édition maison : dictée + sauvegarde au change
-  const maisonTa = el.querySelector('#desc-maison-ta');
+  const maisonTa = corps.querySelector('#desc-maison-ta');
   if (maisonTa) {
     maisonTa.addEventListener('change', saveMaison);
     const wrap = maisonTa.closest('.desc-maison-editor');
@@ -97,8 +90,8 @@ export function rendre(el) {
       const mic = micButton(maisonTa);
       if (mic) wrap.appendChild(mic);
     }
-    el.querySelector('[data-action="save-maison"]')?.addEventListener('click', saveMaison);
-    el.querySelector('[data-action="cancel-maison"]')?.addEventListener('click', () => { editMaison = false; hooks.rendre?.(); });
+    corps.querySelector('[data-action="save-maison"]')?.addEventListener('click', saveMaison);
+    corps.querySelector('[data-action="cancel-maison"]')?.addEventListener('click', () => { editMaison = false; hooks.rendre?.(); });
   }
 }
 

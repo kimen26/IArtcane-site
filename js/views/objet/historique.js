@@ -5,7 +5,8 @@ import { esc } from '../../core/dom.js';
 import { S } from '../../core/state.js';
 import { fmtDateTime, ACT_LABELS, actorBadge, evDetailBits, mdToHtml } from '../../core/format.js';
 import { loadViewCss } from '../../core/css.js';
-import { O, hooks } from './etat.js';
+import { page } from '../../ui/page.js';
+import { O } from './etat.js';
 
 await loadViewCss('objet-suivi');
 
@@ -64,34 +65,30 @@ export function rendre(el) {
       </article>`;
   }).join('');
 
-  el.innerHTML = `
-    <div class="obj-screen suivi-screen">
-      <nav class="obj-nav">
-        <button class="obj-nav-back" data-action="nav" data-ecran="hub">← Fiche</button>
-        <span class="obj-nav-title">Mise à jour</span>
-        <span class="obj-nav-meta">${O.events.length} étape${O.events.length > 1 ? 's' : ''}</span>
-      </nav>
+  const corps = page(el, {
+    titre: 'Mise à jour',
+    meta: `${O.events.length} étape${O.events.length > 1 ? 's' : ''}`,
+    fil: [...S.fil, { label: 'Mise à jour' }],
+  });
 
-      <div class="obj-screen-body suivi-body">
-        <section class="pipe-grid" aria-label="Passes IA">
-          ${PASSES.map(p => passeBadge(pipe[p.key], p.short, p.long)).join('')}
-        </section>
+  corps.innerHTML = `
+    <div class="suivi-body">
+      <section class="pipe-grid" aria-label="Passes IA">
+        ${PASSES.map(p => passeBadge(pipe[p.key], p.short, p.long)).join('')}
+      </section>
 
-        <section class="hist-list" aria-label="Journal">
-          ${journal || '<div class="obj-stub">Aucun événement tracé pour l’instant.</div>'}
-        </section>
+      <section class="hist-list" aria-label="Journal">
+        ${journal || '<div class="obj-stub">Aucun événement tracé pour l’instant.</div>'}
+      </section>
 
-        <details class="tech-details">
-          <summary class="tech-summary">
-            <span>détails techniques</span>
-            <span class="tech-chev">›</span>
-          </summary>
-          <div class="tech-panel">
-            ${ficheTechnique()}
-          </div>
-        </details>
-      </div>
+      <details class="tech-details">
+        <summary class="tech-summary">
+          <span>détails techniques</span>
+          <span class="tech-chev">›</span>
+        </summary>
+        <div class="tech-panel">
+          ${ficheTechnique()}
+        </div>
+      </details>
     </div>`;
-
-  el.querySelector('[data-action="nav"]')?.addEventListener('click', () => hooks.naviguer('hub'));
 }
