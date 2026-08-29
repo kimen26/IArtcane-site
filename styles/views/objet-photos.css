@@ -1,11 +1,23 @@
 /* ═══ Écran Photos de la fiche objet (HO-047) ═══ */
 
+/* Barre à 2 rangées (statut + 3 boutons) : la plus haute du site (91,3 px
+   mesurés au CDP, HO-097). Surcharge du --barre-h générique de .obj-screen
+   (objet.css) — :has() supporté par Chrome/Brave 105+ et le WebView Android
+   d'Alain, aucun autre garde-fou de compat sur ce site. */
+.obj-screen:has(> .obj-photos-actions){ --barre-h:104px; }
+
 .obj-photos-body{
   flex:1;
   padding:11px 12px;
   display:flex;
   flex-direction:column;
   gap:11px;
+  /* .obj-screen-body (objet.css) pose déjà cette réserve, mais le raccourci
+     padding:11px 12px ci-dessus écraserait son padding-bottom dans la cascade
+     (même spécificité, cette feuille chargée après) — on la répète donc ici.
+     --barre-h vaut 104px sur cet écran (surcharge :has() ci-dessus, barre à
+     2 rangées, 91,3 px mesurés). Jamais une constante en dur (HO-097). */
+  padding-bottom:calc(var(--barre-h, 104px) + 16px + env(safe-area-inset-bottom, 0px));
 }
 
 /* ─── Tiroir vues manquantes ─── */
@@ -455,7 +467,7 @@
 .obj-photos-actions{
   flex-direction:column;
   gap:8px;
-  padding:10px 13px 11px;
+  padding:10px 13px calc(11px + env(safe-area-inset-bottom, 0px));
 }
 .obj-photos-status{
   font-size:.65625rem;

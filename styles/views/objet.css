@@ -38,6 +38,10 @@
   display:flex;
   flex-direction:column;
   min-height:100%;
+  /* Hauteur mesurée de .obj-actions (barre à 1 rangée) + marge de zoom texte
+     (HO-097). Une variable ne remonte pas d'un enfant à son voisin : elle est
+     déclarée ici, sur l'ancêtre commun à la barre et au body à compenser. */
+  --barre-h:86px;
 }
 .obj-hub-body{
   flex:1;
@@ -45,7 +49,10 @@
   display:flex;
   flex-direction:column;
   gap:9px;
-  padding-bottom:92px; /* espace pour la barre d'actions fixe */
+  /* Réserve = hauteur réelle de la barre fixe (--barre-h, déclarée sur le
+     conteneur d'écran) + respiration + zone de gestes. Jamais une constante :
+     la barre grandit avec le zoom texte d'Alain (HO-097). */
+  padding-bottom:calc(var(--barre-h, 92px) + 16px + env(safe-area-inset-bottom, 0px));
 }
 
 /* Bandeau photo pleine largeur (en-tête 3c, HO-092 ; bord à bord + cadrage desktop, HO-093) */
@@ -372,7 +379,7 @@
   left:0; right:0; bottom:0;
   background:var(--surface);
   border-top:1px solid var(--line);
-  padding:11px 13px;
+  padding:11px 13px calc(11px + env(safe-area-inset-bottom, 0px));
   display:flex;
   gap:8px;
   box-shadow:0 -3px 12px rgba(20,30,55,.07);
@@ -463,6 +470,10 @@
   display:flex;
   flex-direction:column;
   min-height:100%;
+  /* Hauteur mesurée de la barre à 1 rangée (Description/Ventes/Historique) +
+     marge de zoom texte (HO-097). L'écran Photos a une barre plus haute
+     (2 rangées) : voir la surcharge :has() dans objet-photos.css. */
+  --barre-h:82px;
 }
 .obj-screen-body{
   flex:1;
@@ -470,6 +481,10 @@
   display:flex;
   flex-direction:column;
   gap:11px;
+  /* Réserve = hauteur réelle de la barre fixe (--barre-h, déclarée sur le
+     conteneur d'écran) + respiration + zone de gestes. Jamais une constante :
+     la barre grandit avec le zoom texte d'Alain (HO-097). */
+  padding-bottom:calc(var(--barre-h, 92px) + 16px + env(safe-area-inset-bottom, 0px));
 }
 .obj-stub{
   padding:16px;

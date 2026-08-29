@@ -3,8 +3,13 @@
 /* Liste : extrait de bio tronqué sur 3 lignes (conservé de l'ancienne vue) */
 .art-extrait{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 
-/* Corps de la fiche artiste : empilement des 11 blocs */
-.art-body{padding:12px;padding-bottom:90px;display:flex;flex-direction:column;gap:10px;background:var(--bg);min-height:100%}
+/* Corps de la fiche artiste : empilement des 11 blocs.
+   .art-bar (barre à 1 rangée, 65,2 px mesurés au CDP) est un FRÈRE de ce
+   conteneur dans le DOM (index.js:239, nav+body+barre côte à côte) — pas de
+   :has() possible sans wrapper commun, hors périmètre CSS seul de HO-097.
+   La réserve reste donc chiffrée ici (mesure + marge de zoom), mais gagne la
+   zone de gestes ; ni l'un ni l'autre ne masquait de contenu avant ce chantier. */
+.art-body{padding:12px;padding-bottom:calc(82px + env(safe-area-inset-bottom, 0px));display:flex;flex-direction:column;gap:10px;background:var(--bg);min-height:100%}
 
 /* Navigation interne */
 /* Maquette « Fiche artiste » l. 39 : padding:9px 14px — sans lui le fil
@@ -194,7 +199,7 @@
 .art-empty{font-size:12px;color:var(--ink-3);padding:8px 0}
 
 /* ─── Barre basse fixe ──────────────────────────────────────────────────────── */
-.art-bar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:11px 13px;display:flex;gap:8px;box-shadow:0 -3px 12px rgba(20,30,55,.07);z-index:10}
+.art-bar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:11px 13px calc(11px + env(safe-area-inset-bottom, 0px));display:flex;gap:8px;box-shadow:0 -3px 12px rgba(20,30,55,.07);z-index:10}
 .art-bar-primary{flex:1;text-align:center;background:var(--blue);color:#fff;border-radius:11px;border:none;padding:12px 0;font-size:13.5px;font-weight:700;cursor:pointer}
 .art-bar-primary:hover{background:var(--blue-deep)}
 .art-bar-outline{border:1px solid var(--line-strong);border-radius:11px;background:none;padding:12px 11px;font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer}
@@ -213,12 +218,17 @@ body.role-lecteur .art-chez-relever{display:none}
 
 /* ═══ Écran Images (3b, HO-053) ═══════════════════════════════════════════ */
 
-.art-images-screen{display:flex;flex-direction:column;height:100%;min-height:100%;background:var(--bg)}
+.art-images-screen{display:flex;flex-direction:column;height:100%;min-height:100%;background:var(--bg);
+  /* .art-images-bar (statut + rangée de boutons, même structure que
+     .obj-photos-actions) est un enfant direct de cet écran (images.js:72-79) :
+     la réserve peut donc suivre la hauteur réelle de la barre (HO-097). */
+  --barre-h:104px;
+}
 .art-images-screen .art-nav{background:#fff;border-bottom:1px solid var(--line-soft);padding:9px 14px}
 .art-images-screen .art-nav-title{font-family:var(--serif);font-size:15px;margin-left:3px}
 .art-images-screen .art-nav-meta{margin-left:auto;font-size:11px;color:var(--ink-3)}
 
-.art-images-body{flex:1;padding:11px 12px;display:flex;flex-direction:column;gap:11px;overflow-y:auto;padding-bottom:130px}
+.art-images-body{flex:1;padding:11px 12px;display:flex;flex-direction:column;gap:11px;overflow-y:auto;padding-bottom:calc(var(--barre-h, 104px) + 16px + env(safe-area-inset-bottom, 0px))}
 .art-images-empty{font-size:12px;color:var(--ink-3);text-align:center;padding:24px 0}
 
 /* Carte d'édition */
@@ -288,7 +298,7 @@ body.role-lecteur .art-chez-relever{display:none}
 .art-images-thumb.dragging{position:fixed;z-index:1000;pointer-events:none;box-shadow:var(--shadow-hover)}
 
 /* Barre basse */
-.art-images-bar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:10px 13px 11px;display:flex;flex-direction:column;gap:8px;box-shadow:0 -3px 12px rgba(20,30,55,.07);z-index:10}
+.art-images-bar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:10px 13px calc(11px + env(safe-area-inset-bottom, 0px));display:flex;flex-direction:column;gap:8px;box-shadow:0 -3px 12px rgba(20,30,55,.07);z-index:10}
 .art-images-status{font-size:10.5px;color:var(--ink-3)}
 .art-images-bar-buttons{display:flex;gap:8px}
 .art-images-bar-icon{flex:0 0 auto;border:1px solid var(--line-strong);border-radius:11px;padding:11px 13px;display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1;background:#fff;cursor:pointer}
