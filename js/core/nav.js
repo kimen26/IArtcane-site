@@ -20,3 +20,16 @@ export function viewLabel(view, params = []) {
     default:           return 'Collection';
   }
 }
+
+/** Parent HIÉRARCHIQUE de chaque vue (≠ page précédemment visitée).
+ *  Le bouton retour doit être prévisible : deux visites de la même page
+ *  affichent le même libellé, quel que soit le chemin emprunté (HO-098). */
+export function viewParent(view, params = []) {
+  switch (view) {
+    case 'artiste':    return { label: 'Artistes', hash: '#/artistes' };
+    case 'rayon':      return { label: 'Collection', hash: '#/' };
+    case 'objet':      return null; // la vue calcule son parent (rayon de la catégorie)
+    case 'collection': return null; // racine : pas de retour
+    default:           return { label: 'Collection', hash: '#/' };
+  }
+}

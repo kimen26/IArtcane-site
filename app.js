@@ -10,7 +10,7 @@ import { S, canWrite } from './js/core/state.js';
 import { catCanon, catEmoji } from './js/core/format.js';
 import { sb } from './js/core/data.js';
 import { withBusy } from './js/core/feedback.js';
-import { viewLabel } from './js/core/nav.js';
+import { viewLabel, viewParent } from './js/core/nav.js';
 
 // ─── Service worker (D-013) : shell offline + réception « Partager avec » ───
 // http(s) uniquement (pas de SW en file://) ; échec silencieux — l'app marche sans.
@@ -367,19 +367,19 @@ async function route() {
 window.addEventListener('hashchange', route);
 $('#logo-home').addEventListener('click', () => { location.hash = '#/'; });
 $('#obj-back').addEventListener('click', () => { location.hash = prevView?.hash ?? '#/'; });
-$$('.js-back').forEach(b => b.addEventListener('click', () => { location.hash = prevView?.hash ?? '#/'; }));
+$$('.js-back').forEach(b => b.addEventListener('click', () => { location.hash = b.dataset.hash ?? '#/'; }));
 
-// ─── Fil d'Ariane contextuel (HO-025) ───────────────────────────────────────
-// Mémoire d'une seule vue source : le retour ramène d'où l'on vient, avec
-// fallback Collection sur entrée directe ou lien partagé.
+// ─── Bouton retour hiérarchique (HO-098) : viewParent() donne le PARENT, jamais la page précédente. prevView sert encore #obj-back.
 let currentView = null;
 let prevView = null;
 
 function updateBackButtons() {
   S.currentView = currentView; // D-072 : la feuille de demande connaît la page courante
-  const label = '← ' + (prevView?.label ?? 'Collection');
-  $('#obj-back').textContent = label;
-  $$('.js-back').forEach(b => b.textContent = label);
+  const parent = currentView ? viewParent(currentView.view, currentView.params) : null;
+  $$('.js-back').forEach(b => {
+    b.hidden = !parent;
+    if (parent) { b.textContent = '← ' + parent.label; b.dataset.hash = parent.hash; }
+  });
 }
 
 function computeViewMeta(r, h) {
