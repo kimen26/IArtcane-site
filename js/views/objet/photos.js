@@ -6,12 +6,13 @@ import { enregistrer } from '../../core/feedback.js';
 import { S } from '../../core/state.js';
 import { isVideo } from '../../core/format.js';
 import { loadViewCss } from '../../core/css.js';
-import { sb, logEvent, deleteStoredPhoto } from '../../core/data.js';
+import { sb, logEvent } from '../../core/data.js';
 import { openCamera } from '../../core/camera.js';
 import { openViewer } from '../../core/lightbox.js';
 import { page } from '../../ui/page.js';
 import { micButton } from '../mic.js';
 import { O, hooks } from './etat.js';
+import { supprimer, taguer, definirCouverture, reordonner, cibleObjet } from '../../services/photos.js';
 
 await loadViewCss('objet-photos');
 
@@ -310,7 +311,7 @@ async function supprimerPhoto() {
   const o = S.currentObjet;
   if (!p || !o) return;
   if (!confirm('Supprimer cette photo ? (fichier + référence, définitif)')) return;
-  if (!await deleteStoredPhoto('photos', p.id, [p.storage_path, p.thumb_path])) return;
+  if (!await supprimer(cibleObjet(o.id), p)) return;
   logEvent('photo_supprimee', { photo: p.storage_path });
   toast('Photo supprimée');
   currentIndex = 0;
@@ -321,13 +322,7 @@ async function basculerCouverture() {
   const p = photoCourante();
   const o = S.currentObjet;
   if (!p || !o) return;
-  const updates = O.photos.map(ph => ({
-    id: ph.id,
-    couverture: ph.id === p.id,
-  }));
-  for (const u of updates) {
-    if (!await enregistrer(() => sb.from('photos').update({ couverture: u.couverture }).eq('owner_id', S.tenantId).eq('id', u.id), 'Photo de couverture', { silencieuxSiOk: true })) return;
-  }
+  if (!await definirCouverture(cibleObjet(o.id), p)) { toast('Photo de couverture non enregistrée', true); return; }
   O.photos.forEach(ph => { ph.couverture = ph.id === p.id; });
   toast('✓ Photo de couverture enregistré');
   logEvent('couverture', { photo: p.storage_path });
@@ -338,7 +333,7 @@ async function changerTag(kind) {
   const p = photoCourante();
   const o = S.currentObjet;
   if (!p || !o || p.kind === kind) return;
-  if (!await enregistrer(() => sb.from('photos').update({ kind }).eq('owner_id', S.tenantId).eq('id', p.id), 'Tag de la photo')) return;
+  if (!await taguer(cibleObjet(o.id), p, kind)) { toast('Tag de la photo non enregistré', true); return; }
   p.kind = kind;
   logEvent('tag_photo', { photo: p.storage_path, kind });
   hooks.rendre();
@@ -520,15 +515,18 @@ async function onDragEnd() {
 async function persisterOrdre(photos, nouvelOrdre) {
   const o = S.currentObjet;
   if (!o) return;
-  const updates = photos.map((p, i) => ({ id: p.id, ordre: nouvelOrdre[i] }));
-  for (const u of updates) {
-    if (!await enregistrer(() => sb.from('photos').update({ ordre: u.ordre }).eq('owner_id', S.tenantId).eq('id', u.id), 'Ordre des photos', { silencieuxSiOk: true })) return;
+  const { updates, echecs, ok } = await reordonner(cibleObjet(o.id), photos, nouvelOrdre);
+  if (!ok) {
+    toast(echecs.length === updates.length
+      ? 'Ordre des photos non enregistré'
+      : `Ordre des photos partiellement enregistré — ${echecs.length}/${updates.length} échec(s)`, true);
+  } else {
+    toast('✓ Ordre des photos enregistré');
   }
   O.photos.forEach(p => {
     const u = updates.find(u => u.id === p.id);
     if (u) p.ordre = u.ordre;
   });
-  toast('✓ Ordre des photos enregistré');
   logEvent('ordre_photos', { n: updates.length });
 }
 

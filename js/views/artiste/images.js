@@ -4,13 +4,14 @@
 import { $, esc } from '../../core/dom.js';
 import { S, canWrite } from '../../core/state.js';
 import { loadViewCss } from '../../core/css.js';
-import { sb, logEvent, deleteStoredPhoto, makeThumbBlob } from '../../core/data.js';
+import { sb, logEvent } from '../../core/data.js';
 import { toast, enregistrer, withBusy } from '../../core/feedback.js';
 import { createOverlay } from '../../core/lightbox.js';
 import { page } from '../../ui/page.js';
 import { micButton } from '../mic.js';
 import { A, hooks } from './etat.js';
 import { insererArtistePhoto } from './uploads.js';
+import { supprimer, taguer, remplacer, reordonner, cibleArtiste } from '../../services/photos.js';
 
 await loadViewCss('artistes');
 
@@ -313,7 +314,7 @@ async function supprimerImage() {
   const p = imageCourante();
   if (!p) return;
   if (!confirm('Supprimer cette image ? (fichier + référence, définitif)')) return;
-  if (!await deleteStoredPhoto('artistes_photos', p.id, [p.storage_path, p.thumb_path])) return;
+  if (!await supprimer(cibleArtiste(A.nom), p)) return;
   logEvent('artiste_image_supprimee', { image: p.storage_path });
   toast('Image supprimée');
   currentIndex = 0;
@@ -335,10 +336,9 @@ async function changerZone(zone) {
   if (!p) return;
   const valeur = zone || null;
   if (p.zone === valeur) return;
-  const updates = { zone: valeur };
-  if (valeur !== 'signature') updates.objet_id = null;
-  if (!await enregistrer(() => sb.from('artistes_photos').update(updates).eq('owner_id', S.tenantId).eq('id', p.id), "Zone de l'image")) return;
-  Object.assign(p, updates);
+  if (!await taguer(cibleArtiste(A.nom), p, valeur)) { toast("Zone de l'image non enregistrée", true); return; }
+  p.zone = valeur;
+  if (valeur !== 'signature') p.objet_id = null;
   logEvent('artiste_image_zone', { zone: valeur, objet_id: p.objet_id });
   hooks.rendre();
 }
@@ -504,15 +504,11 @@ async function onDragEnd() {
 }
 
 async function persisterOrdre(images, nouvelOrdre) {
-  const updates = images.map((p, i) => ({ id: p.id, ordre: nouvelOrdre[i] }));
-  const resultats = await Promise.all(updates.map(u =>
-    sb.from('artistes_photos').update({ ordre: u.ordre }).eq('owner_id', S.tenantId).eq('id', u.id)
-  ));
-  const echecs = resultats.filter(r => r.error);
+  const { updates, echecs, ok } = await reordonner(cibleArtiste(A.nom), images, nouvelOrdre);
   logEvent('artiste_images_ordre', { n: updates.length, echecs: echecs.length });
-  if (echecs.length) {
-    console.warn('persisterOrdre:', echecs.map(r => r.error));
-    toast(`Ordre des images non enregistré — ${echecs.length}/${updates.length} échec${echecs.length > 1 ? 's' : ''} : ${echecs[0].error.message}`, true,
+  if (!ok) {
+    console.warn('persisterOrdre:', echecs);
+    toast(`Ordre des images non enregistré — ${echecs.length}/${updates.length} échec${echecs.length > 1 ? 's' : ''} : ${echecs[0].message}`, true,
       { action: { label: 'Réessayer', onClick: () => persisterOrdre(images, nouvelOrdre) } });
     // Tout a échoué → on n'écrit RIEN en mémoire, sinon l'écran affiche un ordre
     // que la base n'a pas et le rendu suivant le « confirme » silencieusement.
@@ -603,27 +599,15 @@ function openCutter(p) {
         const out = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.92));
         if (!out) throw new Error('encodage impossible');
 
-        const oldStoragePath = p.storage_path;
-        const oldThumbPath = p.thumb_path;
-        const dossier = oldStoragePath.replace(/\/[^/]+$/, '');
-        const newPath = `${dossier}/${crypto.randomUUID()}.jpg`;
-        const { error: e1 } = await sb.storage.from('photos').upload(newPath, out, { contentType: 'image/jpeg' });
-        if (e1) throw e1;
-        const tb = await makeThumbBlob(out);
-        let newThumbPath = null;
-        if (tb) {
-          newThumbPath = newPath.replace(/\.jpg$/, '.thumb.jpg');
-          const { error: et } = await sb.storage.from('photos').upload(newThumbPath, tb, { contentType: 'image/jpeg' });
-          if (et) newThumbPath = null;
-        }
-        const { error: e2 } = await sb.from('artistes_photos')
-          .update({ storage_path: newPath, thumb_path: newThumbPath })
-          .eq('owner_id', S.tenantId).eq('id', p.id);
-        if (e2) throw e2;
-        await sb.storage.from('photos').remove([oldStoragePath, oldThumbPath].filter(Boolean));
+        // HO-105 : recadrage porté par services/photos.js::remplacer() —
+        // écrase désormais storage_path en place (D-073/D-075), au lieu du
+        // chemin neuf + suppression de l'ancien pratiqués avant migration.
+        const r = await remplacer(cibleArtiste(A.nom), p, out);
+        if (!r.ok) throw new Error(r.error);
+
         close();
         toast('✓ Image recadrée — résolution d’origine conservée');
-        logEvent('artiste_image_recadree', { image: newPath });
+        logEvent('artiste_image_recadree', { image: p.storage_path });
         await hooks.recharger(A.nom);
       }, { titre: 'Recadrage de l\'image…' });
     } catch (err) {

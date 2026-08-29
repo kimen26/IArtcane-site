@@ -8,7 +8,8 @@
 import { $, toast } from '../../core/dom.js';
 import { withBusy } from '../../core/feedback.js';
 import { S, canWrite } from '../../core/state.js';
-import { sb, logEvent, lancerRecherches, enqueueJobs, uploadPhotosFor } from '../../core/data.js';
+import { sb, logEvent, lancerRecherches, enqueueJobs } from '../../core/data.js';
+import { ajouter, cibleObjet } from '../../services/photos.js';
 
 let pendingObjetId = null;
 let renderer = null; // injecté par index.js (évite un import circulaire)
@@ -109,13 +110,13 @@ function lancerR1EnFond(oid) {
 
 async function envoyerPhotos(oid, isRetry, majMessage, estAnnule) {
   const total = S.capFiles.length;
-  const enAttente = [...S.capFiles]; // copie, dans l'ordre passé à uploadPhotosFor
+  const enAttente = [...S.capFiles]; // copie, dans l'ordre passé à ajouter() (cible objet)
   let arretee = false;
   const onProgress = (sent, tot) => {
     if (estAnnule?.()) { arretee = true; return false; } // stoppe la boucle d'upload
     majMessage(`Envoi des photos — ${sent}/${tot} terminée(s)`);
   };
-  const { done, failed } = await uploadPhotosFor(oid, S.capFiles, true, onProgress);
+  const { done, failed } = await ajouter(cibleObjet(oid), S.capFiles, { firstIsFace: true, onProgress });
 
   if (arretee) {
     // Annulation en cours d'upload : le contrat de reprise (L-022) s'applique

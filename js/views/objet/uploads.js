@@ -2,11 +2,13 @@
 // IArtcane — views/objet/uploads.js : flux d'ajout de photos depuis la fiche
 // (HO-076, extrait de index.js pour respecter le plafond de modularité).
 // Branche le handler #file-add-photo sur withBusy (core/feedback.js, HO-075).
+// HO-105 : la séquence envoi + variantes + insertion + purge + trace passe
+// par services/photos.js::ajouter() — cette vue n'appelle plus la base.
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, toast } from '../../core/dom.js';
 import { withBusy } from '../../core/feedback.js';
 import { S, canWrite } from '../../core/state.js';
-import { logEvent, purgeConsigne, uploadPhotosFor } from '../../core/data.js';
+import { ajouter, cibleObjet } from '../../services/photos.js';
 
 /**
  * Branche le handler d'ajout de photos par fichier sur l'overlay bloquant
@@ -21,27 +23,26 @@ export function brancherUploads(recharger) {
     e.target.value = '';
     if (!files.length || !S.currentObjet) return;
     const oid = S.currentObjet.id;
-    const o = S.currentObjet;
 
     // withBusy jette la valeur de retour de fn quand on a annulé en cours de
     // route (elle rend undefined dans ce cas) — on capture donc le résultat
-    // réel d'uploadPhotosFor par fermeture, pour conclure avec le vrai
-    // compteur `done`, jamais un chiffre figé au moment du clic Annuler.
+    // réel d'ajouter() par fermeture, pour conclure avec le vrai compteur
+    // `done`, jamais un chiffre figé au moment du clic Annuler.
     let resultat = { done: 0, failed: [] };
     const { annule } = await withBusy(async ({ majMessage, estAnnule }) => {
-      resultat = await uploadPhotosFor(oid, files, false, (sent, total) => {
-        majMessage(`Envoi des photos — ${sent}/${total} terminée(s)`);
-        return estAnnule() ? false : undefined;
+      resultat = await ajouter(cibleObjet(oid), files, {
+        onProgress: (sent, total) => {
+          majMessage(`Envoi des photos — ${sent}/${total} terminée(s)`);
+          return estAnnule() ? false : undefined;
+        },
+        evenement: { action: 'photo_ajoutee', detail: { via: 'fichier' } },
+        purgerConsigne: true,
       });
       return resultat;
     }, { titre: `Envoi des photos — 0/${files.length}` });
 
     const { done, failed } = resultat;
 
-    if (done > 0) {
-      logEvent('photo_ajoutee', { n: done, ...(failed.length ? { echecs: failed.length } : {}), via: 'fichier' }, oid);
-      await purgeConsigne(o, oid);
-    }
     if (annule) {
       toast(done ? `Envoi interrompu — ${done}/${files.length} photo(s) ajoutée(s)` : 'Envoi interrompu — aucune photo ajoutée', !done);
     } else if (failed.length > 0) {

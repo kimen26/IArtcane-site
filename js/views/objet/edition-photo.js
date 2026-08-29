@@ -13,19 +13,20 @@
 // sous-écrans de la fiche. Un « geste » (agrandir une image) reste un overlay ;
 // un « état de travail à ne pas perdre » (cette édition destructive) est une
 // page : URL propre, historique, bouton Retour d'Android qui referme l'atelier.
+// HO-105 : le remplacement destructif (écrase storage_path, régénère les 3
+// dérivées depuis la nouvelle brute, jamais en cascade — D-073/D-075) est
+// déplacé tel quel dans services/photos.js::remplacer().
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, toast } from '../../core/dom.js';
 import { loadViewCss } from '../../core/css.js';
 import { withBusy } from '../../core/feedback.js';
 import { S } from '../../core/state.js';
-import { sb, logEvent, makeVariantBlob, signPaths } from '../../core/data.js';
+import { sb, logEvent, signPaths } from '../../core/data.js';
+import { remplacer, cibleObjet } from '../../services/photos.js';
 import { page } from '../../ui/page.js';
 import { catCanon } from '../../core/format.js';
 
 await loadViewCss('objet-photos');
-
-// Bornes des 3 variantes régénérées après édition (valeurs HO-089, non exportées).
-const MINI_PX = 160, THUMB_PX = 480, MOYEN_PX = 2048;
 
 // Point d'entrée de la route `#/objet/<id>/photo/<photoId>/modifier` (app.js).
 // Arrivée directe par URL possible (rechargement de page) : ne dépend d'aucun
@@ -174,27 +175,10 @@ export async function mount(objetId, photoId) {
         // écrasée, tout ré-encodage est une génération de perte supplémentaire.
         const out = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.95));
         if (!out) throw new Error('encodage impossible');
-        // HO-095 — renverse HO-091 : l'édition est destructive, `storage_path` est réécrit.
-        // Il n'y a plus d'image d'origine à retrouver ; `crop_path` repasse donc à NULL et
-        // `rotation` à 0 (le fichier stocké est désormais droit et déjà recadré).
-        const { error: e1 } = await sb.storage
-          .from('photos')
-          .upload(photo.storage_path, out, { contentType: 'image/jpeg', upsert: true });
-        if (e1) throw e1;
-        const paths = { crop_path: null, rotation: 0 };
-        // Nomenclature inchangée mais nom neuf à chaque enregistrement (cache CDN
-        // cassé exprès) : la brute, elle, garde son URL et serait servie périmée sinon.
-        const base = photo.storage_path.replace(/\.[^./]+$/, '').replace(/[^/]+$/, crypto.randomUUID());
-        const bornes = [['mini_path', MINI_PX, 0.75], ['thumb_path', THUMB_PX, 0.8], ['moyen_path', MOYEN_PX, 0.85]];
-        for (const [col, px, q] of bornes) {
-          const vb = await makeVariantBlob(out, px, q);   // ← `out`, TOUJOURS. Jamais `vb` précédent.
-          const p = vb && `${base}.${col.replace('_path', '')}.jpg`;
-          paths[col] = p && !(await sb.storage.from('photos').upload(p, vb, { contentType: 'image/jpeg' })).error ? p : null;
-        }
-        const { error: e2 } = await sb.from('photos').update(paths).eq('owner_id', S.tenantId).eq('id', photo.id);
-        if (e2) throw e2;
-        const anciennes = [photo.crop_path, photo.mini_path, photo.thumb_path, photo.moyen_path].filter(Boolean);
-        if (anciennes.length) await sb.storage.from('photos').remove(anciennes);
+        // HO-095 — renverse HO-091 : l'édition est destructive, `storage_path` est
+        // réécrit, `crop_path` repasse à NULL et `rotation` à 0 (services/photos.js).
+        const r = await remplacer(cibleObjet(objetId), photo, out);
+        if (!r.ok) throw new Error(r.error);
         toast('✓ Photo modifiée — l’image d’origine a été remplacée');
         logEvent('photo_modifiee', { photo: photo.storage_path, rotation: rotLocale }, objetId);
         retour();
