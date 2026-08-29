@@ -2,18 +2,15 @@
 // IArtcane — views/objet/photos.js : écran Photos de la fiche (HO-047).
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, esc, toast } from '../../core/dom.js';
-import { enregistrer, withBusy } from '../../core/feedback.js';
+import { enregistrer } from '../../core/feedback.js';
 import { S } from '../../core/state.js';
 import { isVideo } from '../../core/format.js';
 import { loadViewCss } from '../../core/css.js';
-import { sb, logEvent, deleteStoredPhoto, makeVariantBlob, signPaths } from '../../core/data.js';
+import { sb, logEvent, deleteStoredPhoto } from '../../core/data.js';
 import { openCamera } from '../../core/camera.js';
-import { createOverlay, openViewer } from '../../core/lightbox.js';
+import { openViewer } from '../../core/lightbox.js';
 import { micButton } from '../mic.js';
 import { O, hooks } from './etat.js';
-
-// Bornes des 3 variantes régénérées après crop (valeurs HO-089, non exportées).
-const MINI_PX = 160, THUMB_PX = 480, MOYEN_PX = 2048;
 
 await loadViewCss('objet-photos');
 
@@ -154,12 +151,11 @@ function rendreCartePhoto(p, n, idx) {
               ? `<video src="${esc(p.url)}" controls preload="metadata"></video>`
               : `<img src="${esc(p.url || p.thumbUrl)}" alt="" style="transform: rotate(${rot}deg)" loading="eager" decoding="async" draggable="false">`)
           : `<div class="photos-viewer-placeholder">📷</div>`}
-        <button class="photos-corner photos-corner-tl" data-action="recadrer" title="Recadrer">✂</button>
+        <button class="photos-corner photos-corner-tl" data-action="modifier" title="Modifier la photo">✎ Modifier</button>
         <button class="photos-corner photos-corner-tr" data-action="supprimer" title="Supprimer">🗑</button>
         <button class="photos-corner photos-corner-bl ${isCover ? 'active' : ''}" data-action="couverture" title="Couverture">
           <span>★</span><span>Couverture</span>
         </button>
-        <button class="photos-corner photos-corner-br" data-action="rotater" title="Pivoter de 90°">↻ 90°</button>
       </div>
       ${hasRemarque ? rendreRemarque(p) : ''}
       <div class="photos-tags">
@@ -256,14 +252,14 @@ function brancher(el) {
   });
 
   // Coins de la carte photo
-  el.querySelector('[data-action="recadrer"]')?.addEventListener('click', () => {
+  el.querySelector('[data-action="modifier"]')?.addEventListener('click', async () => {
     const p = photoCourante();
     if (!p) return;
-    openLightbox(p, 'cut');
+    const { ouvrirEdition } = await import('./edition-photo.js');
+    await ouvrirEdition(p, { onFini: () => hooks.recharger(S.currentObjet.id) });
   });
   el.querySelector('[data-action="supprimer"]')?.addEventListener('click', () => supprimerPhoto());
   el.querySelector('[data-action="couverture"]')?.addEventListener('click', () => basculerCouverture());
-  el.querySelector('[data-action="rotater"]')?.addEventListener('click', () => rotaterPhoto());
 
   // Remarque IA
   el.querySelector('[data-action="remarque-refuse"]')?.addEventListener('click', () => refuserRemarque());
@@ -342,17 +338,6 @@ async function basculerCouverture() {
   O.photos.forEach(ph => { ph.couverture = ph.id === p.id; });
   toast('✓ Photo de couverture enregistré');
   logEvent('couverture', { photo: p.storage_path });
-  hooks.rendre();
-}
-
-async function rotaterPhoto() {
-  const p = photoCourante();
-  const o = S.currentObjet;
-  if (!p || !o) return;
-  const rotation = ((p.rotation || 0) + 90) % 360;
-  if (!await enregistrer(() => sb.from('photos').update({ rotation }).eq('owner_id', S.tenantId).eq('id', p.id), 'Rotation')) return;
-  p.rotation = rotation;
-  logEvent('rotation', { photo: p.storage_path, deg: rotation });
   hooks.rendre();
 }
 
@@ -554,126 +539,11 @@ async function persisterOrdre(photos, nouvelOrdre) {
   logEvent('ordre_photos', { n: updates.length });
 }
 
-// ─── Lightbox / recadrage ───────────────────────────────────────────────────
+// ─── Lightbox ───────────────────────────────────────────────────────────────
 
-async function openLightbox(photo, mode = null) {
+async function openLightbox(photo) {
   const titre = S.currentObjet?.titre || 'objet';
-  if (!mode) {
-    openViewer({ src: photo.url, alt: `Photo plein écran — ${titre}`, video: isVideo(photo) });
-    return;
-  }
-  // Le geste porte sur la brute, pas sur l'affichage courant (HO-091). Redressée
-  // dans un canvas DÈS L'OUVERTURE (pas de transform CSS) : sélection et rendu
-  // vivent dans le même repère à toute rotation — un rotate() CSS gardait une
-  // boîte de layout non pivotée, d'où un désalignement à 90°/270° (HO-094).
-  const bruteUrl = (await signPaths([photo.storage_path]))[photo.storage_path];
-  if (!bruteUrl) return toast('Impossible de charger la brute pour le recadrage', true);
-  const rotation = photo.rotation || 0;
-  const bmp = await createImageBitmap(await (await fetch(bruteUrl)).blob());
-  const swap = rotation === 90 || rotation === 270;
-  const dw = swap ? bmp.height : bmp.width, dh = swap ? bmp.width : bmp.height;
-  const straight = document.createElement('canvas');
-  straight.width = dw; straight.height = dh; straight.className = 'cut-canvas';
-  const sctx = straight.getContext('2d');
-  sctx.translate(dw / 2, dh / 2); sctx.rotate(rotation * Math.PI / 180);
-  sctx.drawImage(bmp, -bmp.width / 2, -bmp.height / 2);
-
-  const { el: lb, close } = createOverlay({
-    className: 'cut',
-    html: `<div class="cut-bar"><span class="cut-hint">Tire les poignées (bords et coins) pour délimiter la zone à garder</span>
-      <button class="btn primary small" data-ok disabled>✂️ Recadrer</button>
-      <button class="btn small" data-cancel>Annuler</button></div>`,
-  });
-  lb.prepend(straight);
-
-  const img = straight;
-  const ok = lb.querySelector('[data-ok]');
-  let sel = { x0: 0, y0: 0, x1: 1, y1: 1 };
-  let box = null;
-  let drag = null;
-  const MIN = 0.05;
-  const toRel = e => {
-    const r = img.getBoundingClientRect();
-    return { x: Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1), y: Math.min(Math.max((e.clientY - r.top) / r.height, 0), 1) };
-  };
-  const H = {
-    nw: (s, p) => ({ ...s, x0: Math.min(p.x, s.x1 - MIN), y0: Math.min(p.y, s.y1 - MIN) }),
-    n:  (s, p) => ({ ...s, y0: Math.min(p.y, s.y1 - MIN) }),
-    ne: (s, p) => ({ ...s, x1: Math.max(p.x, s.x0 + MIN), y0: Math.min(p.y, s.y1 - MIN) }),
-    e:  (s, p) => ({ ...s, x1: Math.max(p.x, s.x0 + MIN) }),
-    se: (s, p) => ({ ...s, x1: Math.max(p.x, s.x0 + MIN), y1: Math.max(p.y, s.y0 + MIN) }),
-    s:  (s, p) => ({ ...s, y1: Math.max(p.y, s.y0 + MIN) }),
-    sw: (s, p) => ({ ...s, x0: Math.min(p.x, s.x1 - MIN), y1: Math.max(p.y, s.y0 + MIN) }),
-    w:  (s, p) => ({ ...s, x0: Math.min(p.x, s.x1 - MIN) }),
-  };
-  const draw = () => {
-    if (!box) {
-      box = document.createElement('div');
-      box.className = 'cut-sel';
-      box.innerHTML = Object.keys(H).map(h => `<i data-h="${h}" class="h-${h}"></i>`).join('');
-      lb.append(box);
-    }
-    const r = img.getBoundingClientRect();
-    box.style.left = `${r.left + sel.x0 * r.width}px`;
-    box.style.top = `${r.top + sel.y0 * r.height}px`;
-    box.style.width = `${(sel.x1 - sel.x0) * r.width}px`;
-    box.style.height = `${(sel.y1 - sel.y0) * r.height}px`;
-  };
-  draw();
-  lb.addEventListener('pointerdown', e => {
-    const h = e.target.dataset?.h;
-    if (!h) return;
-    e.preventDefault(); e.stopPropagation();
-    drag = h;
-  });
-  lb.addEventListener('pointermove', e => {
-    if (!drag) return;
-    sel = H[drag](sel, toRel(e));
-    draw();
-    ok.disabled = false;
-  });
-  lb.addEventListener('pointerup', () => { drag = null; });
-  lb.querySelector('[data-cancel]').addEventListener('click', e => { e.stopPropagation(); close(); });
-  ok.addEventListener('click', async e => {
-    e.stopPropagation();
-    ok.disabled = true; ok.textContent = 'Recadrage…';
-    try {
-      await withBusy(async () => {
-        // straight est déjà la brute redressée (même repère que sel) — pas de refetch.
-        const sx = Math.round(sel.x0 * dw), sy = Math.round(sel.y0 * dh);
-        const sw = Math.round((sel.x1 - sel.x0) * dw), sh = Math.round((sel.y1 - sel.y0) * dh);
-        if (sw < 20 || sh < 20) throw new Error('zone trop petite');
-        const c = document.createElement('canvas');
-        c.width = sw; c.height = sh;
-        c.getContext('2d').drawImage(straight, sx, sy, sw, sh, 0, 0, sw, sh);
-        const out = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.92));
-        if (!out) throw new Error('encodage impossible');
-        // storage_path (la brute) n'est JAMAIS réécrit ni supprimé (Yann, HO-091) — crop_path devient l'image de travail,
-        // déjà droite : la métadonnée rotation repasse à 0 pour ne pas la pivoter une 2e fois à l'affichage.
-        const base = photo.storage_path.replace(/\.[^./]+$/, '').replace(/[^/]+$/, crypto.randomUUID());
-        const cropPath = `${base}.crop.jpg`, paths = { crop_path: cropPath, rotation: 0 };
-        const { error: e1 } = await sb.storage.from('photos').upload(cropPath, out, { contentType: 'image/jpeg' });
-        if (e1) throw e1;
-        const bornes = [['mini_path', MINI_PX, 0.75], ['thumb_path', THUMB_PX, 0.8], ['moyen_path', MOYEN_PX, 0.85]];
-        for (const [col, px, q] of bornes) {
-          const vb = await makeVariantBlob(out, px, q);
-          const p = vb && `${base}.${col.replace('_path', '')}.jpg`;
-          paths[col] = p && !(await sb.storage.from('photos').upload(p, vb, { contentType: 'image/jpeg' })).error ? p : null;
-        }
-        const { error: e2 } = await sb.from('photos').update(paths).eq('owner_id', S.tenantId).eq('id', photo.id);
-        if (e2) throw e2;
-        const anciennes = [photo.crop_path, photo.mini_path, photo.thumb_path, photo.moyen_path].filter(Boolean);
-        if (anciennes.length) await sb.storage.from('photos').remove(anciennes);
-        close();
-        toast('✓ Photo recadrée — l’original est conservé');
-        logEvent('recadrage', { photo: cropPath });
-        await hooks.recharger(S.currentObjet.id);
-      }, { titre: 'Recadrage de la photo…' });
-    } catch (err) {
-      toast(`Recadrage échoué : ${err.message ?? err}`, true);
-      ok.disabled = false; ok.textContent = '✂️ Recadrer';
-    }
-  });
+  openViewer({ src: photo.url, alt: `Photo plein écran — ${titre}`, video: isVideo(photo) });
 }
 
 // ─── Formatage ──────────────────────────────────────────────────────────────
