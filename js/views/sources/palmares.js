@@ -10,6 +10,8 @@
 import { $, esc } from '../../core/dom.js';
 import { SRC } from './etat.js';
 import { badges, trouverSource, candidatsDeclencheurs, ETAT_BADGE, nomNu } from './index.js';
+import { filDe } from '../../core/nav.js';
+import { page } from '../../ui/page.js';
 
 const CHIPS = [
   { id: 'tous', label: 'Tous besoins' },
@@ -271,19 +273,26 @@ function journalDecisions() {
 }
 
 // ─── Rendu ─────────────────────────────────────────────────────────────
+// Fil du palmarès : Collection › Sources (cliquable) › Palmarès. Il REMPLACE le
+// lien « ‹ Par besoin » que l'écran posait lui-même — 6e bouton retour du site,
+// que l'audit du 2026-08-29 n'avait pas vu (arbitrage Yann : le fil est la
+// seule navigation ascendante, jamais un retour posé par un écran).
+const filPalmares = () => [
+  ...filDe('sources').map((s, i, a) => (i === a.length - 1 ? { ...s, hash: '#/sources' } : s)),
+  { label: 'Palmarès' },
+];
+
 function render() {
-  const body = $('#sources-body');
-  if (!SRC.data) { body.innerHTML = '<div class="skeleton" style="height:220px"></div>'; return; }
+  const corps = page($('#sources-body'), { titre: 'Sources', meta: 'Palmarès', fil: filPalmares() });
+  if (!SRC.data) { corps.innerHTML = '<div class="skeleton" style="height:220px"></div>'; return; }
 
   const consultations = consultationsFiltrees();
   const parSource = agregerParSource(consultations);
 
-  body.innerHTML = `
+  corps.innerHTML = `
     <div class="pal-wrap">
       <div class="pal-barre">
         <div class="pal-barre-tete">
-          <a class="pal-retour" href="#/sources">‹ Par besoin</a>
-          <h1 class="pal-titre">Sources</h1>
           <div class="pal-bascule">
             <button class="pal-bascule-opt ${ETAT.fenetre === '30j' ? 'actif' : ''}" data-action="fenetre" data-val="30j">30 j</button>
             <button class="pal-bascule-opt ${ETAT.fenetre === 'tout' ? 'actif' : ''}" data-action="fenetre" data-val="tout">tout</button>

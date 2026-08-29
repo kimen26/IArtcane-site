@@ -5,4 +5,3 @@
    descend pas jusqu'ici : on la refait, scopée #view-rayon. */
 #view-rayon .sec-title{font-weight:400;font-size:1.375rem;color:var(--ink-titre)}
 #view-rayon .sec-title::after{background:var(--line-carte)}
-.rayon-n-titre{font-family:var(--sans);font-size:.78rem;color:var(--ink-meta);font-weight:400}

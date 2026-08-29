@@ -10,6 +10,7 @@ import { toast, enregistrer } from '../core/feedback.js';
 import { fmtDateTime } from '../core/format.js';
 import { loadViewCss } from '../core/css.js';
 import { micButton } from './mic.js';
+import { page } from '../ui/page.js';
 
 await loadViewCss('demandes');
 
@@ -139,13 +140,13 @@ function carte(d) {
 }
 
 function render() {
-  const body = $('#demandes-body');
+  const corps = page($('#demandes-body'), { titre: 'Demandes', fil: S.fil });
   if (DEM.erreur) {
-    body.innerHTML = `<div class="empty"><div class="big">⚠️</div><h2>Demandes indisponibles</h2><p>Le chargement a échoué — réessaie dans un instant.</p></div>`;
+    corps.innerHTML = `<div class="empty"><div class="big">⚠️</div><h2>Demandes indisponibles</h2><p>Le chargement a échoué — réessaie dans un instant.</p></div>`;
     return;
   }
   if (!DEM.data.length) {
-    body.innerHTML = `<div class="sec-title page-title">Demandes</div>` + emptyHtml('Aucune demande', "Le bouton 💬 de l'en-tête sert à en écrire une.");
+    corps.innerHTML = emptyHtml('Aucune demande', "Le bouton 💬 de l'en-tête sert à en écrire une.");
     return;
   }
   const filtrees = demandesFiltrees();
@@ -154,8 +155,7 @@ function render() {
       ${esc(c.txt)} <span class="dem-chip-n">${compteChip(c.statuts)}</span>
     </button>`).join('');
 
-  body.innerHTML = `
-    <div class="sec-title page-title">Demandes</div>
+  corps.innerHTML = `
     <div class="dem-chips">${chips}</div>
     <div class="dem-liste">
       ${filtrees.length ? filtrees.map(carte).join('') : '<div class="empty"><p>Aucune demande dans ce filtre.</p></div>'}
@@ -240,8 +240,7 @@ function brancher() {
 }
 
 export async function mount() {
-  const body = $('#demandes-body');
-  body.innerHTML = '<div class="skeleton" style="height:220px"></div>';
+  page($('#demandes-body'), { titre: 'Demandes', fil: S.fil }).innerHTML = '<div class="skeleton" style="height:220px"></div>';
   DEM.filtre = 'ouvertes';
   DEM.reponseOuverte = {};
   DEM.refusSansTexte = {};

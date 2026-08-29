@@ -15,6 +15,8 @@
 import { $, esc, toast } from '../../core/dom.js';
 import { enregistrer } from '../../core/feedback.js';
 import { loadViewCss } from '../../core/css.js';
+import { S } from '../../core/state.js';
+import { page } from '../../ui/page.js';
 import { SRC, hooks, chargerTout, marquerConsultee } from './etat.js';
 import { mount as mountPalmares } from './palmares.js';
 
@@ -257,13 +259,14 @@ function sousLigne() {
 }
 
 function render() {
-  const body = $('#sources-body');
-  if (!SRC.data) { body.innerHTML = '<div class="skeleton" style="height:220px"></div>'; return; }
-  body.innerHTML = `
+  // Titre « Sources » + fil d'Ariane par le chrome uniforme (HO-104) ; la barre
+  // ne garde que le lien vers le palmarès, la recherche et la sous-ligne.
+  const corps = page($('#sources-body'), { titre: 'Sources', fil: S.fil });
+  if (!SRC.data) { corps.innerHTML = '<div class="skeleton" style="height:220px"></div>'; return; }
+  corps.innerHTML = `
     <div class="panel src-wrap">
       <div class="src-barre">
         <div class="src-barre-tete">
-          <h1 class="src-titre">Sources</h1>
           <a class="src-vers-palmares" href="#/sources/palmares">Palmarès →</a>
         </div>
         <input class="src-recherche" type="search" placeholder="Filtrer par nom…" value="${esc(SRC.q)}" aria-label="Filtrer les sources par nom">
@@ -338,7 +341,7 @@ async function afficherEcranCourant() {
   if (estPalmares()) {
     await mountPalmares();
   } else {
-    body.innerHTML = '<div class="skeleton" style="height:220px"></div>';
+    page(body, { titre: 'Sources', fil: S.fil }).innerHTML = '<div class="skeleton" style="height:220px"></div>';
     if (!branche) { brancher(); branche = true; }
     render();
   }
@@ -350,12 +353,19 @@ window.addEventListener('hashchange', () => {
 
 export async function mount() {
   const body = $('#sources-body');
-  body.innerHTML = '<div class="skeleton" style="height:220px"></div>';
+  // Squelette au PREMIER chargement seulement. Un remontage avec les données déjà
+  // en mémoire (retour de fiche, bascule S-A ↔ S-B via app.js) garde l'écran
+  // courant à l'écran pendant le rechargement — sinon le rendu posé par le
+  // hashchange interne du territoire était écrasé par un squelette le temps de
+  // chargerTout() (course vue sur capture desktop du palmarès, 2026-08-30).
+  if (!SRC.data) {
+    page(body, { titre: 'Sources', fil: S.fil }).innerHTML = '<div class="skeleton" style="height:220px"></div>';
+  }
   try {
     await chargerTout();
   } catch (err) {
     console.warn('sources:', err);
-    body.innerHTML = '<div class="empty"><div class="big">🗃️</div><h2>Sources indisponibles</h2><p>data/sources.json introuvable ou invalide.</p></div>';
+    page(body, { titre: 'Sources', fil: S.fil }).innerHTML = '<div class="empty"><div class="big">🗃️</div><h2>Sources indisponibles</h2><p>data/sources.json introuvable ou invalide.</p></div>';
     return;
   }
   await afficherEcranCourant();

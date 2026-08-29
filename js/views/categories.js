@@ -6,6 +6,8 @@
 import { $, esc, emptyHtml } from '../core/dom.js';
 import { catEmoji, mdToHtml } from '../core/format.js';
 import { loadViewCss } from '../core/css.js';
+import { S } from '../core/state.js';
+import { page } from '../ui/page.js';
 
 // CSS de la vue chargé par la vue (D-041) : aucun <link> dans index.html,
 // donc aucun fichier transverse touché par un chantier sur cet écran.
@@ -18,16 +20,18 @@ export function mount() {
 }
 
 async function loadCategories() {
-  const body = $('#categories-body');
-  body.innerHTML = '<div class="skeleton" style="height:220px"></div>';
+  // Titre + fil d'Ariane par le chrome uniforme (HO-104) — le titre statique
+  // d'index.html a disparu avec.
+  const corps = page($('#categories-body'), { titre: 'Catégories & familles', fil: S.fil });
+  corps.innerHTML = '<div class="skeleton" style="height:220px"></div>';
   try {
     famillesCache ??= await (await fetch('data/familles.json')).json();
   } catch {
-    body.innerHTML = emptyHtml('Données indisponibles', 'data/familles.json introuvable — lancer infra/build-site-data.py pour le régénérer.');
+    corps.innerHTML = emptyHtml('Données indisponibles', 'data/familles.json introuvable — lancer infra/build-site-data.py pour le régénérer.');
     return;
   }
   const d = famillesCache;
-  body.innerHTML = `
+  corps.innerHTML = `
     <div class="note" style="margin-bottom:18px">Consultation — l'édition des prompts arrivera avec le menu admin (table <code>prompts</code>).</div>
     <div class="panel panel-pad">
       <div class="sec-title">Taxonomie — ${(d.categories_canon ?? []).length} catégories canoniques</div>

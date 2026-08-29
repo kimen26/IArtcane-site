@@ -31,7 +31,6 @@
 /* ─── Barre du haut ─────────────────────────────────────────────────────── */
 .src-barre{display:flex; flex-direction:column; gap:8px; padding-bottom:11px}
 .src-barre-tete{display:flex; align-items:center; gap:12px}
-.src-titre{margin:0; font-family:var(--serif); font-weight:400; font-size:17px; color:var(--ink)}
 .src-vers-palmares{
   margin-left:auto; font-size:12px; font-weight:600; color:var(--ink-3);
   border:1px solid var(--line); border-radius:var(--r-sm); padding:4px 9px;
@@ -202,9 +201,6 @@ a.src-nom:hover{color:var(--blue-deep)}
 /* ─── Barre du haut ─────────────────────────────────────────────────────── */
 .pal-barre{display:flex; flex-direction:column; gap:8px; padding-bottom:4px}
 .pal-barre-tete{display:flex; align-items:center; gap:10px}
-.pal-retour{font-size:12px; font-weight:600; color:var(--ink-3)}
-.pal-retour:hover{color:var(--blue)}
-.pal-titre{margin:0; font-family:var(--serif); font-weight:400; font-size:17px; color:var(--ink)}
 .pal-bascule{margin-left:auto; display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; font-size:10.5px}
 .pal-bascule-opt{padding:5px 8px; background:none; border:0; color:var(--ink-2); cursor:pointer}
 .pal-bascule-opt.actif{background:var(--ink); color:#fff; font-weight:600}
