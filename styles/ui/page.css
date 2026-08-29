@@ -1,0 +1,85 @@
+/* ─── ui/page.js : squelette UNIQUE d'un écran (HO-100) ───
+   Remplace les quatre en-têtes divergents (`obj-nav*`, `art-nav*`, `ms-back*`,
+   `act-barre*`) et leur rustine `components.css:164-166`. Le retour n'existe
+   plus : la navigation ascendante, c'est `.ui-fil` (arbitrage Yann 2026-08-29,
+   docs/architecture-briques.md §2.1). */
+.ui-page{
+  --ui-barre-h:60px; /* lue par barre-basse.css et par la règle --avec-barre ci-dessous */
+  display:flex;
+  flex-direction:column;
+  min-height:100%;
+}
+
+.ui-page-corps{
+  flex:1;
+  width:100%;
+  min-height:0; /* c'est lui qui absorbe l'espace */
+}
+
+/* Réservation faite par la brique, jamais par l'écran — bug HO-097
+   (« barres basses, contenu masqué ») rendu impossible par construction. */
+.ui-page--avec-barre .ui-page-corps{
+  padding-bottom:var(--ui-barre-h);
+}
+
+.ui-page-tete{
+  display:flex;
+  align-items:center;
+  gap:11px;
+  padding:9px 14px 8px;
+  background:var(--surface);
+  border-bottom:1px solid var(--line-soft);
+}
+
+.ui-page-titre{
+  margin-right:auto; /* pousse méta + outils ensemble à droite */
+  font-family:var(--serif);
+  font-size:.9375rem;
+}
+
+.ui-page-meta{
+  font-size:.6875rem;
+  font-weight:700;
+  letter-spacing:.06em;
+  color:var(--ink-3);
+  white-space:nowrap;
+}
+
+.ui-page-outils{
+  display:flex;
+  align-items:center;
+  gap:2px;
+}
+
+.ui-page-outil{
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-width:44px; /* cible tactile WCAG 2.5.8 */
+  min-height:44px;
+  border:none;
+  border-radius:var(--r-sm);
+  background:none;
+  color:var(--ink-2);
+  font-size:1rem;
+  cursor:pointer;
+}
+.ui-page-outil:hover{ background:var(--blue-softer); color:var(--blue-deep); }
+.ui-page-outil--actif{ background:var(--blue-soft); color:var(--blue); }
+
+.ui-page-outil-compteur{
+  position:absolute;
+  top:2px;
+  right:2px;
+  min-width:14px;
+  height:14px;
+  padding:0 3px;
+  border-radius:7px;
+  background:var(--blue);
+  color:var(--surface);
+  font-size:.625rem;
+  font-weight:700;
+  line-height:14px;
+  text-align:center;
+}

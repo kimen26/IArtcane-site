@@ -17,11 +17,14 @@ import { VERSION } from './version.js';
 
 const charges = new Map(); // nom → Promise (une seule injection par vue)
 
-export function loadViewCss(nom) {
-  if (charges.has(nom)) return charges.get(nom);
-  // URL résolue depuis ce module (site/js/core/) → site/styles/views/<nom>.css :
+export function loadViewCss(nom, dossier = 'views') {
+  const cle = `${dossier}/${nom}`;
+  if (charges.has(cle)) return charges.get(cle);
+  // URL résolue depuis ce module (site/js/core/) → site/styles/<dossier>/<nom>.css :
   // insensible au chemin de déploiement (racine, sous-dossier Pages, serveur local).
-  const href = new URL(`../../styles/views/${nom}.css`, import.meta.url).href + `?v=${VERSION}`;
+  // `dossier` par défaut 'views' — les 12 appelants existants sont inchangés (HO-100 :
+  // extension additive, seule la clé de cache interne passe de `nom` à `dossier/nom`).
+  const href = new URL(`../../styles/${dossier}/${nom}.css`, import.meta.url).href + `?v=${VERSION}`;
   const p = new Promise(resolve => {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
@@ -32,6 +35,6 @@ export function loadViewCss(nom) {
     link.addEventListener('error', () => { console.warn(`CSS de vue introuvable : ${href}`); resolve(); }, { once: true });
     document.head.append(link);
   });
-  charges.set(nom, p);
+  charges.set(cle, p);
   return p;
 }

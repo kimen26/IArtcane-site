@@ -1,0 +1,36 @@
+/* ─── ui/fil.js : fil d'Ariane, gabarit UNIQUE du site (HO-100) ───
+   Bande fine sous l'en-tête — seule navigation ascendante (arbitrage Yann
+   2026-08-29, docs/architecture-briques.md §2.1). Toujours au même endroit,
+   jamais en surimpression sur une image. */
+.ui-fil{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  height:26px;
+  padding:0 14px;
+  font-size:.75rem;
+  white-space:nowrap;
+  overflow-x:auto;
+  scrollbar-width:none;
+  background:var(--surface);
+  border-bottom:1px solid var(--line-soft);
+}
+.ui-fil::-webkit-scrollbar{ display:none; }
+
+.ui-fil-lien{
+  flex:none;
+  color:var(--ink-2);
+  text-decoration:none;
+}
+.ui-fil-lien:hover{ color:var(--blue-deep); }
+
+.ui-fil-sep{
+  flex:none;
+  color:var(--ink-3);
+}
+
+.ui-fil-courant{
+  flex:none;
+  color:var(--ink);
+  font-weight:600;
+}

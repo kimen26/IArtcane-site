@@ -1,0 +1,58 @@
+/* ─── ui/barre-basse.js : barre d'actions du bas, gabarit UNIQUE (HO-100) ───
+   Hauteur pilotée par `--ui-barre-h`, définie dans styles/ui/page.css sur
+   `.ui-page` (variable locale partagée avec `.ui-page-corps` — c'est elle qui
+   rend le bug HO-097 « contenu masqué sous la barre » impossible par
+   construction). Valeur de repli si utilisée hors d'un `.ui-page`. */
+.ui-barre{
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:0;
+  z-index:20;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  height:var(--ui-barre-h, 60px);
+  padding:0 14px;
+  background:var(--surface);
+  border-top:1px solid var(--line-soft);
+  box-shadow:var(--shadow);
+}
+
+.ui-barre-btn{
+  min-height:44px; /* cible tactile WCAG 2.5.8 */
+  padding:0 16px;
+  border:1px solid var(--line-strong);
+  border-radius:var(--r-md);
+  background:var(--surface);
+  color:var(--ink-2);
+  font-size:.875rem;
+  font-weight:600;
+  cursor:pointer;
+}
+.ui-barre-btn:disabled{
+  opacity:.5;
+  cursor:default;
+}
+
+.ui-barre-btn--primaire{
+  background:var(--blue);
+  border-color:var(--blue);
+  color:var(--surface);
+}
+.ui-barre-btn--primaire:hover{ background:var(--blue-deep); border-color:var(--blue-deep); }
+
+.ui-barre-btn--plat{
+  background:none;
+  border-color:transparent;
+}
+.ui-barre-btn--plat:hover{ color:var(--blue-deep); }
+
+.ui-barre-btn--danger{
+  background:var(--red-soft);
+  border-color:var(--red-soft);
+  color:var(--red);
+}
+.ui-barre-btn--danger:hover{ background:var(--red); border-color:var(--red); color:var(--surface); }
+
+.ui-barre-btn--plein{ flex:1; }
