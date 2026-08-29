@@ -516,15 +516,26 @@
   .photos-viewer video{height:160px}
 }
 
-/* ─── Recadrage local (overlay) — dupliqué depuis capture.css (HO-094) ───
-   Duplication assumée : dette du modèle « une vue = son CSS » (core/css.js),
-   pas de factorisation dans un transverse gelé. Ne pas « améliorer » ces
-   valeurs : les poignées de 44px viennent d'un retour d'Alain (HO-027). */
-.lightbox.cut { cursor: default; }
-.lightbox.cut img { max-height: calc(100dvh - 132px); }
-/* Le canvas redressé (HO-094) remplace l'<img> dans l'éditeur : components.css
-   (gelé) ne borne que img/video, donc on répète la borne pour lui. */
-.lightbox.cut .cut-canvas { display: block; max-width: calc(100vw - 48px); max-height: calc(100dvh - 132px); border-radius: var(--r-md); }
+/* ─── Atelier « Modifier la photo » (HO-099) — devenu une page routée, plus un
+   overlay `createOverlay` (lightbox.js reste gelé, il sert encore la visionneuse
+   et la fiche artiste). Le canvas redressé et les poignées de recadrage sont
+   repris tels quels de HO-094/HO-095 ; seul le conteneur change : `.obj-edit-canvas`
+   remplace `.lightbox.cut`, dans le corps d'écran standard `.obj-screen-body`. */
+.obj-edit-canvas {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  background: var(--ink);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.obj-edit-canvas .cut-canvas { display: block; max-width: 100%; max-height: calc(100dvh - 260px); border-radius: var(--r-md); }
+/* Poignées de recadrage : `position:fixed` d'après getBoundingClientRect() du
+   canvas (HO-094) — fonctionne indépendamment du conteneur, ne pas toucher aux
+   dimensions ci-dessous : les 44px viennent d'un retour d'Alain (HO-027). */
 .cut-sel {
   position: fixed;
   border: 2px dashed #fff;
@@ -555,30 +566,15 @@
 .cut-sel .h-s { left: 50%; bottom: 0; cursor: ns-resize; }
 .cut-sel .h-sw { left: 0; bottom: 0; cursor: nesw-resize; }
 .cut-sel .h-w { left: 0; top: 50%; cursor: ew-resize; }
-.cut-bar {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 14px;
-  padding: 14px;
-  background: rgba(13,27,62,.82);
-  border-top: 1px solid rgba(255,255,255,.18);
-  z-index: 12;
-}
-.cut-hint {
-  color: #fff;
-  font-size: 13.5px;
-  opacity: .85;
-  flex: 1 1 100%;
+/* Bandeau d'aide au-dessus du canvas (remplace `.cut-hint` flottant dans l'ex-overlay). */
+.obj-edit-hint {
+  padding: 0 2px 9px;
+  color: var(--ink-2);
+  font-size: .8125rem;
   text-align: center;
 }
-/* [data-rot] reprend .btn.small (components.css, gelé) — aucun token neuf,
-   juste la place dans la barre à 4 boutons (HO-095). */
-.cut-bar [data-rot] { order: 1; }
-.cut-bar [data-ok] { order: 2; }
-.cut-bar [data-cancel] { order: 3; }
+/* Barre d'actions : `.obj-actions` (objet.css, gelé) garantit déjà 44px mini
+   par bouton — remplace `.cut-bar`/`.btn.small` (31,6-33,2px mesurés, HO-099). */
+.obj-edit-actions [data-rot] { order: 1; }
+.obj-edit-actions [data-ok] { order: 2; flex: 1; }
+.obj-edit-actions [data-cancel] { order: 3; }

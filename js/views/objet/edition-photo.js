@@ -1,31 +1,55 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// IArtcane — views/objet/edition-photo.js : atelier plein écran de la photo
-// (HO-095). Édition DESTRUCTIVE : recadrer et/ou pivoter, puis enregistrer
-// écrase la brute (`storage_path`) et régénère les 3 dérivées. Renverse
-// HO-091 (qui gardait la brute intacte via `crop_path`) — arbitrage Yann
-// 2026-08-29 : « si la photo doit être tournée on la tourne, si elle doit
-// être cropée on la crope » ; la « brute jamais perdue » porte sur la
-// qualité des pixels conservés, pas sur la géométrie.
+// IArtcane — views/objet/edition-photo.js : atelier « Modifier la photo »
+// (HO-095, devenu une PAGE ROUTÉE en HO-099). Édition DESTRUCTIVE : recadrer
+// et/ou pivoter, puis enregistrer écrase la brute (`storage_path`) et régénère
+// les 3 dérivées. Renverse HO-091 (qui gardait la brute intacte via `crop_path`)
+// — arbitrage Yann 2026-08-29 : « si la photo doit être tournée on la tourne,
+// si elle doit être cropée on la crope » ; la « brute jamais perdue » porte sur
+// la qualité des pixels conservés, pas sur la géométrie.
+//
+// HO-099 : ce n'est plus un overlay `createOverlay` (lightbox.js reste gelé —
+// il sert encore la visionneuse et la fiche artiste) mais une vraie route,
+// `mount(objetId, photoId)`, rendue dans `#objet-body` comme les autres
+// sous-écrans de la fiche. Un « geste » (agrandir une image) reste un overlay ;
+// un « état de travail à ne pas perdre » (cette édition destructive) est une
+// page : URL propre, historique, bouton Retour d'Android qui referme l'atelier.
 // ═══════════════════════════════════════════════════════════════════════════
-import { toast } from '../../core/dom.js';
+import { $, toast } from '../../core/dom.js';
+import { loadViewCss } from '../../core/css.js';
 import { withBusy } from '../../core/feedback.js';
 import { S } from '../../core/state.js';
 import { sb, logEvent, makeVariantBlob, signPaths } from '../../core/data.js';
-import { createOverlay } from '../../core/lightbox.js';
+
+await loadViewCss('objet-photos');
 
 // Bornes des 3 variantes régénérées après édition (valeurs HO-089, non exportées).
 const MINI_PX = 160, THUMB_PX = 480, MOYEN_PX = 2048;
 
-// Ouvre l'atelier d'édition (recadrage et/ou rotation) sur la brute d'une photo.
-// @param {object} photo   ligne `photos` (storage_path, rotation…)
-// @param {{ onFini: () => void }} opts   rappel après enregistrement réussi
-export async function ouvrirEdition(photo, { onFini } = {}) {
-  // Le geste porte sur la brute, pas sur l'affichage courant (HO-091). Redressée
-  // dans un canvas DÈS L'OUVERTURE (pas de transform CSS) : sélection et rendu
-  // vivent dans le même repère à toute rotation — un rotate() CSS gardait une
-  // boîte de layout non pivotée, d'où un désalignement à 90°/270° (HO-094).
+// Point d'entrée de la route `#/objet/<id>/photo/<photoId>/modifier` (app.js).
+// Arrivée directe par URL possible (rechargement de page) : ne dépend d'aucun
+// état déjà chargé par views/objet/index.js, tout est relu depuis la base.
+export async function mount(objetId, photoId) {
+  const body = $('#objet-body');
+  body.innerHTML = '<div class="skeleton" style="height:320px"></div>';
+
+  const { data: photo, error } = await sb.from('photos').select('*')
+    .eq('owner_id', S.tenantId).eq('objet_id', objetId).eq('id', photoId).maybeSingle();
+  if (error || !photo) {
+    toast('Photo introuvable', true);
+    location.hash = `#/objet/${encodeURIComponent(objetId)}`;
+    return;
+  }
+  // Pose l'objet courant si absent (arrivée directe) — logEvent/caméra en dépendent
+  // ailleurs dans la fiche ; ce chantier passe de toute façon `objetId` explicitement.
+  if (!S.currentObjet || String(S.currentObjet.id) !== String(objetId)) {
+    const { data: o } = await sb.from('objets').select('*').eq('owner_id', S.tenantId).eq('id', objetId).maybeSingle();
+    if (o) S.currentObjet = o;
+  }
+
+  const retour = () => { location.hash = `#/objet/${encodeURIComponent(objetId)}`; };
+
   const bruteUrl = (await signPaths([photo.storage_path]))[photo.storage_path];
-  if (!bruteUrl) return toast('Impossible de charger la brute pour l’édition', true);
+  if (!bruteUrl) { toast('Impossible de charger la brute pour l’édition', true); retour(); return; }
   const bmp = await createImageBitmap(await (await fetch(bruteUrl)).blob());
 
   let rotLocale = photo.rotation || 0;
@@ -45,23 +69,33 @@ export async function ouvrirEdition(photo, { onFini } = {}) {
   };
   redresser();
 
-  const { el: lb, close } = createOverlay({
-    className: 'cut',
-    html: `<div class="cut-bar">
-      <span class="cut-hint">Recadre avec les poignées, ou pivote — puis enregistre</span>
-      <button class="btn small" data-rot>↻ 90°</button>
-      <button class="btn primary small" data-ok disabled>Enregistrer</button>
-      <button class="btn small" data-cancel>Annuler</button></div>`,
-  });
-  lb.prepend(straight);
+  body.innerHTML = `
+    <div class="obj-screen">
+      <nav class="obj-nav">
+        <button class="obj-nav-back" data-action="annuler">← Photos</button>
+        <span class="obj-nav-title">Modifier la photo</span>
+      </nav>
+      <div class="obj-screen-body">
+        <div class="obj-edit-hint">Recadre avec les poignées, ou pivote — puis enregistre</div>
+        <div class="obj-edit-canvas"></div>
+      </div>
+      <div class="obj-actions obj-edit-actions">
+        <button class="obj-action-outline" data-rot>↻ 90°</button>
+        <button class="obj-action-primary" data-ok disabled>Enregistrer</button>
+        <button class="obj-action-outline" data-cancel>Annuler</button>
+      </div>
+    </div>`;
+  body.querySelector('.obj-edit-canvas').append(straight);
+  body.querySelector('[data-action="annuler"]').addEventListener('click', retour);
 
   const img = straight;
-  const ok = lb.querySelector('[data-ok]');
-  const rot = lb.querySelector('[data-rot]');
+  const ok = body.querySelector('[data-ok]');
+  const rot = body.querySelector('[data-rot]');
   let sel = { x0: 0, y0: 0, x1: 1, y1: 1 };
   let box = null;
   let drag = null;
   const MIN = 0.05;
+  const canvasZone = body.querySelector('.obj-edit-canvas');
   const toRel = e => {
     const r = img.getBoundingClientRect();
     return { x: Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1), y: Math.min(Math.max((e.clientY - r.top) / r.height, 0), 1) };
@@ -81,7 +115,7 @@ export async function ouvrirEdition(photo, { onFini } = {}) {
       box = document.createElement('div');
       box.className = 'cut-sel';
       box.innerHTML = Object.keys(H).map(h => `<i data-h="${h}" class="h-${h}"></i>`).join('');
-      lb.append(box);
+      canvasZone.append(box);
     }
     const r = img.getBoundingClientRect();
     box.style.left = `${r.left + sel.x0 * r.width}px`;
@@ -90,20 +124,20 @@ export async function ouvrirEdition(photo, { onFini } = {}) {
     box.style.height = `${(sel.y1 - sel.y0) * r.height}px`;
   };
   draw();
-  lb.addEventListener('pointerdown', e => {
+  canvasZone.addEventListener('pointerdown', e => {
     const h = e.target.dataset?.h;
     if (!h) return;
     e.preventDefault(); e.stopPropagation();
     drag = h;
   });
-  lb.addEventListener('pointermove', e => {
+  canvasZone.addEventListener('pointermove', e => {
     if (!drag) return;
     sel = H[drag](sel, toRel(e));
     draw();
     ok.disabled = false;
   });
-  lb.addEventListener('pointerup', () => { drag = null; });
-  lb.querySelector('[data-cancel]').addEventListener('click', e => { e.stopPropagation(); close(); });
+  canvasZone.addEventListener('pointerup', () => { drag = null; });
+  body.querySelector('[data-cancel]').addEventListener('click', e => { e.stopPropagation(); retour(); });
 
   rot.addEventListener('click', e => {
     e.stopPropagation();
@@ -152,10 +186,9 @@ export async function ouvrirEdition(photo, { onFini } = {}) {
         if (e2) throw e2;
         const anciennes = [photo.crop_path, photo.mini_path, photo.thumb_path, photo.moyen_path].filter(Boolean);
         if (anciennes.length) await sb.storage.from('photos').remove(anciennes);
-        close();
         toast('✓ Photo modifiée — l’image d’origine a été remplacée');
-        logEvent('photo_modifiee', { photo: photo.storage_path, rotation: rotLocale });
-        onFini?.();
+        logEvent('photo_modifiee', { photo: photo.storage_path, rotation: rotLocale }, objetId);
+        retour();
       }, { titre: 'Enregistrement — la photo d’origine est remplacée définitivement…' });
     } catch (err) {
       toast(`Enregistrement échoué : ${err.message ?? err}`, true);

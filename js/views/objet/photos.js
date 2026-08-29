@@ -252,11 +252,10 @@ function brancher(el) {
   });
 
   // Coins de la carte photo
-  el.querySelector('[data-action="modifier"]')?.addEventListener('click', async () => {
+  el.querySelector('[data-action="modifier"]')?.addEventListener('click', () => {
     const p = photoCourante();
     if (!p) return;
-    const { ouvrirEdition } = await import('./edition-photo.js');
-    await ouvrirEdition(p, { onFini: () => hooks.recharger(S.currentObjet.id) });
+    location.hash = `#/objet/${encodeURIComponent(S.currentObjet.id)}/photo/${encodeURIComponent(p.id)}/modifier`;
   });
   el.querySelector('[data-action="supprimer"]')?.addEventListener('click', () => supprimerPhoto());
   el.querySelector('[data-action="couverture"]')?.addEventListener('click', () => basculerCouverture());

@@ -1,8 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // IArtcane — app.js : SHELL (D-039, architecture modulaire par vue)
-// Boot, service worker, auth magic link, locataire/rôle, en-tête, menu
-// gouvernance, routeur à lazy imports. Les écrans vivent dans js/views/*,
-// le partagé dans js/core/* — ce fichier est TRANSVERSAL (gelé hors handoff dédié).
+// Boot, service worker, auth magic link, locataire/rôle, en-tête, menu gouvernance, routeur à lazy imports.
+// Les écrans vivent dans js/views/*, le partagé dans js/core/* — ce fichier est TRANSVERSAL (gelé hors handoff dédié).
 // Règle d'or affichée : jamais un chiffre sans comparables vendus.
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, $$, esc, toast } from './js/core/dom.js';
@@ -325,6 +324,7 @@ $('#btn-demande').addEventListener('click', () => import('./js/views/demande.js'
 // `write: true` → écran réservé aux rôles qui écrivent (lecteur redirigé).
 const ROUTES = [
   { re: /^#\/capture/,            tab: 'capture',    view: 'capture',    write: true, load: () => import('./js/views/capture.js') },
+  { re: /^#\/objet\/([^/]+)\/photo\/([^/]+)\/modifier$/, tab: 'collection', view: 'objet', write: true, load: () => import('./js/views/objet/edition-photo.js'), fn: 'mount' },
   { re: /^#\/objet\/([^/]+)$/,    tab: 'collection', view: 'objet',      load: () => import('./js/views/objet/index.js') },
   { re: /^#\/rayon\/([^/]+)$/,    tab: 'collection', view: 'rayon',      load: () => import('./js/views/rayon.js') },
   { re: /^#\/maison/,             view: 'maison',    write: true,        load: () => import('./js/views/maison.js') },
