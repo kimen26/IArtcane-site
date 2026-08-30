@@ -13,7 +13,7 @@ import { toast, enregistrer } from '../../core/feedback.js';
 import { openViewer } from '../../core/lightbox.js';
 import { loadViewCss } from '../../core/css.js';
 import { page } from '../../ui/page.js';
-import { micButton } from '../mic.js';
+import { texte } from '../../ui/texte.js';
 import { A, hooks } from './etat.js';
 import { insererArtistePhoto } from './uploads.js';
 
@@ -150,14 +150,14 @@ function renderArtiste() {
         actions: [
           { label: `Voir les ${A.objets.length} objet${A.objets.length > 1 ? 's' : ''}`, type: 'primaire', onClick: () => $('#art-objets')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) },
           ...(canWrite() ? [
-            { label: '✎ Note', type: 'plat', onClick: () => { $('#art-note-text')?.focus(); $('#art-composer')?.classList.add('focused'); } },
+            { label: '✎ Note', type: 'plat', onClick: () => { $('#art-composer-texte')?.querySelector('.ui-texte-textarea')?.focus(); $('#art-composer')?.classList.add('focused'); } },
             { label: `🖼 Images · ${A.images.length}`, type: 'plat', onClick: () => hooks.naviguer('images') },
           ] : []),
         ],
       },
     });
     corps.innerHTML = rendreFiche();
-    brancherComposer();
+    brancherJournal(corps);
     // Les cartes objet rendues par cardHtml n’ont pas de data-action ; on les
     // rend cliquables ici (même comportement que l’ancien artistes.js).
     $$('.card[data-oid]', corps).forEach(c => {
@@ -177,12 +177,28 @@ function renderArtiste() {
   }
 }
 
-function brancherComposer() {
-  const ta = $('#art-note-text');
-  if (!ta) return;
-  const btn = micButton(ta);
-  const composer = $('#art-composer');
-  if (btn && composer) composer.appendChild(btn);
+// Branche les entrées du journal et le composeur sur ui/texte.js — appelé
+// après l'insertion HTML (rendreFiche()), texte() a besoin d'éléments DOM
+// réels pour s'y brancher (mic, boutons Annuler/Enregistrer).
+function brancherJournal(corps) {
+  A.notes.forEach((n, i) => {
+    const slot = corps.querySelector(`.art-note-slot[data-note-idx="${i}"]`);
+    if (!slot) return;
+    const imgs = (n.photos ?? []).map(pid => A.images.find(im => im.id === pid)).filter(Boolean);
+    texte(slot, {
+      titre: fmtDate(n.created_at), tag: n.auteur === 'humain' ? 'toi' : 'IA',
+      contenu: n.texte ?? '', vide: imgs.length ? 'Photo jointe.' : 'Note vide.', mode: 'lecture',
+    });
+    if (imgs.length) slot.insertAdjacentHTML('beforeend', `<div class="art-note-photos">${imgs.map(p =>
+      `<button class="art-note-thumb" data-action="zoom-note-photo" data-pid="${esc(p.id)}"><img src="${esc(p.thumbUrl || p.url)}" alt="" loading="lazy" decoding="async"></button>`
+    ).join('')}</div>`);
+  });
+
+  const cible = corps.querySelector('#art-composer-texte');
+  if (cible) texte(cible, {
+    contenu: '', mode: 'edition', micro: true, lignes: 2,
+    sur: { enregistrer: ajouterNote, annuler: () => { pendingPhotos = []; hooks.rendre?.(); } },
+  });
 }
 
 // ─── Navigation interne ─────────────────────────────────────────────────────
@@ -538,47 +554,29 @@ function rendrePresse(d) {
     </section>`;
 }
 
-// 11. Notes & journal
+// 11. Notes & journal — les entrées et le composeur sont des coquilles vides
+// ici (texte() a besoin d'éléments DOM réels pour se brancher) : voir
+// brancherJournal(), appelé juste après l'insertion de ce HTML.
 function rendreJournal() {
   const composer = canWrite() ? `
     <div class="art-composer" id="art-composer">
-      <div class="art-composer-field">
-        <textarea id="art-note-text" rows="2" placeholder="Ajouter une note, un contact, un prix vu…"></textarea>
-      </div>
+      <div id="art-composer-texte"></div>
       <button class="art-composer-photo" type="button" title="Joindre une photo" data-action="attach-photo">📷</button>
-      <button class="art-composer-add" data-action="add-note">Ajouter</button>
     </div>` : '';
 
   const pendingThumbs = pendingPhotos.map(pid => {
     const p = A.images.find(i => i.id === pid);
-    if (!p) return `<div class="art-pending-thumb art-pending-loading"></div>`;
-    return `<div class="art-pending-thumb"><img src="${esc(p.thumbUrl || p.url)}" alt=""></div>`;
+    return p ? `<div class="art-pending-thumb"><img src="${esc(p.thumbUrl || p.url)}" alt=""></div>` : `<div class="art-pending-thumb art-pending-loading"></div>`;
   }).join('');
+
+  const notesHtml = A.notes.length
+    ? A.notes.map((n, i) => `<div class="art-note-slot" data-note-idx="${i}"></div>`).join('')
+    : '<div class="art-empty-note">Aucune note pour l\'instant.</div>';
 
   return `
     <section class="art-journal" aria-label="Notes et journal">
-      <div class="art-section-head">
-        <span>Notes &amp; journal</span>
-        <span class="art-section-meta">jamais réécrit par l'IA</span>
-      </div>
-      <div class="art-notes">
-        ${A.notes.length ? A.notes.map(n => {
-          const humain = n.auteur === 'humain';
-          const noteImgs = (n.photos ?? []).map(pid => A.images.find(i => i.id === pid)).filter(Boolean);
-          return `
-            <div class="art-note">
-              <div class="art-note-head">
-                <span class="art-note-tag ${humain ? 'human' : 'ia'}">${humain ? 'toi' : 'IA'}</span>
-                <span class="art-note-date">${fmtDate(n.created_at)}</span>
-              </div>
-              <div class="art-note-text">${esc(n.texte ?? '')}</div>
-              ${noteImgs.length ? `<div class="art-note-photos">${noteImgs.map(p => `
-                <button class="art-note-thumb" data-action="zoom-artiste-photo" data-pid="${esc(p.id)}">
-                  <img src="${esc(p.thumbUrl || p.url)}" alt="" loading="lazy" decoding="async">
-                </button>`).join('')}</div>` : ''}
-            </div>`;
-        }).join('') : '<div class="art-empty-note">Aucune note pour l\'instant.</div>'}
-      </div>
+      <div class="art-section-head"><span>Notes &amp; journal</span><span class="art-section-meta">jamais réécrit par l'IA</span></div>
+      <div class="art-notes">${notesHtml}</div>
       ${composer}
       ${pendingThumbs ? `<div class="art-pending-photos">${pendingThumbs}</div>` : ''}
     </section>`;
@@ -597,10 +595,6 @@ function openSignature(pid) {
   openViewer({ src: p.url, alt: `Signature relevée sur #${p.objetId}` });
 }
 
-function openNotePhoto(pid) {
-  openArtistePhoto(pid);
-}
-
 $('#artiste-body').addEventListener('click', async e => {
   const el = e.target.closest('[data-action]');
   if (!el) return;
@@ -608,7 +602,7 @@ $('#artiste-body').addEventListener('click', async e => {
   if (!act) return;
 
   // Actions mutantes protégées en lecture seule
-  if ((['add-note', 'attach-photo', 'quick-photo'].includes(act)) && !canWrite()) return;
+  if ((['attach-photo', 'quick-photo'].includes(act)) && !canWrite()) return;
 
   if (act === 'nav-objet') {
     location.hash = '#/objet/' + encodeURIComponent(el.dataset.oid);
@@ -620,7 +614,7 @@ $('#artiste-body').addEventListener('click', async e => {
     openSignature(el.dataset.pid);
   } else if (act === 'zoom-note-photo') {
     e.stopPropagation();
-    openNotePhoto(el.dataset.pid);
+    openArtistePhoto(el.dataset.pid);
   } else if (act === 'comparer-signatures') {
     e.stopPropagation();
     const first = A.signatures[0];
@@ -635,14 +629,11 @@ $('#artiste-body').addEventListener('click', async e => {
   } else if (act === 'quick-photo') {
     filePickerTarget = 'quick';
     $('#file-artiste-photo').click();
-  } else if (act === 'add-note') {
-    e.stopPropagation();
-    await ajouterNote();
   }
 
   // Clic sur une carte objet de la collection (cardHtml n'ajoute pas data-action).
   const card = el.closest('.card[data-oid]');
-  if (card && act !== 'add-note') {
+  if (card) {
     location.hash = '#/objet/' + encodeURIComponent(card.dataset.oid);
   }
 });
@@ -651,10 +642,9 @@ $('#artiste-body').addEventListener('click', async e => {
 // uploadArtistePhoto/insererArtistePhoto vivent dans uploads.js (HO-078) —
 // duplication avec images.js absorbée là, sous withBusy.
 
-async function ajouterNote() {
-  const ta = $('#art-note-text');
-  const texte = ta?.value.trim() ?? '';
-  if (!texte && !pendingPhotos.length) {
+async function ajouterNote(saisie) {
+  const texteNote = (saisie ?? '').trim();
+  if (!texteNote && !pendingPhotos.length) {
     toast('Tape une note ou ajoute une photo', true);
     return;
   }
@@ -662,11 +652,10 @@ async function ajouterNote() {
     owner_id: S.tenantId,
     artiste_nom: A.nom,
     auteur: 'humain',
-    texte: texte || null,
+    texte: texteNote || null,
     photos: pendingPhotos,
   }), 'Note')) return;
   logEvent('artiste_note', { artiste: A.nom }, null);
-  if (ta) ta.value = '';
   pendingPhotos = [];
   await loadArtiste(A.nom);
 }

@@ -1,0 +1,152 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   IArtcane — styles/ui/texte.css : brique `ui/texte.js` (HO-108). Carte de
+   texte unique — en-tête, corps (lecture/édition), pied, dictée micro.
+   Absorbe `desc-card*` / `.desc-text` / `.desc-textarea` /
+   `.desc-editor-actions` / `.desc-card-foot` (objet-suivi.css) et la base
+   `.mic-btn` (résidu HO-049, jusqu'ici dupliquée dans objet-suivi.css).
+   Tokens uniquement (HO-103) — zéro couleur littérale.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.ui-texte{
+  background:var(--surface);
+  border-radius:var(--r-md);
+  padding:13px;
+  box-shadow:var(--shadow);
+  border:1px solid transparent; /* réservé pour les variantes de bordure des vues (ex. carte immortelle) — pas de saut de mise en page */
+}
+.ui-texte-tete{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  margin-bottom:9px;
+}
+.ui-texte-titre{
+  font-size:.59375rem;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--ink-3);
+}
+.ui-texte-tag{
+  margin-left:auto;
+  background:var(--surface-2);
+  border-radius:999px;
+  padding:2px 7px;
+  font-size:.59375rem;
+  font-weight:600;
+  color:var(--ink-2);
+}
+
+/* ─── Corps (lecture) ─────────────────────────────────────────────────────── */
+.ui-texte-corps{
+  font-family:var(--serif);
+  font-size:.8125rem;
+  line-height:1.62;
+  color:var(--ink);
+}
+.ui-texte-corps--vide{
+  font-family:var(--sans);
+  color:var(--ink-3);
+  font-style:italic;
+}
+.ui-texte-pied{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  margin-top:13px;
+  padding-top:11px;
+  border-top:1px solid var(--line-soft);
+}
+.ui-texte-meta{
+  font-size:.65625rem;
+  color:var(--ink-3);
+}
+.ui-texte-action{
+  margin-left:auto;
+  background:none;
+  border:none;
+  padding:0;
+  font-size:.71875rem;
+  font-weight:700;
+  color:var(--blue);
+  cursor:pointer;
+  min-height:44px;
+}
+.ui-texte-action:hover{color:var(--blue-deep)}
+.ui-texte-pied .ui-texte-action{margin-left:0}
+.ui-texte-pied .ui-texte-action:first-of-type{margin-left:auto}
+
+/* ─── Éditeur (édition) ───────────────────────────────────────────────────── */
+.ui-texte-editeur{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:flex-start;
+}
+.ui-texte-textarea{
+  flex:1;
+  min-width:0;
+  width:100%;
+  border:1px solid var(--line);
+  border-radius:var(--r-sm);
+  padding:9px;
+  font-family:var(--serif);
+  font-size:.8125rem;
+  line-height:1.55;
+  color:var(--ink);
+  background:var(--surface);
+  resize:vertical;
+  min-height:80px;
+}
+.ui-texte-textarea:focus{outline:none;border-color:var(--blue)}
+.ui-texte-editeur--micro .ui-texte-textarea{width:auto}
+.ui-texte-actions-edition{
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+  margin-top:8px;
+}
+.ui-texte-btn{
+  border-radius:11px;
+  padding:8px 12px;
+  font-size:.75rem;
+  font-weight:700;
+  cursor:pointer;
+  min-height:36px;
+}
+.ui-texte-btn--outline{
+  border:1px solid var(--line);
+  background:var(--surface);
+  color:var(--ink);
+}
+.ui-texte-btn--primaire{
+  border:none;
+  background:var(--blue);
+  color:var(--surface);
+}
+
+/* ─── Dictée (views/mic.js — base UNIQUE du site, HO-049 résolu ici) ───────── */
+.mic-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:44px;
+  height:44px;
+  min-width:44px;
+  border:1px solid var(--line-strong);
+  border-radius:var(--r-md);
+  background:var(--surface);
+  font-size:20px;
+  line-height:1;
+  cursor:pointer;
+}
+.mic-btn:hover{background:var(--blue-softer);border-color:var(--blue)}
+.mic-btn:disabled{opacity:.55;cursor:not-allowed;background:var(--surface);border-color:var(--line)}
+.mic-btn.recording{position:relative;background:var(--red-soft);border-color:var(--red);animation:ui-texte-mic-pulse 1.2s ease-in-out infinite}
+.mic-btn.recording::after{content:'';position:absolute;inset:-4px;border-radius:var(--r-md);border:2px solid var(--red);opacity:.5;animation:ui-texte-mic-ring 1.2s ease-out infinite}
+@keyframes ui-texte-mic-pulse{0%,100%{opacity:1}50%{opacity:.75}}
+@keyframes ui-texte-mic-ring{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.25);opacity:0}}
+
+/* ─── Accessibilité / mobile ──────────────────────────────────────────────── */
+button.ui-texte-btn{min-height:36px}
+button.ui-texte-action{min-height:44px}

@@ -8,7 +8,7 @@ import { sb, logEvent, enqueueJobs } from '../../core/data.js';
 import { enregistrer } from '../../core/feedback.js';
 import { loadViewCss } from '../../core/css.js';
 import { page } from '../../ui/page.js';
-import { micButton } from '../mic.js';
+import { texte } from '../../ui/texte.js';
 import { O, hooks, estValide, toggleValidation } from './etat.js';
 
 await loadViewCss('objet-suivi');
@@ -41,90 +41,41 @@ export function rendre(el) {
         </div>
         <p class="desc-reminder-txt">Texte de catalogue. Il reprend ce qui est déjà dans l’identification, ne le contredit jamais : les champs restent la source.</p>
       </div>
-
-      <section class="desc-card desc-ia">
-        <div class="desc-card-head">
-          <span class="desc-card-label">Rédigé par l’IA</span>
-          <span class="desc-card-tag">${esc(modele)}</span>
-        </div>
-        ${editIa ? renderIaEditor(o) : renderIaText(o)}
-        ${!editIa ? `
-          <div class="desc-card-foot">
-            <span class="desc-card-meta">généré le ${ficheDate}${relu}</span>
-            <button class="desc-action" data-action="regenerer">↻ Régénérer</button>
-            <button class="desc-action" data-action="edit-ia">✎</button>
-          </div>
-        ` : ''}
-      </section>
-
-      <section class="desc-card desc-maison">
-        <div class="desc-card-head">
-          <span class="desc-card-label">Description maison</span>
-          <span class="desc-card-hint">jamais réécrite par l’IA</span>
-        </div>
-        ${editMaison ? renderMaisonEditor(o) : renderMaisonText(o)}
-        ${!editMaison ? `
-          <div class="desc-card-foot">
-            <span class="desc-card-meta">${o.commentaire ? 'Modifiée le ' + fmtDate(o.updated_at) : '—'}</span>
-            <button class="desc-action" data-action="edit-maison">✎ Modifier</button>
-          </div>
-        ` : ''}
-      </section>
+      <div class="desc-carte-ia"></div>
+      <div class="desc-carte-maison"></div>
     </div>`;
 
-  // Actions fixes
-  corps.querySelector('[data-action="regenerer"]')?.addEventListener('click', onRegenerer);
-  corps.querySelector('[data-action="edit-ia"]')?.addEventListener('click', () => { editIa = true; hooks.rendre?.(); });
-  corps.querySelector('[data-action="edit-maison"]')?.addEventListener('click', () => { editMaison = true; hooks.rendre?.(); });
+  // Carte IA — un verrou humain est posé à l'enregistrement (voir saveIa).
+  texte(corps.querySelector('.desc-carte-ia'), {
+    titre: 'Rédigé par l’IA',
+    tag: modele,
+    contenu: o.description,
+    vide: 'Pas encore de description générée.',
+    mode: editIa ? 'edition' : 'lecture',
+    lignes: 8,
+    meta: `généré le ${ficheDate}${relu}`,
+    actions: [
+      { label: '↻ Régénérer', onClick: onRegenerer },
+      { label: '✎', onClick: () => { editIa = true; hooks.rendre?.(); } },
+    ],
+    sur: { enregistrer: saveIa, annuler: () => { editIa = false; hooks.rendre?.(); } },
+  });
 
-  // Édition IA
-  corps.querySelector('[data-action="save-ia"]')?.addEventListener('click', saveIa);
-  corps.querySelector('[data-action="cancel-ia"]')?.addEventListener('click', () => { editIa = false; hooks.rendre?.(); });
-
-  // Édition maison : dictée + sauvegarde au change
-  const maisonTa = corps.querySelector('#desc-maison-ta');
-  if (maisonTa) {
-    maisonTa.addEventListener('change', saveMaison);
-    const wrap = maisonTa.closest('.desc-maison-editor');
-    if (wrap) {
-      const mic = micButton(maisonTa);
-      if (mic) wrap.appendChild(mic);
-    }
-    corps.querySelector('[data-action="save-maison"]')?.addEventListener('click', saveMaison);
-    corps.querySelector('[data-action="cancel-maison"]')?.addEventListener('click', () => { editMaison = false; hooks.rendre?.(); });
-  }
-}
-
-function renderIaText(o) {
-  if (!o.description) return '<div class="desc-text miss">Pas encore de description générée.</div>';
-  return `<div class="desc-text">${esc(o.description)}</div>`;
-}
-
-function renderIaEditor(o) {
-  return `
-    <div class="desc-ia-editor">
-      <textarea id="desc-ia-ta" class="desc-textarea" rows="8">${esc(o.description || '')}</textarea>
-      <div class="desc-editor-actions">
-        <button class="btn-outline" data-action="cancel-ia">Annuler</button>
-        <button class="btn-primary" data-action="save-ia">Enregistrer</button>
-      </div>
-    </div>`;
-}
-
-function renderMaisonText(o) {
-  if (!o.commentaire) return '<div class="desc-text miss">Aucune description maison.</div>';
-  return `<div class="desc-text">${esc(o.commentaire)}</div>`;
-}
-
-function renderMaisonEditor(o) {
-  return `
-    <div class="desc-maison-editor mic-wrap">
-      <textarea id="desc-maison-ta" class="desc-textarea" rows="6">${esc(o.commentaire || '')}</textarea>
-      <div class="desc-editor-actions">
-        <button class="btn-outline" data-action="cancel-maison">Annuler</button>
-        <button class="btn-primary" data-action="save-maison">Enregistrer</button>
-      </div>
-    </div>`;
+  // Carte maison — IMMORTELLE (D-042 amendée) : jamais réécrite par l'IA. À
+  // la différence de la carte IA ci-dessus, saveMaison ne pose aucun verrou —
+  // la brique ne connaît pas cette distinction, c'est la vue qui la porte.
+  texte(corps.querySelector('.desc-carte-maison'), {
+    titre: 'Description maison',
+    tag: 'jamais réécrite par l’IA',
+    contenu: o.commentaire,
+    vide: 'Aucune description maison.',
+    mode: editMaison ? 'edition' : 'lecture',
+    micro: true,
+    lignes: 6,
+    meta: o.commentaire ? 'Modifiée le ' + fmtDate(o.updated_at) : '—',
+    actions: [{ label: '✎ Modifier', onClick: () => { editMaison = true; hooks.rendre?.(); } }],
+    sur: { enregistrer: saveMaison, annuler: () => { editMaison = false; hooks.rendre?.(); } },
+  });
 }
 
 async function onRegenerer() {
@@ -139,42 +90,37 @@ async function onValiderTextes() {
   hooks.naviguer('hub');
 }
 
-async function saveIa() {
+// `texteSaisi` n'arrive ici QUE si `texte()` a détecté un changement réel par
+// rapport à `o.description` (contrat de la brique) — plus besoin de comparer
+// avant/après localement.
+async function saveIa(texteSaisi) {
   const o = S.currentObjet;
-  const ta = document.querySelector('#desc-ia-ta');
-  const texte = ta?.value ?? '';
   const avant = o.description;
-  if (avant === texte) { editIa = false; hooks.rendre?.(); return; }
 
   const verrous = new Set(Array.isArray(o.verrous_humains) ? o.verrous_humains : []);
   verrous.add('description');
 
   const ok = await enregistrer(() => sb.from('objets')
-    .update({ description: texte, verrous_humains: [...verrous] })
+    .update({ description: texteSaisi, verrous_humains: [...verrous] })
     .eq('owner_id', S.tenantId).eq('id', o.id), 'Description');
   if (!ok) return;
 
-  o.description = texte;
+  o.description = texteSaisi;
   o.verrous_humains = [...verrous];
-  logEvent('correction', { champs: { description: { avant, apres: texte } } });
+  logEvent('correction', { champs: { description: { avant, apres: texteSaisi } } });
   editIa = false;
   hooks.rendre?.();
 }
 
-async function saveMaison() {
+async function saveMaison(texteSaisi) {
   const o = S.currentObjet;
-  const ta = document.querySelector('#desc-maison-ta');
-  const texte = ta?.value ?? '';
-  const avant = o.commentaire;
-  if (avant === texte) { editMaison = false; hooks.rendre?.(); return; }
-
   const ok = await enregistrer(() => sb.from('objets')
-    .update({ commentaire: texte })
+    .update({ commentaire: texteSaisi })
     .eq('owner_id', S.tenantId).eq('id', o.id), 'Note de la maison');
   if (!ok) return;
 
-  o.commentaire = texte;
-  logEvent('note_maison', { n: texte.length });
+  o.commentaire = texteSaisi;
+  logEvent('note_maison', { n: texteSaisi.length });
   editMaison = false;
   hooks.rendre?.();
 }

@@ -153,33 +153,29 @@
 /* ─── 11. Notes & journal ─────────────────────────────────────────────────── */
 .art-journal{background:var(--surface);border-radius:var(--r-md);padding:11px 12px 12px;box-shadow:var(--shadow)}
 .art-notes{border-left:2px solid var(--line);padding-left:10px;display:flex;flex-direction:column;gap:10px}
-.art-note{}
-.art-note-head{display:flex;align-items:center;gap:6px;margin-bottom:3px}
-.art-note-tag{font-size:9.5px;font-weight:700;border-radius:20px;padding:2px 8px}
-.art-note-tag.human{background:var(--blue-soft);color:var(--blue)}
-.art-note-tag.ia{background:var(--surface-2);color:var(--ink-3)}
-.art-note-date{font-size:9.5px;color:var(--ink-3)}
-.art-note-text{font-size:12px;line-height:1.5;color:var(--ink-2)}
+/* Chaque entrée (.art-note-slot) est une carte ui/texte.js (HO-108,
+   styles/ui/texte.css — .ui-texte*) : titre = date, pastille = auteur
+   (toi/IA), corps = texte. Les photos jointes restent hors contrat de la
+   brique (texte() ne les gère pas), ajoutées ici sous la carte. */
 .art-note-photos{display:flex;gap:6px;margin-top:7px}
 .art-note-thumb{padding:0;border:none;background:none;cursor:pointer}
 .art-note-thumb img{width:46px;height:46px;border-radius:7px;object-fit:cover;background:var(--surface-2)}
 .art-empty-note{font-size:12px;color:var(--ink-3);font-style:italic}
-.art-composer{border:1px solid var(--line-strong);border-radius:10px;padding:9px 10px;display:flex;align-items:flex-start;gap:9px;margin-top:11px}
-.art-composer.focused{border-color:var(--blue)}
-.art-composer-field{flex:1}
-.art-composer-field textarea{width:100%;border:none;background:transparent;resize:none;font-family:var(--sans);font-size:12px;color:var(--ink);outline:none;padding:0}
-.art-composer-field textarea::placeholder{color:var(--ink-3)}
-.art-composer-photo,.art-composer-add{flex:0 0 auto;width:28px;height:28px;border-radius:50%;border:none;background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer}
+
+/* Composeur : la carte de saisie (textarea + micro + Annuler/Enregistrer)
+   vient aussi de ui/texte.js, mode édition. Ici, seuls le halo au focus et
+   le bouton photo (hors contrat de la brique). */
+.art-composer{margin-top:11px;display:flex;flex-direction:column;gap:6px}
+.art-composer.focused .ui-texte{border-color:var(--blue)}
+.art-composer-photo{align-self:flex-end;flex:0 0 auto;width:28px;height:28px;border-radius:50%;border:none;background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer}
 .art-composer-photo:hover{background:var(--blue-soft);color:var(--blue)}
-.art-composer-add{width:auto;border-radius:var(--r-sm);padding:0 12px;font-size:11px;font-weight:700;color:var(--surface);background:var(--blue)}
-.art-composer-add:hover{background:var(--blue-deep)}
 .art-pending-photos{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
 .art-pending-thumb{width:46px;height:46px;border-radius:7px;overflow:hidden;background:var(--surface-2)}
 .art-pending-thumb img{width:100%;height:100%;object-fit:cover}
 .art-pending-loading{background:var(--surface-2);animation:pulse 1.2s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
 
-/* Bouton micro injecté par mic.js dans le composeur */
+/* Bouton micro injecté par texte()/mic.js dans le composeur */
 .art-composer .mic-btn{flex:0 0 auto;width:28px;height:28px;border-radius:50%}
 
 /* ─── Section objets de la collection (cible de la barre basse) ─────────────── */

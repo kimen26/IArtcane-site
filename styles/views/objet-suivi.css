@@ -292,151 +292,13 @@
   color:var(--ink-2);
   margin:0;
 }
-.desc-card{
-  background:var(--surface);
-  border-radius:var(--r-md);
-  padding:13px;
-  box-shadow:var(--shadow);
-}
-.desc-maison{
-  border:1.5px solid var(--line-strong);
-}
-.desc-card-head{
-  display:flex;
-  align-items:center;
-  gap:7px;
-  margin-bottom:9px;
-}
-.desc-card-label{
-  font-size:.59375rem;
-  font-weight:700;
-  letter-spacing:.08em;
-  text-transform:uppercase;
-  color:var(--ink-3);
-}
-.desc-ia .desc-card-label{color:var(--ink-3)}
-.desc-maison .desc-card-label{color:var(--blue)}
-.desc-card-tag{
-  margin-left:auto;
-  background:var(--surface-2);
-  border-radius:999px;
-  padding:2px 7px;
-  font-size:.59375rem;
-  font-weight:600;
-  color:var(--ink-2);
-}
-.desc-card-hint{
-  margin-left:auto;
-  font-size:.59375rem;
-  color:var(--ink-3);
-}
-.desc-text{
-  font-family:var(--serif);
-  font-size:.8125rem;
-  line-height:1.62;
-  color:var(--ink);
-}
-.desc-text.miss{
-  font-family:var(--sans);
-  color:var(--ink-3);
-  font-style:italic;
-}
-.desc-card-foot{
-  display:flex;
-  align-items:center;
-  gap:9px;
-  margin-top:13px;
-  padding-top:11px;
-  border-top:1px solid var(--line-soft);
-}
-.desc-card-meta{
-  font-size:.65625rem;
-  color:var(--ink-3);
-}
-.desc-action{
-  margin-left:auto;
-  background:none;
-  border:none;
-  padding:0;
-  font-size:.71875rem;
-  font-weight:700;
-  color:var(--blue);
-  cursor:pointer;
-  min-height:44px;
-}
-.desc-action:hover{color:var(--blue-deep)}
-.desc-card-foot .desc-action{margin-left:0}
-.desc-card-foot .desc-action:first-of-type{margin-left:auto}
 
-/* Éditeurs inline */
-.desc-textarea{
-  width:100%;
-  border:1px solid var(--line);
-  border-radius:var(--r-sm);
-  padding:9px;
-  font-family:var(--serif);
-  font-size:.8125rem;
-  line-height:1.55;
-  color:var(--ink);
-  background:var(--surface);
-  resize:vertical;
-  min-height:80px;
-}
-.desc-textarea:focus{outline:none;border-color:var(--blue)}
-.desc-editor-actions{
-  display:flex;
-  gap:8px;
-  justify-content:flex-end;
-  margin-top:8px;
-}
-.btn-outline,
-.btn-primary{
-  border-radius:11px;
-  padding:8px 12px;
-  font-size:.75rem;
-  font-weight:700;
-  cursor:pointer;
-  min-height:36px;
-}
-.btn-outline{
-  border:1px solid var(--line);
-  background:var(--surface);
-  color:var(--ink);
-}
-.btn-primary{
-  border:none;
-  background:var(--blue);
-  color:var(--surface);
-}
-
-/* ─── Dictée ─── */
-.mic-wrap{
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-  align-items:flex-start;
-}
-.mic-wrap .desc-textarea{flex:1;min-width:0}
-.mic-btn{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  width:44px;
-  height:44px;
-  min-width:44px;
-  border:1px solid var(--line-strong);
-  border-radius:var(--r-md);
-  background:var(--surface);
-  font-size:20px;
-  line-height:1;
-  cursor:pointer;
-}
-.mic-btn:hover{background:var(--blue-softer);border-color:var(--blue)}
-.mic-btn:disabled{opacity:.55;cursor:not-allowed;background:var(--surface);border-color:var(--line)}
-.mic-btn.recording{position:relative;background:var(--red-soft);border-color:var(--red);animation:mic-pulse 1.2s ease-in-out infinite}
-.mic-btn.recording::after{content:'';position:absolute;inset:-4px;border-radius:var(--r-md);border:2px solid var(--red);opacity:.5;animation:mic-ring 1.2s ease-out infinite}
-@keyframes mic-pulse{0%,100%{opacity:1}50%{opacity:.75}}
-@keyframes mic-ring{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.25);opacity:0}}
+/* Cartes IA / maison (2e) : posées par ui/texte.js (HO-108, styles/ui/texte.css
+   — .ui-texte*). Ici, seules les deux nuances propres à cette vue : la carte
+   maison porte une bordure et un titre bleu (immortelle, D-042 amendée — la
+   brique ne connaît pas cette distinction, la vue la porte visuellement). */
+.desc-carte-maison .ui-texte{border-color:var(--line-strong);border-width:1.5px}
+.desc-carte-maison .ui-texte-titre{color:var(--blue)}
 
 /* ─── Historique (2f) ─── */
 .pipe-grid{
@@ -592,7 +454,6 @@ button,input,select,textarea,a{min-height:0}
 .fork-reload,
 .comp-link,
 .comp-more,
-.desc-action,
 .tech-summary{
   min-height:44px;
 }
