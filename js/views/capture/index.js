@@ -1,24 +1,30 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // IArtcane — views/capture/index.js : création d'objet, écrans 4a/4b (HO-054).
 // Remplace le contenu de #view-capture à chaque mount ; capture.js est coquille.
+// Depuis HO-106 : galerie()/vignettes() (ui/) portent carte + grille, ex-
+// capture/photos.js (supprimé, absorbé). Photos pas encore en base (`File`
+// locaux, S.capFiles) : pas de services/photos.js ici, chaque item porte un
+// `id` local stable (assigné à l'ajout). Modifier remplace ✂/🗑/↻90° (D-073/
+// HO-095) : `sur.modifier` ouvre openLocalCrop (gardé, pas d'équivalent
+// routé, même raisonnement qu'artiste) ; rotaterPhoto disparaît faute de
+// bouton — signalé au rapport.
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, $$, esc, toast } from '../../core/dom.js';
 import { withBusy } from '../../core/feedback.js';
 import { S } from '../../core/state.js';
-import { plur } from '../../core/format.js';
+import { plur, isVideo } from '../../core/format.js';
 import { sb } from '../../core/data.js';
 import { openCamera } from '../../core/camera.js';
 import { loadViewCss } from '../../core/css.js';
 import { createOverlay } from '../../core/lightbox.js';
+import { galerie } from '../../ui/galerie.js';
 import { micButton } from '../mic.js';
 import { CATS_PROMPT } from '../../core/taxonomie.js';
-import { getCurrentIndex, setCurrentIndex, ensureCurrentIndex, suggestedViews, countDoneViews, setCover, reorderCapFiles } from './etat.js';
-import { renderCarte, renderGrille } from './photos.js';
+import { getCurrentIndex, setCurrentIndex, ensureCurrentIndex, suggestedViews, countDoneViews, setCover, reorderCapFiles, KINDS, kindLabel } from './etat.js';
 import { creerFiche, setRenderer } from './creation.js';
 
 await loadViewCss('capture');
 
-let dragState = null;
 setRenderer(render);
 
 export function mount() {
@@ -28,12 +34,9 @@ export function mount() {
   if (consumeShareFlag()) receiveSharedPhotos();
 }
 
-// ─── Rendu global de l'écran ───────────────────────────────────────────────
-
 function render() {
   const n = S.capFiles.length;
   ensureCurrentIndex();
-  const selected = n ? getCurrentIndex() : -1;
 
   const capture = $('#view-capture');
   capture.innerHTML = `
@@ -47,13 +50,33 @@ function render() {
       <div class="capture-body">
         ${renderCategorisation()}
         ${renderVuesConseillees()}
-        ${n === 0 ? renderZoneAjout() : renderEdition()}
+        ${n === 0 ? renderZoneAjout() : '<div class="capture-galerie" data-role="galerie"></div>'}
       </div>
 
       ${renderBarreBasse()}
     </div>`;
 
+  if (n > 0) {
+    galerie($('[data-role="galerie"]'), {
+      images: S.capFiles.map(mapImage), courante: getCurrentIndex(), mode: 'edition',
+      tags: KINDS, libelle: 'Photo', peutAjouter: false, peutReordonner: true,
+      actions: ['modifier', 'couverture', 'supprimer'],
+      sur: { choisir: onChoisir, reordonner: onReordonner, taguer: changerTag, modifier: onModifier, supprimer: retirerPhoto, couverture: basculerCouverture, commenter: () => {} },
+    });
+  }
+
   brancher();
+}
+
+function mapImage(item) {
+  const label = kindLabel(item.kind) || null;
+  const url = item.url || (item.file ? URL.createObjectURL(item.file) : null);
+  if (url && !item.url) item.url = url;
+  const estImage = item.file && /^image\//.test(item.file.type);
+  return {
+    id: item.id, url, thumbUrl: estImage ? url : null, tag: label,
+    couverture: !!item.cover, commentaire: item.comment, video: !!(item.file && isVideo(item.file)),
+  };
 }
 
 function renderCategorisation() {
@@ -103,9 +126,7 @@ function renderVuesConseillees() {
           <span class="capture-vues-count ok">${done} / ${total}</span>
           <span class="capture-vues-chev">▾</span>
         </summary>
-        <div class="capture-vues-list">
-          ${vues.map(v => renderVueLine(v, true)).join('')}
-        </div>
+        <div class="capture-vues-list">${vues.map(v => renderVueLine(v, true)).join('')}</div>
       </details>`;
   }
 
@@ -116,9 +137,7 @@ function renderVuesConseillees() {
         <span class="capture-vues-title">Vues conseillées</span>
         <span class="capture-vues-count">${done} / ${total}</span>
       </summary>
-      <div class="capture-vues-list">
-        ${vues.map(v => renderVueLine(v, false)).join('')}
-      </div>
+      <div class="capture-vues-list">${vues.map(v => renderVueLine(v, false)).join('')}</div>
     </details>`;
 }
 
@@ -143,12 +162,6 @@ function renderZoneAjout() {
     </div>`;
 }
 
-function renderEdition() {
-  const idx = getCurrentIndex();
-  const item = S.capFiles[idx];
-  return renderCarte(item, idx, S.capFiles.length) + renderGrille(S.capFiles, idx);
-}
-
 function renderBarreBasse() {
   const n = S.capFiles.length;
   const prefix = n ? `${n} photo${n > 1 ? 's' : ''} · ` : '';
@@ -161,8 +174,6 @@ function renderBarreBasse() {
       </div>
     </div>`;
 }
-
-// ─── Branchement des événements ─────────────────────────────────────────────
 
 async function initCapture() {
   const numEl = $('#cap-num');
@@ -179,75 +190,37 @@ async function initCapture() {
 }
 
 function brancher() {
-  // Retour
   $('[data-action="back"]')?.addEventListener('click', () => { location.hash = '#/'; });
 
-  // Zone d'ajout + boutons caméra/galerie
   const dropzone = $('#cap-dropzone');
   if (dropzone) {
     dropzone.addEventListener('click', () => $('#file-gallery').click());
     dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('over'); });
     dropzone.addEventListener('dragleave', () => dropzone.classList.remove('over'));
-    dropzone.addEventListener('drop', e => {
-      e.preventDefault(); dropzone.classList.remove('over'); addCapFiles(e.dataTransfer.files);
-    });
+    dropzone.addEventListener('drop', e => { e.preventDefault(); dropzone.classList.remove('over'); addCapFiles(e.dataTransfer.files); });
   }
   $('#cap-btn-cam')?.addEventListener('click', () => openCamera('capture', { addFiles: addCapFiles }));
   $('#file-camera')?.addEventListener('change', e => { addCapFiles(e.target.files); e.target.value = ''; });
   $('#file-gallery')?.addEventListener('change', e => { addCapFiles(e.target.files); e.target.value = ''; });
 
-  // Tags radio
-  $$('[data-action="tag"]').forEach(btn => {
-    btn.addEventListener('click', () => changerTag(btn.dataset.kind));
-  });
-
-  // Coins de la carte photo
-  $('[data-action="recadrer"]')?.addEventListener('click', () => {
-    const idx = getCurrentIndex();
-    const item = S.capFiles[idx];
-    if (item?.file) openLocalCrop(item.file, idx);
-  });
-  $('[data-action="retirer"]')?.addEventListener('click', retirerPhoto);
-  $('[data-action="couverture"]')?.addEventListener('click', basculerCouverture);
-  $('[data-action="rotater"]')?.addEventListener('click', rotaterPhoto);
-
-  // Commentaire + dictée
-  const ta = $('[data-action="commentaire"]');
+  // 'input', pas seulement 'change' (comme galerie() l'écoute pour objet/
+  // artiste, DB) : capture est local, rien à perdre si "Créer la fiche"
+  // arrive avant le blur du champ.
+  const ta = $('.ui-galerie-comment-area');
   if (ta) {
     ta.addEventListener('input', () => { const item = S.capFiles[getCurrentIndex()]; if (item) item.comment = ta.value; });
     const mic = micButton(ta);
     if (mic) ta.parentElement.append(mic);
   }
 
-  // Note maison (objets.commentaire — lue par R1 dès la 1re passe) + dictée
   const note = $('#cap-commentaire');
-  if (note) {
-    const mic = micButton(note);
-    if (mic) note.parentElement.append(mic);
-  }
+  if (note) { const mic = micButton(note); if (mic) note.parentElement.append(mic); }
 
-  // Grille
-  $$('[data-action="select"]').forEach(thumb => {
-    thumb.addEventListener('click', () => {
-      if (dragState?.moved) return;
-      setCurrentIndex(Number(thumb.dataset.idx));
-      render();
-    });
-    initDrag(thumb);
-  });
-
-  // Vues conseillées : bouton 📷 par ligne
   $$('[data-action="vue-cam"]').forEach(btn => {
     btn.addEventListener('click', () => openCamera('capture', { addFiles: files => addCapFiles(files) }));
   });
 
-  // Créer la fiche
   $('#cap-save')?.addEventListener('click', creerFiche);
-
-  // Désactivation du clic droit sur les images locales (optionnel, pas critique)
-  $$('.cap-viewer img').forEach(img => {
-    img.addEventListener('contextmenu', e => e.preventDefault());
-  });
 }
 
 function addCapFiles(fileList) {
@@ -256,25 +229,22 @@ function addCapFiles(fileList) {
   for (const f of fileList) {
     const file = f instanceof File ? f : f?.file;
     if (!file) continue;
-    const item = {
-      file,
-      comment: '',
+    S.capFiles.push({
+      id: crypto.randomUUID(), file, comment: '',
       kind: first && i === 0 && /^image\//.test(file.type) ? 'face' : '',
       cover: first && S.capFiles.length === 0 && i === 0,
       ordre: S.capFiles.length + i + 1,
-    };
-    S.capFiles.push(item);
+    });
     i++;
   }
   if (S.capFiles.length) setCurrentIndex(S.capFiles.length - i || 0);
   render();
 }
 
-// ─── Actions unitaires ──────────────────────────────────────────────────────
+function onChoisir(i) { setCurrentIndex(i); render(); }
 
 function changerTag(kind) {
-  const idx = getCurrentIndex();
-  const item = S.capFiles[idx];
+  const item = S.capFiles[getCurrentIndex()];
   if (!item || item.kind === kind) return;
   item.kind = kind;
   render();
@@ -290,36 +260,22 @@ function retirerPhoto() {
   render();
 }
 
-function basculerCouverture() {
-  const idx = getCurrentIndex();
-  setCover(idx);
-  render();
+function basculerCouverture() { setCover(getCurrentIndex()); render(); }
+
+function onModifier() {
+  const item = S.capFiles[getCurrentIndex()];
+  if (item?.file) openLocalCrop(item.file, getCurrentIndex());
 }
 
-async function rotaterPhoto() {
-  const idx = getCurrentIndex();
-  const item = S.capFiles[idx];
-  if (!item?.file || !/^image\//.test(item.file.type)) return;
-  try {
-    const bmp = await createImageBitmap(item.file);
-    const c = document.createElement('canvas');
-    c.width = bmp.height; c.height = bmp.width;
-    const ctx = c.getContext('2d');
-    ctx.translate(c.width / 2, c.height / 2);
-    ctx.rotate(Math.PI / 2);
-    ctx.drawImage(bmp, -bmp.width / 2, -bmp.height / 2);
-    const blob = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.92));
-    if (!blob) throw new Error('encodage impossible');
-    if (item.url) URL.revokeObjectURL(item.url);
-    const name = (item.file.name.replace(/\.[^.]+$/, '') || 'photo') + '.jpg';
-    const rotated = new File([blob], name, { type: 'image/jpeg', lastModified: Date.now() });
-    item.file = rotated;
-    item.url = null; // sera recréé au prochain render
-    render();
-    toast('✓ Photo pivotée');
-  } catch (err) {
-    toast(`Rotation échouée : ${err.message ?? err}`, true);
-  }
+// ordre[i] (permutation complète, ui/glisser.js) → (startIdx,finalIdx) pour
+// reorderCapFiles, figé dans etat.js : un seul item bouge par glissé, c'est
+// celui dont l'écart |ordre[i]-i| est maximal (les autres décalent d'un cran).
+function onReordonner(ordre) {
+  let startIdx = 0, ecart = -1;
+  ordre.forEach((rang, i) => { const e = Math.abs(rang - i); if (e > ecart) { ecart = e; startIdx = i; } });
+  const finalIdx = ordre[startIdx];
+  if (finalIdx !== startIdx) reorderCapFiles(startIdx, finalIdx);
+  render();
 }
 
 // ─── Recadrage local (même pattern que capture.js historique) ─────────────────
@@ -419,98 +375,7 @@ function openLocalCrop(file, index) {
   });
 }
 
-// ─── Drag & drop de la grille (appui long + glisser) ────────────────────────
-
-function initDrag(thumb) {
-  let timer = null;
-  let startX = 0, startY = 0;
-
-  const start = e => {
-    if (e.button !== 0) return;
-    startX = e.clientX; startY = e.clientY;
-    timer = setTimeout(() => activerDrag(thumb, e), 400);
-    thumb.setPointerCapture?.(e.pointerId);
-  };
-  const move = e => {
-    if (!timer && !dragState) return;
-    const dx = e.clientX - startX, dy = e.clientY - startY;
-    if (timer && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) { clearTimeout(timer); timer = null; }
-    if (dragState) onDragMove(e);
-  };
-  const end = e => {
-    if (timer) { clearTimeout(timer); timer = null; }
-    if (dragState) onDragEnd(e);
-  };
-
-  thumb.addEventListener('pointerdown', start);
-  thumb.addEventListener('pointermove', move);
-  thumb.addEventListener('pointerup', end);
-  thumb.addEventListener('pointercancel', end);
-}
-
-function activerDrag(thumb, e) {
-  const grid = thumb.closest('.cap-grid');
-  const thumbs = [...grid.querySelectorAll('.cap-thumb')];
-  const idx = Number(thumb.dataset.idx);
-  const rect = thumb.getBoundingClientRect();
-  const clone = thumb.cloneNode(true);
-  clone.classList.add('dragging');
-  clone.style.width = `${rect.width}px`;
-  clone.style.height = `${rect.height}px`;
-  clone.style.left = `${rect.left}px`;
-  clone.style.top = `${rect.top}px`;
-  document.body.append(clone);
-  thumb.classList.add('drag-ghost');
-
-  dragState = {
-    idx, startIdx: idx, clone, grid, thumbs,
-    offsetX: e.clientX - rect.left, offsetY: e.clientY - rect.top,
-    moved: false,
-  };
-}
-
-function onDragMove(e) {
-  if (!dragState) return;
-  const { clone, offsetX, offsetY } = dragState;
-  clone.style.left = `${e.clientX - offsetX}px`;
-  clone.style.top = `${e.clientY - offsetY}px`;
-  dragState.moved = true;
-
-  clone.style.visibility = 'hidden';
-  const target = document.elementFromPoint(e.clientX, e.clientY)?.closest('.cap-thumb');
-  clone.style.visibility = '';
-  if (!target || target === dragState.thumbs[dragState.idx]) return;
-  const newIdx = Number(target.dataset.idx);
-  if (isNaN(newIdx)) return;
-
-  const arr = [...dragState.thumbs];
-  const [moved] = arr.splice(dragState.idx, 1);
-  arr.splice(newIdx, 0, moved);
-  arr.forEach((t, i) => { t.dataset.idx = i; });
-  dragState.idx = newIdx;
-  dragState.thumbs = arr;
-  gridReorder(arr);
-}
-
-function gridReorder(arr) {
-  const grid = dragState.grid;
-  arr.forEach(t => grid.append(t));
-}
-
-function onDragEnd() {
-  if (!dragState) return;
-  const { startIdx, idx: finalIdx, clone, thumbs } = dragState;
-  clone.remove();
-  thumbs.forEach(t => t.classList.remove('drag-ghost'));
-  dragState = null;
-
-  if (finalIdx !== startIdx) reorderCapFiles(startIdx, finalIdx);
-  render();
-}
-
-// ─── Enregistrement / création de la fiche : voir ./creation.js (HO-079) ────
-
-// ─── Protection fermeture + Share Target ────────────────────────────────────
+// Enregistrement / création de la fiche : voir ./creation.js (HO-079)
 
 window.addEventListener('beforeunload', e => {
   if (S.capFiles.length) { e.preventDefault(); e.returnValue = ''; }
@@ -536,9 +401,6 @@ async function receiveSharedPhotos() {
       const blob = await res.blob();
       files.push(new File([blob], res.headers.get('x-name') || 'partage.jpg', { type: res.headers.get('x-type') || blob.type || 'image/jpeg' }));
     }
-    // Nettoyage du cache de partage : non bloquant, les photos sont déjà en
-    // main (dans `files`) à ce stade — un échec ici ne doit pas déclencher
-    // le toast d'erreur, juste laisser une trace pour le diagnostic (HO-079).
     try {
       await caches.delete('share-inbox');
     } catch (errDelete) {
@@ -553,4 +415,3 @@ async function receiveSharedPhotos() {
     toast(`Photos partagées non récupérées — ${err.message ?? err}. Réessaie le partage.`, true);
   }
 }
-

@@ -1,5 +1,15 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // IArtcane — views/artiste/images.js : écran Images de la fiche artiste (3b).
+// Assemblage seul depuis HO-106 : galerie()/vignettes() (ui/) portent le
+// rendu commun, services/photos.js (HO-105) porte les gestes. Zone/objet
+// source/tags libres/transcription restent propres à l'artiste (hors
+// contrat de la brique) et sont rendus à part, sous la galerie.
+//
+// Modifier remplace désormais ✂ recadrer + 🗑 supprimer + ↻ 90° pivoter
+// (D-073/HO-095, unification demandée par le brief HO-106) : `sur.modifier`
+// ouvre `openCutter`, gardé tel quel faute d'équivalent routé côté artiste
+// (contrairement à l'objet). Conséquence assumée : la rotation instantanée
+// (pivoterImage) n'a plus de bouton et disparaît — signalé au rapport.
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, esc } from '../../core/dom.js';
 import { S, canWrite } from '../../core/state.js';
@@ -8,6 +18,7 @@ import { sb, logEvent } from '../../core/data.js';
 import { toast, enregistrer, withBusy } from '../../core/feedback.js';
 import { createOverlay } from '../../core/lightbox.js';
 import { page } from '../../ui/page.js';
+import { galerie } from '../../ui/galerie.js';
 import { micButton } from '../mic.js';
 import { A, hooks } from './etat.js';
 import { insererArtistePhoto } from './uploads.js';
@@ -15,27 +26,16 @@ import { supprimer, taguer, remplacer, reordonner, cibleArtiste } from '../../se
 
 await loadViewCss('artistes');
 
-// ─── Constantes ─────────────────────────────────────────────────────────────
-
 const ZONES = [
-  { key: '', label: 'Choisir une zone…' },
   { key: 'portrait', label: 'Portrait de l\'artiste' },
   { key: 'signature', label: 'Signatures relevées' },
   { key: 'externe', label: 'Galerie externe' },
   { key: 'vrac', label: 'En vrac' },
 ];
-
-const ZONE_LABELS = {
-  portrait: 'portrait',
-  signature: 'signature',
-  externe: 'galerie externe',
-  vrac: 'en vrac',
-};
-
+const ZONE_LABELS = { portrait: 'portrait', signature: 'signature', externe: 'galerie externe', vrac: 'en vrac' };
 const TAG_SUGGESTIONS = ['sous la base', 'peinte', 'en creux', 'au revers', 'étiquette'];
 
 let currentIndex = 0;
-let dragState = null;
 let tagInputVisible = false;
 
 // Input file local pour l'ajout d'image depuis l'écran 3b.
@@ -65,7 +65,6 @@ export function rendre() {
   const body = $('#artiste-body');
   const images = imagesTriees();
   const n = images.length;
-
   if (!images[currentIndex]) currentIndex = 0;
   const sel = images[currentIndex];
   const sansZone = images.filter(p => !p.zone).length;
@@ -84,101 +83,69 @@ export function rendre() {
 
   corps.innerHTML = `
     <div class="art-images-body">
-      ${sel ? rendreCarte(sel, n, currentIndex) : rendreSansImage()}
-      ${n ? rendreGrille(images, sel) : ''}
+      <div class="art-images-galerie" data-role="galerie"></div>
+      ${sel ? rendreExtra(sel) : ''}
       ${sansZone ? `<div class="art-images-status">${sansZone} image${sansZone > 1 ? 's' : ''} attendent leur zone d'apparition</div>` : ''}
     </div>`;
 
-  brancher(corps);
+  galerie(corps.querySelector('[data-role="galerie"]'), {
+    images: images.map(mapImage), courante: currentIndex, mode: 'edition',
+    tags: ZONES, libelle: 'Image', peutAjouter: false, peutReordonner: true,
+    actions: ['modifier', 'supprimer'],
+    sur: { choisir: onChoisir, reordonner: onReordonner, taguer: onZone, modifier: onModifier, supprimer: onSupprimer, commenter: onCommenter },
+  });
+
+  brancherExtra(corps);
 }
 
 function onAjouter() { if (canWrite()) fileInput.click(); }
-
 function onEnregistrer() { toast('✓ Images enregistrées'); hooks.naviguer('fiche'); }
 
 function imagesTriees() {
   return A.images.slice().sort((a, b) => {
-    const oa = a.ordre ?? 0;
-    const ob = b.ordre ?? 0;
-    if (oa !== ob) return oa - ob;
-    return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+    const d = (a.ordre ?? 0) - (b.ordre ?? 0);
+    return d !== 0 ? d : new Date(a.created_at || 0) - new Date(b.created_at || 0);
   });
 }
+function imageCourante() { return imagesTriees()[currentIndex]; }
 
-function imageCourante() {
-  return imagesTriees()[currentIndex];
-}
-
-// ─── Carte d'édition ──────────────────────────────────────────────────────────
-
-function rendreSansImage() {
-  return `<div class="art-images-empty">Aucune image pour cet artiste.</div>`;
-}
-
-function rendreCarte(p, n, idx) {
-  const rot = p.rotation || 0;
+function mapImage(p) {
   const modifie = p.updated_at && p.created_at !== p.updated_at;
-  const dateImport = fmtShortDate(p.created_at);
-  const etatSansZone = !p.zone
-    ? '<span class="art-images-state warn">sans zone</span>'
-    : '';
-  const etatModif = modifie && p.zone
-    ? '<span class="art-images-state">modifiée</span>'
-    : '';
+  return {
+    id: p.id, url: p.url, thumbUrl: p.thumbUrl, tag: p.zone ? (ZONE_LABELS[p.zone] || p.zone) : null,
+    commentaire: p.commentaire, video: false, rotation: p.rotation || 0,
+    etat: modifie ? 'modifiée' : (p.created_at ? `importée le ${fmtShortDate(p.created_at)}` : ''),
+  };
+}
 
+// ─── Zone / objet source / tags libres / transcription (propre à l'artiste) ─
+
+function rendreExtra(p) {
   return `
-    <div class="art-images-card">
-      <div class="art-images-card-head">
-        <span class="art-images-card-title">Image ${idx + 1} sur ${n}</span>
-        <span class="art-images-card-date">· importée le ${esc(dateImport)}</span>
-        <span class="art-images-card-state">${etatSansZone}${etatModif}</span>
-      </div>
-      <div class="art-images-viewer">
-        ${p.url
-          ? `<img src="${esc(p.url)}" alt="" style="transform: rotate(${rot}deg)" loading="eager" decoding="async">`
-          : `<div class="art-images-viewer-placeholder">🖼</div>`}
-        <button class="art-images-corner art-images-corner-tl" data-action="recadrer" title="Recadrer">✂</button>
-        <button class="art-images-corner art-images-corner-tr" data-action="supprimer" title="Supprimer">🗑</button>
-        <button class="art-images-corner art-images-corner-br" data-action="rotater" title="Pivoter de 90°">↻ 90°</button>
-      </div>
-      <div class="art-images-zone">
-        <div class="art-images-label">Où elle apparaît</div>
-        <div class="art-images-zone-row">
-          <select class="art-images-zone-select ${!p.zone ? 'empty' : ''}" data-action="zone" aria-label="Zone d'apparition">
-            ${ZONES.map(z => `<option value="${esc(z.key)}" ${p.zone === z.key ? 'selected' : ''}>${esc(z.label)}</option>`).join('')}
-          </select>
-          ${p.zone === 'signature' ? rendreSelectObjet(p.objet_id) : ''}
-        </div>
-      </div>
+    <div class="art-images-extra">
+      ${p.zone === 'signature' ? rendreSelectObjet(p.objet_id) : ''}
       <div class="art-images-tags">
-        <div class="art-images-label">Ce que montre l'image</div>
-        <div class="art-images-tags-list" role="listbox" aria-label="Tags de l'image">
-          ${rendreTags(p)}
-        </div>
-      </div>
-      <div class="art-images-comment">
-        <div class="art-images-label">Commentaire</div>
-        <div class="art-images-comment-wrap">
-          <textarea class="art-images-comment-area" rows="2" placeholder="Décris ce qu'on voit…" data-action="commentaire">${esc(p.commentaire || '')}</textarea>
-        </div>
+        <div class="art-images-label">Tags libres</div>
+        <div class="art-images-tags-list" role="listbox" aria-label="Tags libres de l'image">${rendreTagsLibres(p)}</div>
       </div>
       ${p.zone === 'signature' ? rendreTranscription(p) : ''}
     </div>`;
 }
 
 function rendreSelectObjet(objetId) {
-  const objets = A.objets || [];
-  const options = objets.map(o =>
+  const options = (A.objets || []).map(o =>
     `<option value="${esc(o.id)}" ${String(o.id) === String(objetId || '') ? 'selected' : ''}>#${esc(o.id)} — ${esc(o.titre || 'objet')}</option>`
   ).join('');
   return `
-    <select class="art-images-objet-select" data-action="objet-source" aria-label="Objet source de la signature">
-      <option value="" ${!objetId ? 'selected' : ''}>aucun</option>
-      ${options}
-    </select>`;
+    <div class="art-images-objsrc">
+      <div class="art-images-label">Objet source de la signature</div>
+      <select class="art-images-objet-select" data-action="objet-source" aria-label="Objet source de la signature">
+        <option value="" ${!objetId ? 'selected' : ''}>aucun</option>${options}
+      </select>
+    </div>`;
 }
 
-function rendreTags(p) {
+function rendreTagsLibres(p) {
   const tags = Array.isArray(p.tags) ? p.tags : [];
   const all = [...new Set([...TAG_SUGGESTIONS, ...tags])];
   const chips = all.map(t => {
@@ -186,8 +153,8 @@ function rendreTags(p) {
     return `<button type="button" class="art-images-tag ${active ? 'active' : ''}" data-action="tag" data-tag="${esc(t)}" role="option" aria-selected="${active}">${esc(t)}</button>`;
   }).join('');
   const add = tagInputVisible
-    ? `<input type="text" class="art-images-tag-input" data-action="tag-input" placeholder="tag…" maxlength="30">`
-    : `<button type="button" class="art-images-tag art-images-tag-add" data-action="add-tag">+ tag</button>`;
+    ? '<input type="text" class="art-images-tag-input" data-action="tag-input" placeholder="tag…" maxlength="30">'
+    : '<button type="button" class="art-images-tag art-images-tag-add" data-action="add-tag">+ tag</button>';
   return `${chips}${add}`;
 }
 
@@ -201,116 +168,40 @@ function rendreTranscription(p) {
     </div>`;
 }
 
-// ─── Grille ───────────────────────────────────────────────────────────────────
-
-function rendreGrille(images, sel) {
-  return `
-    <div class="art-images-grid-section">
-      <div class="art-images-grid-head">
-        <span class="art-images-grid-title">Les ${images.length} image${images.length > 1 ? 's' : ''}</span>
-        <span class="art-images-grid-help">touche pour éditer · maintiens et glisse pour l'ordre</span>
-      </div>
-      <div class="art-images-grid" role="list">
-        ${images.map((p, i) => rendreThumb(p, i, sel?.id === p.id)).join('')}
-      </div>
-    </div>`;
-}
-
-function rendreThumb(p, i, selected) {
-  const sansZone = !p.zone;
-  const label = sansZone ? 'sans zone' : (ZONE_LABELS[p.zone] || p.zone);
-  const sigObj = p.zone === 'signature' && p.objet_id ? ` #${esc(p.objet_id)}` : '';
-  return `
-    <div class="art-images-thumb ${selected ? 'selected' : ''} ${sansZone ? 'untagged' : ''}" data-action="select" data-idx="${i}" role="listitem" tabindex="0" aria-label="Image ${i + 1}">
-      ${p.thumbUrl
-        ? `<img src="${esc(p.thumbUrl)}" alt="" loading="lazy" decoding="async">`
-        : `<span class="art-images-thumb-placeholder">🖼</span>`}
-      <span class="art-images-thumb-num">${i + 1}</span>
-      ${sansZone ? '<span class="art-images-thumb-warn" aria-label="Zone à choisir">!</span>' : ''}
-      <span class="art-images-thumb-label ${sansZone ? 'warn' : ''}">${esc(label)}${sigObj}</span>
-    </div>`;
-}
-
-// ─── Branchement des événements ───────────────────────────────────────────────
-
-function brancher(el) {
-  // Coins de la carte
-  el.querySelector('[data-action="recadrer"]')?.addEventListener('click', () => recadrer());
-  el.querySelector('[data-action="supprimer"]')?.addEventListener('click', () => supprimerImage());
-  el.querySelector('[data-action="rotater"]')?.addEventListener('click', () => pivoterImage());
-
-  // Zone + objet source
-  el.querySelector('[data-action="zone"]')?.addEventListener('change', e => changerZone(e.target.value));
+function brancherExtra(el) {
   el.querySelector('[data-action="objet-source"]')?.addEventListener('change', e => changerObjetSource(e.target.value || null));
 
-  // Tags
-  el.querySelectorAll('[data-action="tag"]').forEach(btn => {
-    btn.addEventListener('click', () => basculerTag(btn.dataset.tag));
-  });
-  const addBtn = el.querySelector('[data-action="add-tag"]');
-  if (addBtn) addBtn.addEventListener('click', () => { tagInputVisible = true; hooks.rendre(); });
+  el.querySelectorAll('[data-action="tag"]').forEach(btn => btn.addEventListener('click', () => basculerTag(btn.dataset.tag)));
+  el.querySelector('[data-action="add-tag"]')?.addEventListener('click', () => { tagInputVisible = true; hooks.rendre(); });
   const tagInput = el.querySelector('[data-action="tag-input"]');
   if (tagInput) {
     tagInput.focus();
     tagInput.addEventListener('keydown', e => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        const v = tagInput.value.trim();
-        if (v) ajouterTag(v);
-        tagInputVisible = false;
-      } else if (e.key === 'Escape') {
-        tagInputVisible = false;
-        hooks.rendre();
-      }
+      if (e.key === 'Enter') { e.preventDefault(); const v = tagInput.value.trim(); if (v) ajouterTag(v); tagInputVisible = false; }
+      else if (e.key === 'Escape') { tagInputVisible = false; hooks.rendre(); }
     });
-    tagInput.addEventListener('blur', () => {
-      const v = tagInput.value.trim();
-      if (v) ajouterTag(v);
-      tagInputVisible = false;
-      hooks.rendre();
-    });
+    tagInput.addEventListener('blur', () => { const v = tagInput.value.trim(); if (v) ajouterTag(v); tagInputVisible = false; hooks.rendre(); });
   }
 
-  // Commentaire + dictée
-  const ta = el.querySelector('[data-action="commentaire"]');
-  if (ta) {
-    const mic = micButton(ta);
-    if (mic) ta.parentElement.append(mic);
-    ta.addEventListener('change', () => sauverCommentaire(ta.value));
-  }
-
-  // Transcription
   const tt = el.querySelector('[data-action="transcription"]');
-  if (tt) {
-    const mic = micButton(tt);
-    if (mic) tt.parentElement.append(mic);
-    tt.addEventListener('change', () => sauverTranscription(tt.value));
-  }
+  if (tt) { const mic = micButton(tt); if (mic) tt.parentElement.append(mic); tt.addEventListener('change', () => sauverTranscription(tt.value)); }
 
-  // Sélection / drag & drop grille
-  el.querySelectorAll('[data-action="select"]').forEach(thumb => {
-    thumb.addEventListener('click', () => {
-      if (dragState?.moved) return;
-      currentIndex = Number(thumb.dataset.idx);
-      hooks.rendre();
-    });
-    initDrag(thumb);
-  });
+  const ta = el.querySelector('.ui-galerie-comment-area');
+  if (ta) { const mic = micButton(ta); if (mic) ta.parentElement.append(mic); }
 }
 
-// ─── Actions unitaires ──────────────────────────────────────────────────────
+// ─── Actions de la galerie ──────────────────────────────────────────────────
 
-async function recadrer() {
+function onChoisir(i) { currentIndex = i; hooks.rendre(); }
+
+function onModifier() {
   const p = imageCourante();
   if (!p) return;
-  if (p.rotation && p.rotation !== 0) {
-    toast('Remets l\'image droite (0°) avant de recadrer', true);
-    return;
-  }
+  if (p.rotation && p.rotation !== 0) { toast('Remets l\'image droite (0°) avant de recadrer', true); return; }
   openCutter(p);
 }
 
-async function supprimerImage() {
+async function onSupprimer() {
   const p = imageCourante();
   if (!p) return;
   if (!confirm('Supprimer cette image ? (fichier + référence, définitif)')) return;
@@ -321,36 +212,22 @@ async function supprimerImage() {
   await hooks.recharger(A.nom);
 }
 
-async function pivoterImage() {
+async function onZone(zone) {
   const p = imageCourante();
-  if (!p) return;
-  const rotation = ((p.rotation || 0) + 90) % 360;
-  if (!await enregistrer(() => sb.from('artistes_photos').update({ rotation }).eq('owner_id', S.tenantId).eq('id', p.id), 'Rotation')) return;
-  p.rotation = rotation;
-  logEvent('artiste_image_rotation', { image: p.storage_path, deg: rotation });
-  hooks.rendre();
-}
-
-async function changerZone(zone) {
-  const p = imageCourante();
-  if (!p) return;
-  const valeur = zone || null;
-  if (p.zone === valeur) return;
-  if (!await taguer(cibleArtiste(A.nom), p, valeur)) { toast("Zone de l'image non enregistrée", true); return; }
-  p.zone = valeur;
-  if (valeur !== 'signature') p.objet_id = null;
-  logEvent('artiste_image_zone', { zone: valeur, objet_id: p.objet_id });
+  if (!p || p.zone === zone) return;
+  if (!await taguer(cibleArtiste(A.nom), p, zone)) { toast("Zone de l'image non enregistrée", true); return; }
+  p.zone = zone;
+  if (zone !== 'signature') p.objet_id = null;
+  logEvent('artiste_image_zone', { zone, objet_id: p.objet_id });
   hooks.rendre();
 }
 
 async function changerObjetSource(objetId) {
   const p = imageCourante();
-  if (!p || p.zone !== 'signature') return;
-  const valeur = objetId || null;
-  if (p.objet_id === valeur) return;
-  if (!await enregistrer(() => sb.from('artistes_photos').update({ objet_id: valeur }).eq('owner_id', S.tenantId).eq('id', p.id), 'Objet source')) return;
-  p.objet_id = valeur;
-  logEvent('artiste_image_zone', { zone: p.zone, objet_id: valeur });
+  if (!p || p.zone !== 'signature' || p.objet_id === objetId) return;
+  if (!await enregistrer(() => sb.from('artistes_photos').update({ objet_id: objetId }).eq('owner_id', S.tenantId).eq('id', p.id), 'Objet source')) return;
+  p.objet_id = objetId;
+  logEvent('artiste_image_zone', { zone: p.zone, objet_id: objetId });
   hooks.rendre();
 }
 
@@ -372,16 +249,15 @@ async function ajouterTag(tag) {
   const normalise = tag.toLowerCase().trim();
   if (!normalise) return;
   const tags = Array.isArray(p.tags) ? [...p.tags] : [];
-  if (tags.includes(normalise)) { tagInputVisible = false; hooks.rendre(); return; }
+  if (tags.includes(normalise)) { hooks.rendre(); return; }
   tags.push(normalise);
   if (!await enregistrer(() => sb.from('artistes_photos').update({ tags }).eq('owner_id', S.tenantId).eq('id', p.id), 'Tag ajouté')) return;
   p.tags = tags;
   logEvent('artiste_image_tag', { tag: normalise });
-  tagInputVisible = false;
   hooks.rendre();
 }
 
-async function sauverCommentaire(texte) {
+async function onCommenter(texte) {
   const p = imageCourante();
   if (!p) return;
   const commentaire = texte.trim() || null;
@@ -399,130 +275,26 @@ async function sauverTranscription(texte) {
   logEvent('artiste_image_transcription', { image: p.storage_path });
 }
 
-// ─── Drag & drop réordonnancement ───────────────────────────────────────────
-
-function initDrag(thumb) {
-  let timer = null;
-  let startX = 0, startY = 0;
-
-  const start = e => {
-    if (e.button !== 0) return;
-    startX = e.clientX; startY = e.clientY;
-    timer = setTimeout(() => activerDrag(thumb, e), 400);
-    thumb.setPointerCapture?.(e.pointerId);
-  };
-
-  const move = e => {
-    if (!timer && !dragState) return;
-    const dx = e.clientX - startX, dy = e.clientY - startY;
-    if (timer && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
-      clearTimeout(timer); timer = null;
-    }
-    if (dragState) onDragMove(e);
-  };
-
-  const end = e => {
-    if (timer) { clearTimeout(timer); timer = null; }
-    if (dragState) onDragEnd(e);
-  };
-
-  thumb.addEventListener('pointerdown', start);
-  thumb.addEventListener('pointermove', move);
-  thumb.addEventListener('pointerup', end);
-  thumb.addEventListener('pointercancel', end);
-}
-
-function activerDrag(thumb, e) {
-  const grid = thumb.closest('.art-images-grid');
-  const thumbs = [...grid.querySelectorAll('.art-images-thumb')];
-  const idx = Number(thumb.dataset.idx);
-  const rect = thumb.getBoundingClientRect();
-  const clone = thumb.cloneNode(true);
-  clone.classList.add('dragging');
-  clone.style.width = `${rect.width}px`;
-  clone.style.height = `${rect.height}px`;
-  clone.style.left = `${rect.left}px`;
-  clone.style.top = `${rect.top}px`;
-  document.body.append(clone);
-  thumb.classList.add('drag-ghost');
-
-  dragState = {
-    idx, clone, grid, thumbs,
-    offsetX: e.clientX - rect.left, offsetY: e.clientY - rect.top,
-    moved: false,
-  };
-}
-
-function onDragMove(e) {
-  if (!dragState) return;
-  const { clone, offsetX, offsetY } = dragState;
-  clone.style.left = `${e.clientX - offsetX}px`;
-  clone.style.top = `${e.clientY - offsetY}px`;
-  dragState.moved = true;
-
-  clone.style.visibility = 'hidden';
-  const target = document.elementFromPoint(e.clientX, e.clientY)?.closest('.art-images-thumb');
-  clone.style.visibility = '';
-  if (!target || target === dragState.thumbs[dragState.idx]) return;
-  const newIdx = Number(target.dataset.idx);
-  if (isNaN(newIdx)) return;
-
-  const arr = [...dragState.thumbs];
-  const [moved] = arr.splice(dragState.idx, 1);
-  arr.splice(newIdx, 0, moved);
-  arr.forEach((t, i) => {
-    t.dataset.idx = i;
-    const num = t.querySelector('.art-images-thumb-num');
-    if (num) num.textContent = i + 1;
-  });
-  dragState.idx = newIdx;
-  dragState.thumbs = arr;
-  gridReorder(arr);
-}
-
-function gridReorder(arr) {
-  const grid = dragState.grid;
-  arr.forEach(t => grid.append(t));
-}
-
-async function onDragEnd() {
-  if (!dragState) return;
-  const { idx, clone, thumbs } = dragState;
-  clone.remove();
-  thumbs.forEach(t => t.classList.remove('drag-ghost'));
-  dragState = null;
-
+async function onReordonner(ordre) {
   const images = imagesTriees();
   const movedId = images[currentIndex]?.id;
-  const nouvelOrdre = thumbs.map(t => Number(t.dataset.idx));
-  await persisterOrdre(images, nouvelOrdre);
-
-  const nouvellesImages = imagesTriees();
-  const nouvelIdx = nouvellesImages.findIndex(p => p.id === movedId);
+  const { updates, echecs, ok } = await reordonner(cibleArtiste(A.nom), images, ordre);
+  logEvent('artiste_images_ordre', { n: updates.length, echecs: echecs.length });
+  if (!ok) {
+    console.warn('onReordonner:', echecs);
+    toast(`Ordre des images non enregistré — ${echecs.length}/${updates.length} échec${echecs.length > 1 ? 's' : ''} : ${echecs[0].message}`, true,
+      { action: { label: 'Réessayer', onClick: () => onReordonner(ordre) } });
+    if (echecs.length === updates.length) return; // rien écrit en mémoire, sinon le rendu suivant "confirme" un ordre que la base n'a pas
+  } else {
+    toast('✓ Ordre des images enregistré');
+  }
+  A.images.forEach(p => { const u = updates.find(u => u.id === p.id); if (u) p.ordre = u.ordre; });
+  const nouvelIdx = imagesTriees().findIndex(p => p.id === movedId);
   if (nouvelIdx >= 0) currentIndex = nouvelIdx;
   hooks.rendre();
 }
 
-async function persisterOrdre(images, nouvelOrdre) {
-  const { updates, echecs, ok } = await reordonner(cibleArtiste(A.nom), images, nouvelOrdre);
-  logEvent('artiste_images_ordre', { n: updates.length, echecs: echecs.length });
-  if (!ok) {
-    console.warn('persisterOrdre:', echecs);
-    toast(`Ordre des images non enregistré — ${echecs.length}/${updates.length} échec${echecs.length > 1 ? 's' : ''} : ${echecs[0].message}`, true,
-      { action: { label: 'Réessayer', onClick: () => persisterOrdre(images, nouvelOrdre) } });
-    // Tout a échoué → on n'écrit RIEN en mémoire, sinon l'écran affiche un ordre
-    // que la base n'a pas et le rendu suivant le « confirme » silencieusement.
-    if (echecs.length === updates.length) return;
-  } else {
-    toast('✓ Ordre des images enregistré');
-  }
-  A.images.forEach(p => {
-    const u = updates.find(u => u.id === p.id);
-    if (u) p.ordre = u.ordre;
-  });
-}
-
-// ─── Lightbox / recadrage ───────────────────────────────────────────────────
+// ─── Recadrage (overlay, gardé faute d'équivalent routé — cf. tête de fichier) ─
 
 function openCutter(p) {
   const { el: lb, close } = createOverlay({
@@ -598,13 +370,8 @@ function openCutter(p) {
         c.getContext('2d').drawImage(bmp, sx, sy, sw, sh, 0, 0, sw, sh);
         const out = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.92));
         if (!out) throw new Error('encodage impossible');
-
-        // HO-105 : recadrage porté par services/photos.js::remplacer() —
-        // écrase désormais storage_path en place (D-073/D-075), au lieu du
-        // chemin neuf + suppression de l'ancien pratiqués avant migration.
         const r = await remplacer(cibleArtiste(A.nom), p, out);
         if (!r.ok) throw new Error(r.error);
-
         close();
         toast('✓ Image recadrée — résolution d’origine conservée');
         logEvent('artiste_image_recadree', { image: p.storage_path });
@@ -616,8 +383,6 @@ function openCutter(p) {
     }
   });
 }
-
-// ─── Formatage ──────────────────────────────────────────────────────────────
 
 function fmtShortDate(iso) {
   const d = new Date(iso);

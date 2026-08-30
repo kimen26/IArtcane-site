@@ -1,0 +1,217 @@
+/* ═══ ui/galerie.js : grande zone lecture ET édition d'une image (HO-106) ═══
+   Remplace les anciennes cartes/visionneuses/coins de carte de chaque
+   territoire (le duplicata mesuré docs/architecture-briques.md §1.2/§2.2) —
+   un seul gabarit consommé par objet, artiste et capture. Zéro couleur
+   littérale : tout vient de styles/tokens.css (socle HO-103). La bande de
+   vignettes en dessous est stylée par styles/ui/vignettes.css (galerie() la
+   compose, jamais la vue). */
+
+.ui-galerie{
+  display:flex;
+  flex-direction:column;
+  gap:11px;
+}
+
+.ui-galerie-vide{
+  padding:24px;
+  text-align:center;
+  color:var(--ink-3);
+  font-size:.8125rem;
+}
+
+/* ─── Carte ─── */
+.ui-galerie-carte{
+  background:var(--surface);
+  border:1.5px solid var(--line-strong);
+  border-radius:14px;
+  overflow:hidden;
+  box-shadow:0 2px 8px var(--ombre-legere);
+  display:flex;
+  flex-direction:column;
+}
+.ui-galerie-head{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:9px 12px;
+  border-bottom:1px solid var(--line-soft);
+}
+.ui-galerie-titre{
+  font-family:var(--serif);
+  font-size:.875rem;
+  white-space:nowrap;
+}
+.ui-galerie-tag-label{
+  font-size:.65625rem;
+  color:var(--ink-3);
+  white-space:nowrap;
+}
+.ui-galerie-etat{
+  margin-left:auto;
+  font-size:.625rem;
+  color:var(--ink-3);
+  white-space:nowrap;
+}
+
+/* ─── Visionneuse ─── */
+.ui-galerie-viewer{
+  position:relative;
+  background:var(--ink);
+  min-height:206px;
+  display:grid;
+  place-items:center;
+}
+.ui-galerie-viewer img,
+.ui-galerie-viewer video{
+  display:block;
+  width:100%;
+  height:206px;
+  object-fit:contain;
+}
+/* Empêche le menu contextuel natif — équivalent de components.css:266-273
+   (posait la règle sur les anciennes visionneuses objet/capture), reposé ici
+   sur le gabarit unique. Signalé HO-106 : les anciens sélecteurs de
+   components.css deviennent morts, non retirés ici (transverse gelé). */
+.ui-galerie-viewer img{
+  -webkit-touch-callout:none;
+  -webkit-user-drag:none;
+  user-select:none;
+}
+.ui-galerie-placeholder{
+  font-size:2rem;
+  color:var(--voile-clair);
+}
+
+/* ─── Actions (coins) ─── */
+.ui-galerie-action{
+  position:absolute;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:none;
+  cursor:pointer;
+  white-space:nowrap;
+  min-width:30px;
+  min-height:30px;
+  padding:0;
+  font-size:.8125rem;
+  font-weight:700;
+  color:var(--ink);
+}
+.ui-galerie-action--tr{
+  top:10px;
+  right:11px;
+  width:30px;
+  height:30px;
+  border-radius:50%;
+  background:var(--surface-coin-clair);
+}
+.ui-galerie-action--tl,
+.ui-galerie-action--bl{
+  left:11px;
+  border-radius:999px;
+  padding:5px 10px;
+  gap:4px;
+  font-size:.6875rem;
+}
+.ui-galerie-action--tl{
+  top:10px;
+  background:var(--surface-coin-clair);
+}
+.ui-galerie-action--bl{
+  bottom:10px;
+  background:var(--ink);
+  color:var(--surface);
+}
+.ui-galerie-action--bl.ui-galerie-action--active{background:var(--blue)}
+
+/* ─── Tags radio ─── */
+.ui-galerie-tags,
+.ui-galerie-comment{
+  padding:11px 12px 0;
+}
+.ui-galerie-tags-label,
+.ui-galerie-comment-label{
+  font-size:.59375rem;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:var(--ink-3);
+  margin-bottom:6px;
+}
+.ui-galerie-tags-list{
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+}
+.ui-galerie-tag-btn{
+  border:none;
+  border-radius:999px;
+  padding:4px 10px;
+  font-size:.6875rem;
+  font-weight:500;
+  cursor:pointer;
+  background:var(--surface-2);
+  color:var(--ink-2);
+  min-height:28px;
+}
+.ui-galerie-tag-btn--active{
+  background:var(--blue);
+  color:var(--surface);
+  font-weight:600;
+}
+.ui-galerie-tag-btn:focus-visible{
+  outline:2px solid var(--blue);
+  outline-offset:2px;
+}
+
+/* ─── Commentaire ─── */
+.ui-galerie-comment{padding-bottom:14px}
+.ui-galerie-comment-wrap{
+  display:flex;
+  align-items:flex-start;
+  gap:9px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:9px 10px;
+}
+.ui-galerie-comment-area{
+  flex:1;
+  border:none;
+  background:none;
+  resize:none;
+  font-family:inherit;
+  font-size:.78125rem;
+  line-height:1.5;
+  color:var(--ink-2);
+  min-height:44px;
+}
+.ui-galerie-comment-area:focus{outline:none}
+.ui-galerie-comment-wrap:has(.ui-galerie-comment-area:focus){border-color:var(--blue)}
+.ui-galerie-comment-wrap .mic-btn{
+  flex:0 0 auto;
+  width:30px;
+  height:30px;
+  border-radius:50%;
+  border:none;
+  background:var(--surface-2);
+  font-size:.8125rem;
+  cursor:pointer;
+  display:grid;
+  place-items:center;
+}
+.ui-galerie-comment-wrap .mic-btn.recording{background:var(--red); color:var(--surface)}
+
+/* ─── Bande de vignettes composée ─── */
+.ui-galerie-vign{margin-top:2px}
+
+/* ─── Responsive zoom / petits écrans (P30 Pro, gabarits historiques HO-047) ─── */
+@media (max-width:339px){
+  .ui-galerie-viewer{min-height:180px}
+  .ui-galerie-viewer img,
+  .ui-galerie-viewer video{height:180px}
+}
+@media (max-width:320px){
+  .ui-galerie-viewer{min-height:160px}
+  .ui-galerie-viewer img,
+  .ui-galerie-viewer video{height:160px}
+}
