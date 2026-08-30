@@ -58,8 +58,8 @@ async function loadObjet(id) {
     chargerNLens(id),
   ]);
   const compPaths = (comps ?? []).map(c => c.image_path).filter(Boolean);
-  const urlByPath = await signPaths([...(photos ?? []).flatMap(p => [isVideo(p) ? p.storage_path : p.moyen_path, p.thumb_path].filter(Boolean)), ...compPaths]); // grande zone : `moyen` (2048 px) — la brute (2 Mo) reste pour l'atelier et les vidéos (quota egress, 2026-08-31)
-  O.photos = (photos ?? []).map(p => { const g = urlByPath[isVideo(p) ? p.storage_path : p.moyen_path]; return { ...p, url: g ?? urlByPath[p.thumb_path], thumbUrl: urlByPath[p.thumb_path] ?? g }; });
+  const grand = p => (isVideo(p) ? p.storage_path : (p.moyen_path ?? p.storage_path)), urlByPath = await signPaths([...(photos ?? []).flatMap(p => [grand(p), p.thumb_path].filter(Boolean)), ...compPaths]); // grande zone 2048 : ex-`moyen` s'il existe, sinon la maîtresse (D-081)
+  O.photos = (photos ?? []).map(p => ({ ...p, url: urlByPath[grand(p)] ?? urlByPath[p.thumb_path], thumbUrl: urlByPath[p.thumb_path] ?? urlByPath[grand(p)] }));
   O.comps = (comps ?? []).map(c => ({ ...c, imageSrc: c.image_path ? urlByPath[c.image_path] : null }));
   O.fiche = (fiches ?? [])[0] ?? null;
   O.events = events ?? [];

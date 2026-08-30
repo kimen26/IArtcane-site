@@ -207,12 +207,17 @@ export async function loadPhotoMap() {
 }
 
 // ─── Upload de photos (partagé capture + fiche objet + caméra) ───────────────
-// Échelle d'images à l'upload (arbitrage Yann 2026-08-28, lane F bis, HO-089) :
-// 3 variantes JPEG bornées, générées depuis le fichier d'origine (jamais en
-// cascade d'une variante sur l'autre — deux réencodages successifs dégradent).
-const MINI_PX = 160;   // vignettes de rayon, mini-cartes, objets similaires
-const THUMB_PX = 480;  // collection, fiche produit, galerie, navigation photo
-const MOYEN_PX = 2048; // zoom plein écran, envoi LLM
+// Échelle d'images à l'upload — D-081 (arbitrage Yann 2026-08-31) : l'image
+// MAÎTRESSE est réencodée à 2048 px q0.85 dès l'envoi ; le fichier d'origine du
+// téléphone (2 Mo et plus) ne touche jamais le bucket — « on est amateur,
+// n'abusons pas à faire plus que les gros ». L'ex-variante `moyen` (2048)
+// devient redondante et n'est plus produite (colonne conservée, NULL).
+// mini/thumb se génèrent depuis l'ORIGINE, jamais en cascade (deux
+// réencodages successifs dégradent — HO-089).
+const MINI_PX = 160;           // vignettes de rayon, mini-cartes, objets similaires
+const THUMB_PX = 480;          // collection, fiche produit, galerie, navigation photo
+export const MAITRE_PX = 2048; // image maîtresse : grande zone, atelier, envoi LLM
+export const MAITRE_Q = 0.85;
 
 // Génère une variante JPEG bornée à `maxPx` sur son plus grand côté.
 // Ne grossit jamais une image plus petite que la borne (s = min(1, …)).
@@ -235,28 +240,30 @@ export async function makeThumbBlob(blob) {
   return makeVariantBlob(blob, THUMB_PX, 0.8);
 }
 
-// Envoie UN fichier dans le bucket + ses 3 variantes (mini/thumb/moyen).
-// Primitive partagée par les photos d'objet et les photos de fiche artiste
-// (deux séquences identiques auparavant — factorisées 2026-08-25).
+// Envoie UN fichier dans le bucket (image maîtresse 2048, D-081) + ses
+// variantes mini/thumb. Primitive partagée par les photos d'objet et les photos
+// de fiche artiste (deux séquences identiques auparavant — factorisées 2026-08-25).
 // @param dossier  préfixe de chemin dans le bucket (sans slash final)
-// @returns { path, thumbPath, miniPath, moyenPath, video } ou null si l'envoi
-//          du fichier d'origine a échoué
+// @returns { path, thumbPath, miniPath, moyenPath: null, video } ou null si
+//          l'envoi de la maîtresse a échoué (moyenPath gardé pour les appelants)
 export async function uploadImageWithThumb(dossier, file) {
-  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+  const video = /^video\//.test(file.type);
   const base = `${dossier}/${crypto.randomUUID()}`;
+  // Image : maîtresse 2048 q0.85. Repli sur l'origine si le décodage échoue
+  // (format exotique) — perdre du poids vaut mieux que perdre la photo.
+  const maitre = video ? null : await makeVariantBlob(file, MAITRE_PX, MAITRE_Q);
+  const ext = maitre ? 'jpg' : ((file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg');
   const path = `${base}.${ext}`;
-  const { error } = await sb.storage.from('photos').upload(path, file, { contentType: file.type || undefined });
+  const { error } = await sb.storage.from('photos').upload(path, maitre ?? file, { contentType: maitre ? 'image/jpeg' : (file.type || undefined) });
   if (error) { console.warn('uploadImageWithThumb:', error); toast(`Photo « ${file.name} » non envoyée — ${humaniser(error)}.`, 'action'); return null; }
 
-  const video = /^video\//.test(file.type);
-  let thumbPath = null, miniPath = null, moyenPath = null;
+  let thumbPath = null, miniPath = null;
   if (!video) {
     // Chaque variante se génère depuis `file` d'origine (jamais en cascade) ;
     // échec d'une variante = non bloquant, le chemin reste NULL.
-    const [mb, tb, ob] = await Promise.all([
+    const [mb, tb] = await Promise.all([
       makeVariantBlob(file, MINI_PX, 0.75),
       makeVariantBlob(file, THUMB_PX, 0.8),
-      makeVariantBlob(file, MOYEN_PX, 0.85),
     ]);
     if (mb) {
       const p = `${base}.mini.jpg`;
@@ -268,13 +275,8 @@ export async function uploadImageWithThumb(dossier, file) {
       const { error: e } = await sb.storage.from('photos').upload(p, tb, { contentType: 'image/jpeg' });
       if (!e) thumbPath = p;
     }
-    if (ob) {
-      const p = `${base}.moyen.jpg`;
-      const { error: e } = await sb.storage.from('photos').upload(p, ob, { contentType: 'image/jpeg' });
-      if (!e) moyenPath = p;
-    }
   }
-  return { path, thumbPath, miniPath, moyenPath, video };
+  return { path, thumbPath, miniPath, moyenPath: null, video };
 }
 
 // Accepte un tableau de File purs (rétro-compat caméra / fiche objet)

@@ -132,30 +132,33 @@ export async function supprimer(cible, photo) {
 }
 
 // ─── remplacer() — édition destructive (D-073/D-075) ────────────────────────
-// Écrase la brute (storage_path, upsert), régénère les dérivées EXISTANTES
-// pour la cible depuis `blob` — jamais en cascade d'une variante sur l'autre.
-// `blob` est déjà le résultat du crop/rotation : c'est la vue qui dessine sur
-// le canvas et encode (qualité laissée à son choix — 0.95 objet, 0.92 artiste
-// aujourd'hui) ; le service ne sait rien de la géométrie, seulement du stockage.
-// Bornes HO-089, portées telles quelles (edition-photo.js avant migration).
-const MINI_PX = 160, THUMB_PX = 480, MOYEN_PX = 2048;
+// Écrase la maîtresse (storage_path, upsert — rebornée à 2048 q0.85, D-081),
+// régénère les dérivées EXISTANTES pour la cible depuis `blob` — jamais en
+// cascade d'une variante sur l'autre. `blob` est déjà le résultat du
+// crop/rotation : c'est la vue qui dessine sur le canvas et encode ; le
+// service ne sait rien de la géométrie, seulement du stockage.
+// Bornes HO-089 ; maîtresse D-081 (mêmes valeurs qu'à l'upload, core/data.js).
+const MINI_PX = 160, THUMB_PX = 480, MAITRE_PX = 2048, MAITRE_Q = 0.85;
 
 // @returns {Promise<{ok:boolean, error?:string, paths?:object}>}
 export async function remplacer(cible, photo, blob) {
   const d = await deps();
+  const maitre = (await d.makeVariantBlob(blob, MAITRE_PX, MAITRE_Q)) ?? blob;
   const { error: e1 } = await d.sb.storage.from('photos')
-    .upload(photo.storage_path, blob, { contentType: 'image/jpeg', upsert: true });
+    .upload(photo.storage_path, maitre, { contentType: 'image/jpeg', upsert: true });
   if (e1) return { ok: false, error: e1.message };
 
   // Nom neuf à chaque enregistrement pour les dérivées (cache CDN cassé
-  // exprès) — la brute, elle, garde son chemin (upsert ci-dessus).
+  // exprès) — la maîtresse, elle, garde son chemin (upsert ci-dessus).
   const base = photo.storage_path.replace(/\.[^./]+$/, '').replace(/[^/]+$/, crypto.randomUUID());
   const patch = { rotation: 0 };
-  if (cible.table === 'photos') patch.crop_path = null; // colonne absente côté artiste
+  // Colonnes absentes côté artiste. `moyen` n'est plus produit (D-081) : l'ancien
+  // fichier part avec `anciennes` ci-dessous, la colonne passe à NULL.
+  if (cible.table === 'photos') { patch.crop_path = null; patch.moyen_path = null; }
 
   const bornes = cible.table === 'photos'
-    ? [['mini_path', MINI_PX, 0.75], ['thumb_path', THUMB_PX, 0.8], ['moyen_path', MOYEN_PX, 0.85]]
-    : [['thumb_path', THUMB_PX, 0.8]]; // artiste : ni mini_path ni moyen_path (HO-089)
+    ? [['mini_path', MINI_PX, 0.75], ['thumb_path', THUMB_PX, 0.8]]
+    : [['thumb_path', THUMB_PX, 0.8]]; // artiste : pas de mini_path (HO-089)
   for (const [col, px, q] of bornes) {
     const vb = await d.makeVariantBlob(blob, px, q); // ← `blob`, TOUJOURS. Jamais la variante précédente.
     const p = vb && `${base}.${col.replace('_path', '')}.jpg`;
