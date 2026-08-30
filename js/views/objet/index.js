@@ -353,8 +353,15 @@ async function loadSimilar(o) {
   const first = {};
   for (const p of ph ?? []) if (!first[p.objet_id]) first[p.objet_id] = p.thumb_path ?? p.storage_path;
   const urls = await signPaths(Object.values(first));
+  // Trois requêtes plus tard, l'écran a pu changer : Photos ouvert avant l'arrivée
+  // des similaires (#similar-grid n'existe plus → « Cannot set properties of
+  // null », vu en recette desktop le 2026-08-30, intermittent), ou un AUTRE objet
+  // affiché entre-temps — on peindrait alors ses similaires à lui sur la mauvaise
+  // fiche, sans erreur. Dans les deux cas : rien à peindre.
+  const grid = $('#similar-grid');
+  if (!grid || String(S.currentObjet?.id) !== String(o.id)) return;
   panel.style.display = '';
-  $('#similar-grid').innerHTML = data.map(s => {
+  grid.innerHTML = data.map(s => {
     const img = urls[first[s.id]];
     return `<div class="sim-card" data-action="similar" data-oid="${esc(s.id)}" tabindex="0" role="button" aria-label="${esc(s.titre || 'Objet similaire')} — fiche #${esc(s.id)}">
       <div class="sim-img">${img ? `<img src="${esc(img)}" alt="${esc(s.titre || 'Objet similaire')}" loading="lazy" decoding="async">` : catEmoji(s.categorie)}</div>
