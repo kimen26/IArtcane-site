@@ -72,6 +72,12 @@ function editionHtml(opts) {
  *                       n'est PAS appelé si le texte tapé est identique à
  *                       `contenu` (annuler() est appelé à la place, pour que
  *                       la vue sorte du mode édition sans écriture inutile)
+ *   enregistrerSiIdentique {boolean=false}  pour un COMPOSEUR (créer à partir
+ *                       de rien, `contenu:''`) : enregistrer() est appelé même
+ *                       sans changement — c'est la vue qui décide si « vide »
+ *                       est acceptable (ex. note photo seule). Sans cette
+ *                       option, une note « photo jointe, rien tapé » était
+ *                       annulée en silence (régression HO-108, revue 2026-08-30).
  */
 export function texte(el, opts = {}) {
   const mode = opts.mode || 'lecture';
@@ -93,7 +99,7 @@ export function texte(el, opts = {}) {
     el.querySelector('[data-ui-texte="annuler"]')?.addEventListener('click', () => sur.annuler?.());
     el.querySelector('[data-ui-texte="enregistrer"]')?.addEventListener('click', () => {
       const valeur = ta?.value ?? '';
-      if (valeur === contenuInitial) { sur.annuler?.(); return; }
+      if (valeur === contenuInitial && !opts.enregistrerSiIdentique) { sur.annuler?.(); return; }
       sur.enregistrer?.(valeur);
     });
   } else {

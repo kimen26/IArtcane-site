@@ -197,6 +197,7 @@ function brancherJournal(corps) {
   const cible = corps.querySelector('#art-composer-texte');
   if (cible) texte(cible, {
     contenu: '', mode: 'edition', micro: true, lignes: 2,
+    enregistrerSiIdentique: true, // composeur : une note « photo seule » (rien tapé) doit partir — ajouterNote() garde « ni texte ni photo »
     sur: { enregistrer: ajouterNote, annuler: () => { pendingPhotos = []; hooks.rendre?.(); } },
   });
 }
