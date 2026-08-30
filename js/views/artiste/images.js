@@ -15,7 +15,7 @@ import { $, esc } from '../../core/dom.js';
 import { S, canWrite } from '../../core/state.js';
 import { loadViewCss } from '../../core/css.js';
 import { sb, logEvent } from '../../core/data.js';
-import { toast, enregistrer, withBusy } from '../../core/feedback.js';
+import { toast, enregistrer, withBusy, humaniser } from '../../core/feedback.js';
 import { createOverlay } from '../../core/lightbox.js';
 import { page } from '../../ui/page.js';
 import { galerie } from '../../ui/galerie.js';
@@ -378,7 +378,7 @@ function openCutter(p) {
         await hooks.recharger(A.nom);
       }, { titre: 'Recadrage de l\'image…' });
     } catch (err) {
-      toast(`Recadrage échoué : ${err.message ?? err}`, true);
+      console.warn('recadrage artiste:', err); toast(`Recadrage échoué — ${humaniser(err)}. Réessaie.`, 'action');
       ok.disabled = false; ok.textContent = '✂️ Recadrer';
     }
   });

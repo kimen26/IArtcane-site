@@ -6,7 +6,7 @@
 import { $, esc, emptyHtml } from '../core/dom.js';
 import { S, canWrite } from '../core/state.js';
 import { sb } from '../core/data.js';
-import { toast, enregistrer } from '../core/feedback.js';
+import { toast, enregistrer, humaniser } from '../core/feedback.js';
 import { fmtDateTime } from '../core/format.js';
 import { loadViewCss } from '../core/css.js';
 import { micButton } from './mic.js';
@@ -56,7 +56,7 @@ async function charger() {
     .order('created_at', { ascending: false });
   if (error) {
     console.warn('demandes:', error);
-    toast('Chargement des demandes impossible — ' + (error.message ?? error), true);
+    console.warn('demandes:', error); toast(`Demandes non chargées — ${humaniser(error)}.`, 'panne');
     DEM.erreur = true;
     DEM.data = [];
     return;

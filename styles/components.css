@@ -226,7 +226,10 @@ details.acc:not([open])>summary{margin-bottom:0}
    8 mots ») — sans width, le flex se réduit à la largeur du contenu et les deux
    cibles de 44 px (action + ✕) écrasent le texte en colonne étroite. */
 .toast{display:flex;align-items:center;gap:6px;background:var(--ink);color:#fff;font-size:.875rem;font-weight:500;padding:6px 6px 6px 16px;border-radius:var(--r-md);box-shadow:var(--shadow-hover);animation:fade .2s ease;border:1px solid var(--bordure-claire-douce);width:min(92vw,480px);max-width:min(92vw,480px);text-align:left;line-height:1.4}
-.toast.err{background:var(--red)}
+/* Niveaux HO-110 : info = style de base (neutre, ci-dessus) · action = un
+   geste reste à faire · panne = rien ne rattrape (ex-.toast.err). */
+.toast.action{background:var(--amber)}
+.toast.panne{background:var(--red)}
 .toast-msg{flex:1;min-width:0}
 .toast-n{flex:0 0 auto;background:var(--voile-clair);border-radius:999px;font-size:.75rem;font-weight:700;padding:2px 8px}
 .toast-action,.toast-close{flex:0 0 auto;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;background:transparent;border:none;color:#fff;cursor:pointer;font-size:.8125rem}

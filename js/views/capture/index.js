@@ -10,7 +10,7 @@
 // bouton — signalé au rapport.
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, $$, esc, toast } from '../../core/dom.js';
-import { withBusy } from '../../core/feedback.js';
+import { withBusy, humaniser } from '../../core/feedback.js';
 import { S } from '../../core/state.js';
 import { plur, isVideo } from '../../core/format.js';
 import { sb } from '../../core/data.js';
@@ -368,7 +368,7 @@ function openLocalCrop(file, index) {
         render();
       }, { titre: 'Recadrage de la photo…' });
     } catch (err) {
-      toast(`Recadrage échoué : ${err.message ?? err}`, true);
+      console.warn('recadrage capture:', err); toast(`Recadrage échoué — ${humaniser(err)}. Réessaie.`, 'action');
     } finally {
       ok.disabled = false; ok.textContent = '✂️ Recadrer';
     }
@@ -412,6 +412,6 @@ async function receiveSharedPhotos() {
     }
   } catch (err) {
     console.warn('share-inbox :', err);
-    toast(`Photos partagées non récupérées — ${err.message ?? err}. Réessaie le partage.`, true);
+    toast(`Photos partagées non récupérées — ${humaniser(err)}. Réessaie le partage.`, 'action');
   }
 }

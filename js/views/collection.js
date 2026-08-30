@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // IArtcane — views/collection.js : listing, recherche, filtres, listes, CSV
 // ═══════════════════════════════════════════════════════════════════════════
-import { $, $$, esc, norm, toast, emptyHtml } from '../core/dom.js';
+import { $, $$, esc, norm, toast, humaniser, emptyHtml } from '../core/dom.js';
 import { S } from '../core/state.js';
 import { catCanon, catEmoji, cardHtml, STATUTS } from '../core/format.js';
 import { sb, loadPhotoMap } from '../core/data.js';
@@ -25,7 +25,7 @@ async function loadCollection() {
   const body = $('#collection-body');
   body.innerHTML = '<div class="skeleton" style="height:220px"></div>';
   const { data, error } = await sb.from('objets').select('*').eq('owner_id', S.tenantId).order('created_at', { ascending: false });
-  if (error) { toast(error.message, true); body.innerHTML = ''; return; }
+  if (error) { console.warn('collection:', error); toast(`Collection non chargée — ${humaniser(error)}.`, 'panne'); body.innerHTML = ''; return; }
   S.collection = data ?? [];
   await loadPhotoMap();
   // Ligne de titre du bandeau (HO-042) : « N objets · M à estimer » (HO-043)

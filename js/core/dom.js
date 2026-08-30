@@ -9,6 +9,6 @@ export const norm = s => String(s ?? '').toLowerCase().normalize('NFD').replace(
 
 // Implémentation déplacée dans feedback.js (HO-075, socle toast/enregistrer/withBusy) —
 // re-export pour ne pas casser les 20 appelants historiques qui importent d'ici.
-export { toast } from './feedback.js';
+export { toast, humaniser } from './feedback.js';
 
 export const emptyHtml = (t, s, action = '') => `<div class="empty"><div class="big">🗃️</div><h2>${esc(t)}</h2><p>${esc(s)}</p>${action}</div>`;

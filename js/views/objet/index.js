@@ -13,7 +13,7 @@
 //   • etat.js           état partagé + helpers validation
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, esc, toast, emptyHtml } from '../../core/dom.js';
-import { enregistrer, withBusy } from '../../core/feedback.js';
+import { enregistrer, withBusy, humaniser } from '../../core/feedback.js';
 import { S, canWrite } from '../../core/state.js';
 import {
   fmtNum, fmtDate, catCanon, catEmoji, infoSvg, STATUTS,
@@ -432,10 +432,10 @@ async function onRelancerHub(evt) {
     toast(r.skip
       ? `R1 sautée (${r.skip}) — R2 (Lens) en file`
       : `R1 terminée${r.certain ? ' — auteur certain ✓' : ' — doute : analyse versée à la description'} · R2 (Lens) en file`);
-  } else if (!annule && r?.reseau) {
-    const n = await enqueueJobs([o.id], 'r1');
-    if (n) toast('R1 en file — le cron la prend sous ~2 min');
-  }
+  } else if (!annule && r && !r.ok) { // HO-110 : lancerRecherches() se tait, le message dépend de si l'échec est rattrapé
+    if (r.raison === 'delai') { await enqueueJobs([o.id], 'r1'); toast('Recherche trop longue — elle repart en file, la fiche se complétera plus tard. Rien à faire.'); }
+    else if (r.raison === 'session') toast('Session expirée — reconnecte-toi pour continuer.', 'action');
+    else toast(`L'IA n'a pas répondu (${humaniser(r.erreur ?? r)}) — rien n'a changé sur la fiche. Réessaie dans quelques minutes.`, 'action', { action: { label: 'Réessayer', onClick: () => onRelancerHub() } }); }
   if (btn) btn.disabled = false;
   loadObjet(o.id);
 }

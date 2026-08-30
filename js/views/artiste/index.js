@@ -9,7 +9,7 @@ import { $, $$, esc, emptyHtml } from '../../core/dom.js';
 import { S, canWrite } from '../../core/state.js';
 import { auteurMatch, cardHtml, fmtDate, fmtNum, mdToHtml } from '../../core/format.js';
 import { sb, signPaths, logEvent, ensureCollection, loadPhotoMap } from '../../core/data.js';
-import { toast, enregistrer } from '../../core/feedback.js';
+import { toast, enregistrer, humaniser } from '../../core/feedback.js';
 import { openViewer } from '../../core/lightbox.js';
 import { loadViewCss } from '../../core/css.js';
 import { page } from '../../ui/page.js';
@@ -40,7 +40,7 @@ async function loadArtistesList() {
     ensureCollection(),
   ]);
   const corps = page(el, { titre: 'Artistes', fil: S.fil });
-  if (error) { toast(error.message, true); corps.innerHTML = ''; return; }
+  if (error) { console.warn('artiste:', error); toast(`Fiche artiste non chargée — ${humaniser(error)}.`, 'panne'); corps.innerHTML = ''; return; }
   if (!data?.length) {
     corps.innerHTML = emptyHtml('Aucune fiche artiste pour l\'instant', 'Le cron les crée lors des passes d\'identification.');
     return;
@@ -84,7 +84,7 @@ async function loadArtiste(nom) {
   if (S.collection.length && !Object.keys(S.photoMap).length) await loadPhotoMap();
 
   const { data: a, error } = await sb.from('artistes').select('*').eq('owner_id', S.tenantId).eq('nom', nom).maybeSingle();
-  if (error) { toast(error.message, true); body.innerHTML = ''; return; }
+  if (error) { console.warn('artiste:', error); toast(`Fiche artiste non chargée — ${humaniser(error)}.`, 'panne'); body.innerHTML = ''; return; }
 
   const objets = S.collection.filter(o => auteurMatch(o.auteur, nom));
   const idsObjets = objets.map(o => o.id);

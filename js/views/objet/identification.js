@@ -12,7 +12,7 @@ await loadViewCss('objet-identification');
 import { esc, toast } from '../../core/dom.js';
 import { S } from '../../core/state.js';
 import { sb, logEvent } from '../../core/data.js';
-import { enregistrer } from '../../core/feedback.js';
+import { enregistrer, humaniser } from '../../core/feedback.js';
 import { catCanon } from '../../core/format.js';
 import { SOUS, CATS_CANON, CATS_PROMPT } from '../../core/taxonomie.js';
 import { openCamera } from '../../core/camera.js';
@@ -315,7 +315,8 @@ async function onFieldChange(champ, valeurBrute) {
   }
 
   const { error } = await sb.from('objets').update(updates).eq('owner_id', S.tenantId).eq('id', o.id);
-  if (error) { toast(error.message, true); return; }
+  // LABELS, pas le nom de colonne : Alain lit « Catégorie », pas « categorie » (HO-110).
+  if (error) { console.warn('identification:', error); toast(`« ${LABELS[col] ?? col} » non enregistré — ${humaniser(error)}.`, 'panne'); return; }
 
   Object.assign(o, updates);
 

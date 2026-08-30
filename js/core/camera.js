@@ -16,7 +16,7 @@
 import { $, toast } from './dom.js';
 import { S } from './state.js';
 import { logEvent, uploadPhotosFor } from './data.js';
-import { withBusy } from './feedback.js';
+import { withBusy, humaniser } from './feedback.js';
 
 let camStream = null;
 let camTarget = 'capture'; // 'capture' → addFiles (nouvel objet) · 'objet' → upload direct sur S.currentObjet
@@ -79,7 +79,8 @@ $('#camera-shot').addEventListener('click', () => {
       );
       const { done, failed } = valeur ?? { done: 0, failed: [] };
       if (done > 0) { camUploaded += done; logEvent('photo_ajoutee', { n: done, via: 'camera' }); toast('Photo ajoutée à la fiche — tu peux enchaîner ou Terminer'); }
-      else if (failed.length) { toast(`Photo non envoyée (${failed[0].reason}) — réessaie`, true); }
+      // Même forme que uploads.js (HO-110) : un cliché = 1 photo tentée.
+      else if (failed.length) { toast(`${done} photo(s) sur 1 ajoutée(s) — ${humaniser(failed[0].reason)}. Les autres n'ont pas été envoyées : réessaie.`, 'action'); }
     } else {
       hooks.addFiles?.([file]);
       toast('Photo ajoutée — enchaîne ou « Enregistrer l\'objet »');

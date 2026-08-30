@@ -6,7 +6,7 @@
 // la R1 dure 1-3 min et la fiche doit s'ouvrir tout de suite).
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, toast } from '../../core/dom.js';
-import { withBusy } from '../../core/feedback.js';
+import { withBusy, humaniser } from '../../core/feedback.js';
 import { S, canWrite } from '../../core/state.js';
 import { sb, logEvent, lancerRecherches, enqueueJobs } from '../../core/data.js';
 import { ajouter, cibleObjet } from '../../services/photos.js';
@@ -79,7 +79,7 @@ export async function creerFiche() {
       finaliserCreation(newId);
     }, { titre: 'Création de la fiche…', annulable: true });
   } catch (err) {
-    toast(err.message ?? String(err), true);
+    console.warn('création:', err); toast(`Fiche non créée — ${humaniser(err)}. Réessaie.`, 'action');
   } finally {
     btn.disabled = false;
     btn.textContent = 'Créer la fiche';
@@ -99,12 +99,15 @@ function lancerR1EnFond(oid) {
         if (!r.skip) toast(`Objet #${oid} — recherche R1 terminée, recharge pour voir.`);
         return;
       }
+      // Quelle que soit la raison (session/délai/réseau/service) : un job est
+      // enfilé, donc un SEUL message, neutre — pas de panne suivie d'un
+      // « c'est reparti » pour le même événement (HO-110).
       await enqueueJobs([oid], 'r1');
-      toast(`Recherche de #${oid} remise en file — le cron la reprend sous ~2 min.`);
+      toast(`Recherche de #${oid} remise en file — le cron la reprend sous ~2 min. Rien à faire.`);
     })
     .catch(async () => {
       await enqueueJobs([oid], 'r1');
-      toast(`Recherche de #${oid} remise en file — le cron la reprend sous ~2 min.`);
+      toast(`Recherche de #${oid} remise en file — le cron la reprend sous ~2 min. Rien à faire.`);
     });
 }
 
@@ -129,7 +132,7 @@ async function envoyerPhotos(oid, isRetry, majMessage, estAnnule) {
     pendingObjetId = oid;
     renderer?.();
     if (done > 0) lancerR1EnFond(oid);
-    toast(`Fiche #${oid} créée — ${done}/${total} photos envoyées, les autres restent ici à renvoyer.`, true);
+    toast(`Fiche #${oid} créée — ${done} photo(s) sur ${total} envoyée(s). Les autres sont restées ici, à renvoyer quand tu veux.`);
     return;
   }
 
@@ -138,7 +141,7 @@ async function envoyerPhotos(oid, isRetry, majMessage, estAnnule) {
     S.capFiles = failed.map(({ item }) => item);
     renderer?.();
     if (done > 0) lancerR1EnFond(oid);
-    toast(`Objet #${oid} créé — ${done}/${total} photos envoyées. ${failed.length} en échec : renvoyez-les depuis cet écran.`, true);
+    toast(`Objet #${oid} créé — ${done} photo(s) sur ${total} envoyée(s). Les autres sont restées ici : appuie sur « Créer la fiche » pour les renvoyer.`, 'action');
     return;
   }
 

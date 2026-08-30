@@ -19,7 +19,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, toast } from '../../core/dom.js';
 import { loadViewCss } from '../../core/css.js';
-import { withBusy } from '../../core/feedback.js';
+import { withBusy, humaniser } from '../../core/feedback.js';
 import { S } from '../../core/state.js';
 import { sb, logEvent, signPaths } from '../../core/data.js';
 import { remplacer, cibleObjet } from '../../services/photos.js';
@@ -184,7 +184,7 @@ export async function mount(objetId, photoId) {
         retour();
       }, { titre: 'Enregistrement — la photo d’origine est remplacée définitivement…' });
     } catch (err) {
-      toast(`Enregistrement échoué : ${err.message ?? err}`, true);
+      console.warn('edition-photo:', err); toast(`Enregistrement échoué — ${humaniser(err)}. Réessaie.`, 'action');
       ok.disabled = false; ok.textContent = 'Enregistrer';
     }
   }

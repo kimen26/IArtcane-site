@@ -2,7 +2,7 @@
 // IArtcane — core/data.js : client Supabase + accès données partagés (D-039)
 // ═══════════════════════════════════════════════════════════════════════════
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import { toast, enregistrer } from './feedback.js';
+import { toast, enregistrer, humaniser } from './feedback.js';
 import { S, canWrite } from './state.js';
 import { isVideo } from './format.js';
 
@@ -57,19 +57,19 @@ export async function enqueueJobs(oids, type = 'r2') {
   if (!oids.length) return 0;
   const { data: pending, error: e0 } = await sb.from('jobs').select('objet_id')
     .eq('owner_id', S.tenantId).eq('statut', 'en_attente');
-  if (e0) { toast(e0.message, true); return 0; }
+  if (e0) { console.warn('enqueueJobs:', e0); toast(humaniser(e0), 'panne'); return 0; }
   const busy = new Set((pending ?? []).map(j => j.objet_id));
   const todo = oids.filter(id => !busy.has(id));
   if (!todo.length) return 0;
   let ok = todo;
   const { error } = await sb.from('jobs').insert(todo.map(objet_id => ({ owner_id: S.tenantId, objet_id, type })));
   if (error) {
-    if (error.code !== '23505') { toast(error.message, true); return 0; }
+    if (error.code !== '23505') { console.warn('enqueueJobs:', error); toast(humaniser(error), 'panne'); return 0; }
     ok = [];
     for (const objet_id of todo) {
       const { error: e } = await sb.from('jobs').insert({ owner_id: S.tenantId, objet_id, type });
       if (!e) ok.push(objet_id);
-      else if (e.code !== '23505') toast(e.message, true);
+      else if (e.code !== '23505') { console.warn('enqueueJobs:', e); toast(humaniser(e), 'panne'); }
     }
   }
   return ok.length;
@@ -80,7 +80,19 @@ export async function enqueueJobs(oids, type = 'r2') {
 // job R2 (Lens, cron 2 min). Plus AUCUN recalcul automatique à l'ajout de
 // photos : le recalcul est un acte humain (Enregistrer / « Relancer les
 // recherches »). L'edge elle-même saute la R1 si aucune photo n'a changé.
-// @returns { ok, skip?, certain?, error? }
+//
+// HO-110 : cette primitive SE TAIT à l'écran — seul l'appelant sait si
+// l'échec est rattrapé (job `r1` enfilé) ou non, donc lequel des deux doit
+// parler. `console.warn` reste ici : se taire à l'écran, pas dans les
+// journaux ; `erreur` porte le message brut pour l'appelant (`console.warn`
+// et `humaniser`).
+// @returns {Promise<
+//   { ok: true, [x: string]: any }                                | // succès (inchangé)
+//   { ok: false, raison: 'session' }                               | // pas de jeton
+//   { ok: false, raison: 'delai', timeout: true }                  | // plafond dépassé (AbortError)
+//   { ok: false, raison: 'reseau', erreur: string }                | // fetch en échec
+//   { ok: false, raison: 'service', http: number, erreur: string }   // réponse non OK de l'edge
+// >}
 // Plafond d'attente de la R1 live (A9, 2026-08-28). Sans lui, un appel bloqué
 // laissait l'utilisateur sur « Recherche R1 (Kimi)… » indéfiniment — perçu comme
 // « ça n'ouvre jamais » (L-027). Au-delà, on rend la main : l'appelant bascule
@@ -89,7 +101,7 @@ const R1_TIMEOUT_MS = 120000;
 
 export async function lancerRecherches(oid, { force = false } = {}) {
   const { data: { session } } = await sb.auth.getSession();
-  if (!session?.access_token) { toast('Session expirée — reconnecte-toi', true); return { ok: false }; }
+  if (!session?.access_token) { console.warn('lancerRecherches: session expirée'); return { ok: false, raison: 'session' }; }
   let res;
   const ctrl = new AbortController();
   const minuteur = setTimeout(() => ctrl.abort(), R1_TIMEOUT_MS);
@@ -101,19 +113,23 @@ export async function lancerRecherches(oid, { force = false } = {}) {
       signal: ctrl.signal,
     });
   } catch (e) {
-    // Abort = dépassement du plafond, pas une panne réseau : message distinct
-    // pour que l'utilisateur comprenne que la recherche continue en file.
+    // Abort = dépassement du plafond, pas une panne réseau : raison distincte
+    // pour que l'appelant sache que la recherche continue en file.
     if (e?.name === 'AbortError') {
-      toast('Recherche trop longue — elle repart en file, la fiche se complétera plus tard.');
-      return { ok: false, timeout: true };
+      console.warn('lancerRecherches: délai dépassé');
+      return { ok: false, raison: 'delai', timeout: true };
     }
-    toast(`Recherches injoignables : ${e.message ?? e}`, true);
-    return { ok: false, reseau: true };
+    console.warn('lancerRecherches: réseau', e);
+    return { ok: false, raison: 'reseau', erreur: e.message ?? String(e) };
   } finally {
     clearTimeout(minuteur);
   }
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) { toast(body.error ?? `Recherches échouées (HTTP ${res.status})`, true); return { ok: false, ...body }; }
+  if (!res.ok) {
+    const erreur = body.error ?? `Recherches échouées (HTTP ${res.status})`;
+    console.warn('lancerRecherches: service', res.status, erreur);
+    return { ok: false, raison: 'service', http: res.status, erreur };
+  }
   return { ok: true, ...body };
 }
 
@@ -199,7 +215,7 @@ export async function uploadImageWithThumb(dossier, file) {
   const base = `${dossier}/${crypto.randomUUID()}`;
   const path = `${base}.${ext}`;
   const { error } = await sb.storage.from('photos').upload(path, file, { contentType: file.type || undefined });
-  if (error) { toast(`Photo « ${file.name} » non envoyée — ${error.message}`, true); return null; }
+  if (error) { console.warn('uploadImageWithThumb:', error); toast(`Photo « ${file.name} » non envoyée — ${humaniser(error)}.`, 'action'); return null; }
 
   const video = /^video\//.test(file.type);
   let thumbPath = null, miniPath = null, moyenPath = null;
@@ -268,7 +284,7 @@ export async function uploadPhotosFor(oid, files, firstIsFace = false, onProgres
     if (couverture) insertPayload.couverture = true;
     const { error } = await sb.from('photos').insert(insertPayload);
     if (error) {
-      toast(`Photo « ${f.name} » non envoyée — ${error.message}`, true);
+      console.warn('uploadPhotosFor:', error); toast(`Photo « ${f.name} » non envoyée — ${humaniser(error)}.`, 'action');
       failed.push({ item, reason: error.message });
     } else {
       done++;
@@ -287,7 +303,7 @@ export async function deleteStoredPhoto(table, id, paths) {
   // code concluait « supprimée », l'écran se rerendait sans la vignette, et la
   // ligne restait en base. Panne muette constatée en prod (Yann, 2026-08-28).
   const { data, error } = await sb.from(table).delete().eq('owner_id', S.tenantId).eq('id', id).select('id');
-  if (error) { toast(`Photo non supprimée — ${error.message}`, true); return false; }
+  if (error) { console.warn('deleteStoredPhoto:', error); toast(`Photo non supprimée — ${humaniser(error)}.`, 'panne'); return false; }
   if (!data?.length) { toast('Photo non supprimée — droits insuffisants ou déjà supprimée. Recharge la page.', true); return false; }
   await sb.storage.from('photos').remove(paths.filter(Boolean));
   return true;
