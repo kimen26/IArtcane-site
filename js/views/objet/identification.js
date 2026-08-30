@@ -315,8 +315,7 @@ async function onFieldChange(champ, valeurBrute) {
   }
 
   const { error } = await sb.from('objets').update(updates).eq('owner_id', S.tenantId).eq('id', o.id);
-  // LABELS, pas le nom de colonne : Alain lit « Catégorie », pas « categorie » (HO-110).
-  if (error) { console.warn('identification:', error); toast(`« ${LABELS[col] ?? col} » non enregistré — ${humaniser(error)}.`, 'panne'); return; }
+  if (error) { console.warn('identification:', error); toast(`« ${LABELS[col] ?? col} » non enregistré — ${humaniser(error)}.`, 'panne'); return; } // LABELS : Alain lit « Catégorie » (HO-110)
 
   Object.assign(o, updates);
 
