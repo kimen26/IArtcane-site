@@ -16,7 +16,7 @@ import { $, esc, toast, emptyHtml } from '../../core/dom.js';
 import { enregistrer, withBusy, humaniser } from '../../core/feedback.js';
 import { S, canWrite } from '../../core/state.js';
 import {
-  fmtNum, fmtDate, catCanon, catEmoji, infoSvg, STATUTS,
+  fmtNum, fmtDate, catCanon, catEmoji, infoSvg, isVideo, STATUTS,
 } from '../../core/format.js';
 import { sb, signPaths, logEvent, lancerRecherches, enqueueJobs } from '../../core/data.js';
 import { loadViewCss } from '../../core/css.js';
@@ -58,8 +58,8 @@ async function loadObjet(id) {
     chargerNLens(id),
   ]);
   const compPaths = (comps ?? []).map(c => c.image_path).filter(Boolean);
-  const urlByPath = await signPaths([...(photos ?? []).flatMap(p => [p.storage_path, p.thumb_path].filter(Boolean)), ...compPaths]);
-  O.photos = (photos ?? []).map(p => ({ ...p, url: urlByPath[p.storage_path], thumbUrl: urlByPath[p.thumb_path] ?? urlByPath[p.storage_path] }));
+  const urlByPath = await signPaths([...(photos ?? []).flatMap(p => [isVideo(p) ? p.storage_path : p.moyen_path, p.thumb_path].filter(Boolean)), ...compPaths]); // grande zone : `moyen` (2048 px) — la brute (2 Mo) reste pour l'atelier et les vidéos (quota egress, 2026-08-31)
+  O.photos = (photos ?? []).map(p => { const g = urlByPath[isVideo(p) ? p.storage_path : p.moyen_path]; return { ...p, url: g ?? urlByPath[p.thumb_path], thumbUrl: urlByPath[p.thumb_path] ?? g }; });
   O.comps = (comps ?? []).map(c => ({ ...c, imageSrc: c.image_path ? urlByPath[c.image_path] : null }));
   O.fiche = (fiches ?? [])[0] ?? null;
   O.events = events ?? [];

@@ -26,12 +26,41 @@ export const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   },
 });
 
-// Signe un lot de chemins du bucket privé 'photos' → { path: url }
+// Signe un lot de chemins du bucket privé 'photos' → { path: url }.
+// Mémo localStorage 24 h : re-signer à chaque écran changeait le token, donc
+// l'URL, donc le navigateur retéléchargeait tout (egress ×50 — quota Free
+// crevé le 2026-08-31). Une URL stable entre deux écrans ET deux visites
+// laisse enfin le cache HTTP travailler. Marge d'1 h sur l'expiration.
+const SURL_KEY = 'iartcane-surl-v1';
+const SURL_TTL = 86400;            // durée de signature (s)
+const SURL_MARGE = 3600e3;         // re-signe si moins d'1 h de vie restante (ms)
+function surlLire() {
+  try { return JSON.parse(localStorage.getItem(SURL_KEY)) ?? {}; } catch { return {}; }
+}
+// À appeler quand un fichier est ÉCRASÉ sous le même chemin (édition destructive,
+// HO-095) : la prochaine signature produira une URL neuve → pas de cache périmé.
+export function oublierSignatures(paths) {
+  const memo = surlLire();
+  for (const p of paths) delete memo[p];
+  try { localStorage.setItem(SURL_KEY, JSON.stringify(memo)); } catch { /* au pire on garde le mémo */ }
+}
 export async function signPaths(paths) {
   if (!paths.length) return {};
-  const { data } = await sb.storage.from('photos').createSignedUrls(paths, 3600);
+  const memo = surlLire();
+  const limite = Date.now() + SURL_MARGE;
   const out = {};
-  for (const s of data ?? []) if (s?.signedUrl) out[s.path] = s.signedUrl;
+  const manquants = [];
+  for (const p of new Set(paths)) {
+    if (memo[p]?.exp > limite) out[p] = memo[p].url;
+    else manquants.push(p);
+  }
+  if (manquants.length) {
+    const { data } = await sb.storage.from('photos').createSignedUrls(manquants, SURL_TTL);
+    const exp = Date.now() + SURL_TTL * 1000;
+    for (const s of data ?? []) if (s?.signedUrl) { out[s.path] = s.signedUrl; memo[s.path] = { url: s.signedUrl, exp }; }
+    for (const p of Object.keys(memo)) if (memo[p].exp <= limite) delete memo[p]; // purge des mortes
+    try { localStorage.setItem(SURL_KEY, JSON.stringify(memo)); } catch { /* stockage bloqué : on re-signera */ }
+  }
   return out;
 }
 
@@ -166,9 +195,11 @@ export async function loadPhotoMap() {
   const { data } = await sb.from('photos').select('objet_id,storage_path,thumb_path,mini_path,kind,couverture').eq('owner_id', S.tenantId).order('couverture', { ascending: false }).order('created_at');
   const first = {};
   for (const p of data ?? []) if (!first[p.objet_id]) first[p.objet_id] = p;
-  const urlByPath = await signPaths(Object.values(first).flatMap(p => [p.storage_path, p.thumb_path, p.mini_path].filter(Boolean)));
+  // On ne signe plus la brute : toutes les photos ont leurs variantes (backfill
+  // HO-089) et servir 2 Mo là où 27 Ko suffisent a crevé le quota egress (2026-08-31).
+  const urlByPath = await signPaths(Object.values(first).flatMap(p => [p.thumb_path, p.mini_path].filter(Boolean)));
   for (const [oid, p] of Object.entries(first)) {
-    const url = urlByPath[p.thumb_path] ?? urlByPath[p.storage_path]; // 480 d'abord (masonry, vitesse)
+    const url = urlByPath[p.thumb_path] ?? null; // 480 (masonry, vitesse)
     const miniUrl = urlByPath[p.mini_path] ?? url;
     // vid : 1re « photo » = vidéo → badge ▶ sur la carte (même sans miniature)
     S.photoMap[oid] = { url: url ?? null, miniUrl: miniUrl ?? null, vid: isVideo(p) };

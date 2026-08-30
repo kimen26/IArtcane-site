@@ -208,10 +208,12 @@ export async function loadActiviteData() {
     if (!A.photoMap[p.objet_id]) A.photoMap[p.objet_id] = p;
     else if (p.couverture) A.photoMap[p.objet_id] = p;
   }
-  const toSign = Object.values(A.photoMap).flatMap(p => [p.thumb_path, p.storage_path].filter(Boolean));
+  // Vignettes seulement — la brute (2 Mo pièce) ne sort plus du bucket pour
+  // une liste (quota egress crevé le 2026-08-31 ; toutes les photos ont un thumb).
+  const toSign = Object.values(A.photoMap).map(p => p.thumb_path).filter(Boolean);
   const signed = await signPaths(toSign);
   for (const [oid, p] of Object.entries(A.photoMap)) {
-    A.photoMap[oid] = { ...p, url: signed[p.storage_path] || null, thumbUrl: signed[p.thumb_path] || signed[p.storage_path] || null };
+    A.photoMap[oid] = { ...p, url: null, thumbUrl: signed[p.thumb_path] || null };
   }
 
   A.loading = false;

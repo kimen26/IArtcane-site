@@ -167,6 +167,11 @@ export async function remplacer(cible, photo, blob) {
   const anciennes = [photo.crop_path, photo.mini_path, photo.thumb_path, photo.moyen_path].filter(Boolean);
   if (anciennes.length) await d.sb.storage.from('photos').remove(anciennes);
 
+  // La brute a changé SOUS LE MÊME chemin : oublier son URL signée mémorisée
+  // (core/data.js), sinon le cache resservirait l'ancienne image jusqu'à 24 h.
+  // `?.` : les doubles de test hors-ligne n'injectent pas forcément ce helper.
+  d.oublierSignatures?.([photo.storage_path]);
+
   return { ok: true, paths: patch };
 }
 
