@@ -53,7 +53,6 @@ export function rendre(el) {
 
   const corps = page(el, {
     titre: 'Ventes',
-    meta: `#${o.id}`,
     fil: [...S.fil, { label: 'Ventes' }],
   });
 

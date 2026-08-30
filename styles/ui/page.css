@@ -5,6 +5,10 @@
    docs/architecture-briques.md §2.1). */
 .ui-page{
   --ui-barre-h:60px; /* lue par barre-basse.css et par la règle --avec-barre ci-dessous */
+  --ecran-x:6px; /* marge latérale du contenu — LA valeur (retour Yann 2026-08-31 : ÷4, HO-113) */
+  /* `main` (base.css:109) pose --main-x/--main-y : on les annule pour coller
+     au bord et à l'en-tête, puis on pose notre propre marge, unique et petite. */
+  margin:calc(-1 * var(--main-y, 0px)) calc(-1 * var(--main-x, 0px)) 0;
   display:flex;
   flex-direction:column;
   min-height:100%;
@@ -14,6 +18,7 @@
   flex:1;
   width:100%;
   min-height:0; /* c'est lui qui absorbe l'espace */
+  padding-inline:var(--ecran-x);
 }
 
 /* Réservation faite par la brique, jamais par l'écran — bug HO-097

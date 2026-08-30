@@ -6,7 +6,7 @@
 /* Corps de la fiche artiste : empilement des 11 blocs. En-tête, fil d'Ariane
    et barre basse sont posés par `ui/page.js` + `ui/barre-basse.js` (HO-104) —
    la réserve de bas de page est automatique, plus besoin de la chiffrer ici. */
-.art-body{padding:12px;display:flex;flex-direction:column;gap:10px;background:var(--bg)}
+.art-body{padding:12px 0;display:flex;flex-direction:column;gap:10px;background:var(--bg)}
 
 /* En-têtes de section réutilisables */
 .art-section-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
@@ -205,7 +205,7 @@ body.role-lecteur .art-chez-relever{display:none}
    `<select>` d'origine) ; objet source / tags libres / transcription restent
    propres à l'artiste (hors contrat de la brique), rendus par
    views/artiste/images.js sous la galerie. */
-.art-images-body{display:flex;flex-direction:column;gap:11px;padding:11px 12px 16px}
+.art-images-body{display:flex;flex-direction:column;gap:11px;padding:11px 0 16px}
 
 .art-images-extra{display:flex;flex-direction:column;gap:2px}
 

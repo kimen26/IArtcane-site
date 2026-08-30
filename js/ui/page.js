@@ -69,9 +69,18 @@ export function page(el, opts = {}) {
     ? `<div class="ui-page-outils">${outils.map(outilHtml).join('')}</div>`
     : '';
 
+  // HO-113 §3 : l'en-tête ne fait double emploi avec le fil que quand il ne
+  // porte RIEN de plus que le dernier segment (ni outils, ni meta) — sinon il
+  // reste la seule source de cette info (ex. le compteur d'un rayon).
+  const dernier = Array.isArray(opts.fil) && opts.fil.length ? opts.fil[opts.fil.length - 1] : null;
+  const teteRedondante = !!dernier && dernier.label === opts.titre && !outils.length && !opts.meta;
+  const teteHtml = teteRedondante
+    ? ''
+    : `<header class="ui-page-tete"><span class="ui-page-titre">${esc(opts.titre)}</span>${metaHtml}${outilsHtml}</header>`;
+
   el.innerHTML = `<div class="ui-page${avecBarre ? ' ui-page--avec-barre' : ''}">`
     + filHtml
-    + `<header class="ui-page-tete"><span class="ui-page-titre">${esc(opts.titre)}</span>${metaHtml}${outilsHtml}</header>`
+    + teteHtml
     + `<div class="ui-page-corps">${opts.corps || ''}</div>`
     + barreHtml
     + `</div>`;

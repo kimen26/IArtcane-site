@@ -54,7 +54,6 @@ export function rendre(el) {
 
   const corps = page(el, {
     titre: 'Photos',
-    meta: `#${o.id}`,
     fil: [...S.fil, { label: 'Photos' }],
     barre: {
       actions: [
