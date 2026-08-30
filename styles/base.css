@@ -106,7 +106,7 @@ header{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:
 .page-search-line .search input{padding-right:40px;padding-top:9px;padding-bottom:9px}
 @media (max-width:640px){.page-subhead{padding:5px 11px}}
 
-main{max-width:1240px;margin:0 auto;padding:28px 24px 80px}
+main{--main-x:24px;--main-y:28px;max-width:1240px;margin:0 auto;padding:var(--main-y) var(--main-x) 80px} /* --main-x/-y : lues par styles/ui/page.css pour coller le chrome au bord (HO-113) */
 .view{display:none}
 .view.active{display:block;animation:fade .25s ease}
 @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}

@@ -42,7 +42,7 @@
    scrollable, marges resserrées (objectif : ≥ 2 cartes visibles sans scroll
    à 375 px, police agrandie). */
 @media (max-width:640px){
-  main{padding:16px 14px 64px}
+  main{--main-x:14px;--main-y:16px;padding:var(--main-y) var(--main-x) 64px}
   .toolbar{gap:8px;margin-bottom:10px}
   .filters-panel{display:none;flex-direction:column;gap:10px;flex:1 1 100%;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px;box-shadow:var(--shadow)}
   .filters-panel.open{display:flex}
