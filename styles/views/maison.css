@@ -52,6 +52,7 @@
 
 /* ─── Champs & boutons ───────────────────────────────────────────────────── */
 .ms-field-row{ display:flex; gap:8px; }
+.ms-field-row-champ{ flex:1; min-width:0; } /* accueille ui/champs.js (HO-107) — le nom de la maison */
 .ms-input{ flex:1; min-width:0; border:1px solid var(--ms-field-line); border-radius:9px;
   padding:10px 11px; font-family:var(--sans); font-size:13.5px; color:var(--ink); background:var(--ms-field); outline:none; }
 .ms-input:focus{ border-color:var(--ms-action); }

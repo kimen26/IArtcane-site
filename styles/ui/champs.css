@@ -1,0 +1,91 @@
+/* ═══ ui/champs.js — zone 2 colonnes, titre + contenu (HO-107) ═══
+   Zéro couleur littérale (socle HO-103) : tout vient de tokens.css. */
+
+.ui-champs{ display:flex; flex-direction:column; gap:8px; }
+.ui-champs--ok,
+.ui-champs--warn{
+  border:1.5px solid;
+  border-radius:14px;
+  padding:8px 8px 9px;
+}
+.ui-champs--ok{ background:color-mix(in srgb, var(--ok-soft) 18%, var(--surface)); border-color:var(--ok-line); }
+.ui-champs--warn{ background:color-mix(in srgb, var(--amber-soft) 22%, var(--surface)); border-color:var(--warn-line); }
+
+.ui-champs-titre{
+  font-size:.59375rem;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  font-weight:700;
+  padding:0 2px;
+  margin:0 0 2px;
+  color:var(--ink-2);
+}
+.ui-champs--ok .ui-champs-titre{ color:var(--green); }
+.ui-champs--warn .ui-champs-titre{ color:var(--amber); }
+
+/* ─── Grille : N colonnes, 1 sous 640px (même point de rupture que .dl) ─── */
+.ui-champs-grille{
+  display:grid;
+  grid-template-columns:repeat(var(--ui-champs-cols, 2), minmax(0, 1fr));
+  gap:9px 10px;
+}
+@media (max-width:640px){
+  .ui-champs-grille{ grid-template-columns:1fr; }
+}
+
+.ui-champs-champ{ min-width:0; padding:2px; }
+.ui-champs-champ--pleine{ grid-column:1 / -1; }
+.ui-champs-champ--case{ display:flex; align-items:center; }
+
+.ui-champs-entete{ display:flex; align-items:center; gap:8px; margin-bottom:5px; }
+.ui-champs-label{ font-size:.6875rem; font-weight:600; letter-spacing:.02em; color:var(--ink-2); flex:1; min-width:0; }
+.ui-champs-aide{ font-size:.65625rem; line-height:1.4; color:var(--ink-3); margin-bottom:5px; }
+
+/* ─── Contrôles de saisie — ≥16px (zoom auto iOS, HO-031) et ≥44px de cible ─── */
+.ui-champs-input{
+  width:100%;
+  min-height:44px;
+  padding:9px 10px;
+  font-size:1rem;
+  color:var(--ink);
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--r-sm);
+  outline:none;
+  box-sizing:border-box;
+}
+.ui-champs-input:focus{ border-color:var(--blue); box-shadow:0 0 0 1.5px var(--blue); }
+.ui-champs-input:disabled{ background:var(--surface-2); color:var(--ink-3); cursor:not-allowed; }
+.ui-champs-textarea{ min-height:76px; resize:vertical; font-family:inherit; line-height:1.4; }
+select.ui-champs-input{
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238A94B8' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 10px center;
+  padding-right:28px;
+}
+
+.ui-champs-case{ display:inline-flex; align-items:center; justify-content:center; min-width:44px; min-height:44px; cursor:pointer; }
+.ui-champs-checkbox{ width:22px; height:22px; accent-color:var(--blue); cursor:pointer; }
+
+.ui-champs-valeur{ min-height:auto; padding:0; border:none; background:none; display:flex; align-items:center; font-size:.875rem; color:var(--ink); }
+.ui-champs-manque{ color:var(--ink-3); font-style:italic; }
+
+/* ─── Pastille de validation (20px + cible tactile 44px sans en changer la taille) ─── */
+.ui-champs-pastille{
+  position:relative;
+  width:20px; height:20px;
+  border-radius:50%;
+  border:1.5px solid var(--line-strong);
+  background:var(--surface);
+  display:inline-grid;
+  place-items:center;
+  font-size:.75rem;
+  font-weight:700;
+  color:var(--surface); /* blanc du token (pas de littéral, cf. exigence de la porte grep) */
+  cursor:pointer;
+  flex:0 0 auto;
+}
+.ui-champs-pastille::after{ content:''; position:absolute; inset:-12px; border-radius:50%; }
+.ui-champs-pastille--ok{ background:var(--ok); border-color:var(--ok); }
+.ui-champs-pastille--verrou{ background:var(--ink-3); border-color:var(--ink-3); font-size:.625rem; }

@@ -10,6 +10,7 @@ import { $, esc, toast } from '../../core/dom.js';
 import { enregistrer } from '../../core/feedback.js';
 import { S, canWrite } from '../../core/state.js';
 import { sb } from '../../core/data.js';
+import { champs } from '../../ui/champs.js';
 import {
   M, hooks, RUBAN_DEFAUT, roueTeintes, NEUTRES, rubanTexte, hex2rgb,
 } from './etat.js';
@@ -39,7 +40,7 @@ export function rendre(zone) {
         <div class="ms-sec-title"><span>Nom de la maison</span><span class="ms-rule"></span></div>
         <p class="ms-note">Affiché dans l'en-tête et dans le switcher du menu.</p>
         <div class="ms-field-row">
-          <input id="ms-name" class="ms-input" value="${esc(t.name)}" placeholder="PONAIRE…" ${lecture ? 'disabled' : ''} autocomplete="off">
+          <div class="ms-field-row-champ" id="ms-nom-champ"></div>
           <button class="ms-btn ms-btn-primary" id="ms-rename" ${lecture ? 'disabled' : ''}>Renommer</button>
         </div>
       </div>
@@ -72,6 +73,13 @@ export function rendre(zone) {
         </div>
       </div>
     </div>`;
+
+  // Champ « Nom » via ui/champs.js (HO-107) : pas de sur.changer — cette
+  // fiche persiste sur clic explicite du bouton Renommer (comportement
+  // inchangé), pas à la saisie ; champs() ne fait ici que la mise en page.
+  champs($('#ms-nom-champ'), {
+    liste: [{ cle: 'nom', valeur: t.name, editable: !lecture, type: 'texte', placeholder: 'PONAIRE…', autocomplete: 'off' }],
+  });
 
   if (lecture) return;
   brancher(zone);
@@ -175,7 +183,7 @@ function brancherPastilles() {
 
 function brancher(zone) {
   $('#ms-rename').addEventListener('click', async () => {
-    const name = $('#ms-name').value.trim();
+    const name = $('#ms-nom-champ .ui-champs-input').value.trim();
     if (!name) { toast('Nom vide', true); return; }
     const ok = await enregistrer(() => sb.from('tenants').upsert({ owner_id: S.tenantId, name }), 'Nom de la maison', { silencieuxSiOk: true });
     if (!ok) return;

@@ -1,4 +1,9 @@
-/* ═══ Écran Identification (2c) ═══ */
+/* ═══ Écran Identification (2c) ═══
+   La mise en page générique (blocs, grille, pastilles, contrôles) vient
+   désormais de styles/ui/champs.css (HO-107). Ce fichier ne garde que ce
+   qu'aucune brique générique ne représente : la sous-catégorie accolée au
+   select principal, les suggestions d'artiste, le bouton caméra des
+   dimensions, l'accordéon Compléments et le rangement. */
 
 .obj-id-body{
   background:var(--bg);
@@ -8,118 +13,35 @@
   padding:12px 12px 24px;
 }
 
-/* ─── Blocs valoriser / valider ─── */
-.obj-id-bloc{
-  border:1.5px solid;
-  border-radius:14px;
-  padding:8px 8px 9px;
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-.obj-id-bloc.ok{
-  background:color-mix(in srgb, var(--ok-soft) 18%, var(--surface));
-  border-color:var(--ok-line);
-}
-.obj-id-bloc.warn{
-  background:color-mix(in srgb, var(--amber-soft) 22%, var(--surface));
-  border-color:var(--warn-line);
-}
-.obj-id-bloc-title{
-  font-size:.59375rem;
-  letter-spacing:.1em;
-  text-transform:uppercase;
-  font-weight:700;
-  padding:0 2px;
-  margin:0;
-}
-.obj-id-bloc.ok .obj-id-bloc-title{ color:var(--green); }
-.obj-id-bloc.warn .obj-id-bloc-title{ color:var(--amber); }
-.obj-id-bloc-fields{
-  display:flex;
-  flex-direction:column;
-  gap:7px;
-}
-
-/* ─── Champ générique ─── */
-.obj-id-field{
-  padding:2px;
-}
-.obj-id-label{
-  margin-bottom:5px;
-}
-.obj-id-bloc.ok .obj-id-label{ color:var(--green); }
-.obj-id-bloc.warn .obj-id-label{ color:var(--amber); }
-
-.obj-id-label-row,
-.obj-id-input-row{
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
-.obj-id-input-row.full .obj-id-input-wrap{ flex:1; }
-.obj-id-input-wrap{
-  flex:1;
-  min-width:0;
-  position:relative;
-}
-/* Zone tactile 44 px autour de la pastille 20 px sans en changer la taille. */
-.obj-id-input-row .pastille{
-  position:relative;
-}
-.obj-id-input-row .pastille::after{
-  content:'';
-  position:absolute;
-  inset:-12px;
-  border-radius:50%;
-}
-
+/* ─── Rangement : seul champ encore rendu à la main (pas de pastille, pas de
+   label par champ — hors du contrat générique de champs()) ─── */
 .obj-input{
   width:100%;
-  min-height:40px;
+  min-height:44px;
   padding:8px 9px;
-  font-size:.78125rem;
+  font-size:1rem;
   color:var(--ink);
   background:var(--surface);
   border:1px solid var(--line);
   border-radius:var(--r-sm);
   outline:none;
   box-sizing:border-box;
-  text-overflow:ellipsis;
-  overflow:hidden;
-  white-space:nowrap;
 }
-.obj-input:disabled{
-  background:var(--surface-2);
-  color:var(--ink-3);
-  cursor:not-allowed;
-}
-.obj-input:focus,
-.obj-input.focus-target{
-  border-color:var(--blue);
-  box-shadow:0 0 0 1.5px var(--blue);
-}
-select.obj-input{
-  appearance:none;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238A94B8' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;
-  background-position:right 9px center;
-  padding-right:26px;
-}
+.obj-input:focus{ border-color:var(--blue); box-shadow:0 0 0 1.5px var(--blue); }
 
-/* ─── Catégorie ─── */
-.obj-id-cat-row{
+/* ─── Catégorie : sous-catégorie injectée à côté du select principal rendu
+   par champs() (cascade métier, cf. augmentCategorie() dans la vue) ─── */
+[data-champ="categorie"]{
   display:flex;
-  align-items:center;
+  flex-wrap:wrap;
+  align-items:flex-start;
   gap:8px;
 }
-.obj-id-cat-wrap,
-.obj-id-sous-wrap{
-  flex:1;
-  min-width:0;
-}
+[data-champ="categorie"] .ui-champs-entete{ flex:0 0 100%; }
+[data-champ="categorie"] .ui-champs-input{ flex:1; min-width:120px; }
 
-/* ─── Auteur / suggestions ─── */
+/* ─── Auteur : case « inconnu » + suggestions injectées (augmentAuteur()) ─── */
+[data-champ="auteur"]{ position:relative; }
 .obj-id-check{
   margin-left:auto;
   display:flex;
@@ -136,7 +58,6 @@ select.obj-input{
   accent-color:var(--blue);
   cursor:pointer;
 }
-.obj-id-auteur-wrap{ position:relative; }
 .obj-id-suggestions{
   position:absolute;
   top:calc(100% + 2px);
@@ -175,7 +96,7 @@ select.obj-input{
   cursor:pointer;
   text-align:left;
   width:100%;
-  min-height:40px;
+  min-height:44px;
 }
 .obj-id-suggest:last-of-type,
 .obj-id-suggest-new{ border-bottom:none; }
@@ -187,15 +108,7 @@ select.obj-input{
 }
 .obj-id-suggest-new:hover{ background:var(--blue-soft); }
 
-/* ─── État ─── */
-.obj-id-etat-detail{
-  margin-top:6px;
-  font-size:.71875rem;
-  line-height:1.4;
-  padding:7px 9px;
-}
-
-/* ─── Dimensions ─── */
+/* ─── Dimensions : bouton caméra injecté dans l'entête du 1er champ ─── */
 .obj-id-cam-link{
   margin-left:auto;
   background:none;
@@ -208,19 +121,6 @@ select.obj-input{
   min-height:44px;
 }
 .obj-id-cam-link:hover{ color:var(--blue-deep); }
-.obj-id-dims{
-  flex:1;
-  display:flex;
-  gap:6px;
-  min-width:0;
-}
-.obj-id-dims .obj-input{
-  flex:1;
-  min-width:0;
-  text-align:center;
-  padding-left:6px;
-  padding-right:6px;
-}
 
 /* ─── Compléments (accordéon) ─── */
 .obj-id-complements{
@@ -270,12 +170,12 @@ select.obj-input{
 .obj-id-rangement-row .obj-input{
   flex:1;
   min-width:0;
-  font-size:.71875rem;
+  font-size:.875rem;
   padding-left:7px;
   padding-right:7px;
 }
 
-/* ─── Focus ciblé depuis le hub ─── */
+/* ─── Focus ciblé depuis le hub (appliqué à .ui-champs-champ) ─── */
 .focus-target{
   animation:focus-pulse 1.4s ease-out;
 }
@@ -290,9 +190,4 @@ select.obj-input{
 .obj-id-suggest-new,
 .obj-id-cam-link{
   min-height:44px;
-}
-
-@media (max-width:339px){
-  .obj-id-cat-row{ flex-direction:column; align-items:stretch; }
-  .obj-id-dims{ flex-direction:column; }
 }
