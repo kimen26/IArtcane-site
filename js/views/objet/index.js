@@ -234,6 +234,7 @@ function rendreHub(o) {
       <div class="obj-meta-row">
         <span class="obj-meta-comps">${nVendus} vendu${nVendus > 1 ? 's' : ''} · ${nVente} en vente</span>
         <button type="button" class="obj-meta-lien" data-action="nav" data-ecran="photos">Photos ›</button>
+        <button type="button" class="obj-meta-lien" data-action="nav" data-ecran="historique">Historique ›</button>
         <span class="obj-meta-statut">${STATUTS[o.statut] ?? esc(o.statut)} · <span class="obj-meta-date">${fmtDate(o.updated_at)}</span></span>
       </div>
 

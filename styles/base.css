@@ -55,6 +55,7 @@ header{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:
 .burger i{width:19px;height:1.8px;background:var(--ink);display:block}
 .drawer{position:fixed;left:0;top:0;bottom:0;width:280px;max-width:88vw;background:var(--surface);box-shadow:var(--shadow-drawer);z-index:70;transform:translateX(-105%);transition:transform .24s ease-out;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
 .drawer.open{transform:none}
+html:has(> body.drawer-open),body.drawer-open{overflow:hidden} /* tiroir ouvert : la page derrière ne défile plus — le conteneur de défilement est html (HO-123, revue) */
 .drawer-veil{position:fixed;inset:0;background:var(--voile-tiroir);z-index:65;opacity:0;pointer-events:none;transition:opacity .2s}
 .drawer-veil.open{opacity:1;pointer-events:auto}
 .drawer-head{display:flex;flex-direction:column;gap:14px;padding-bottom:14px;border-bottom:1px solid var(--line-soft)}
