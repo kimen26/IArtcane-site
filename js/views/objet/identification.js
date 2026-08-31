@@ -73,7 +73,7 @@ export function rendre(el) {
       </details>
     </div>`;
 
-  const sur = { changer: onFieldChange, basculerValidation: toggleValidation };
+  const sur = { changer: onFieldChange, basculerValidation: cle => toggleValidation(cle === 'profondeur_cm' ? 'dimensions' : cle) }; // la pastille P (cm) couvre le triplet dimensions (demande Alain n°14)
   champs(corps.querySelector('#obj-id-bloc1'), { titre: 'Indispensable pour valoriser', liste: bloc1Liste(o), sur });
   champs(corps.querySelector('#obj-id-bloc2'), { titre: 'Indispensable pour valider', liste: bloc2Liste(o), sur });
   champs(corps.querySelector('#obj-id-complements'), { liste: complementsListe(o), sur });

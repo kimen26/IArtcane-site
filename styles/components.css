@@ -38,6 +38,9 @@
    volontairement dupliqué ici plutôt que touché là-bas. */
 .demandes-count{min-width:15px;min-height:15px;padding:0 6px;border-radius:999px;background:var(--red);color:#fff;font-family:var(--mono);font-size:.5625rem;font-weight:700;display:inline-grid;place-items:center}
 .btn-round .demandes-count{position:absolute;top:-2px;right:-2px}
+/* Zéro demande ouverte : la pastille reste visible mais passe au vert —
+   « tout est traité » se lit d'un coup d'œil (demande Yann, 2026-08-31). */
+.demandes-count.zero{background:var(--ok)}
 /* Mobile : chrome replié — chips et listes sauvegardées en une rangée
    scrollable, marges resserrées (objectif : ≥ 2 cartes visibles sans scroll
    à 375 px, police agrandie). */

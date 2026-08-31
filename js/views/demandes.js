@@ -259,6 +259,9 @@ export async function refreshCompteur() {
     .in('statut', ['nouvelle', 'acceptee']);
   S.demandesOuvertes = count ?? 0;
   const pastille = $('#demandes-count');
-  pastille.textContent = S.demandesOuvertes || '';
-  pastille.classList.toggle('hidden', !S.demandesOuvertes);
+  // Zéro s'affiche en VERT plutôt que de disparaître : Alain voit d'un coup
+  // d'œil que tout est traité (demande Yann, 2026-08-31).
+  pastille.textContent = S.demandesOuvertes;
+  pastille.classList.remove('hidden');
+  pastille.classList.toggle('zero', !S.demandesOuvertes);
 }
