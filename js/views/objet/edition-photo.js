@@ -112,11 +112,18 @@ export async function mount(objetId, photoId) {
   });
   corps.innerHTML = `
     <div class="obj-screen-body">
+      <button type="button" class="obj-edit-fermer" data-role="fermer" aria-label="Fermer sans enregistrer">✕</button>
       <div class="obj-edit-zone"></div>
     </div>`;
+  corps.querySelector('[data-role="fermer"]')?.addEventListener('click', retour);
   const zone = corps.querySelector('.obj-edit-zone');
 
   let urlCourante = null;
+  // HO-138 : rien de changé → on n'enregistre pas (Yann, recette 2026-08-31).
+  // La brique ui/recadrage.js n'active son bouton « valider » que sur un vrai
+  // geste de poignée (pointermove) — cette variable couvre l'AUTRE geste
+  // possible ici, la rotation, pilotée de l'extérieur par onRotClick().
+  let modifie = false;
   const monterAtelier = () => {
     zone.innerHTML = '';
     if (urlCourante) URL.revokeObjectURL(urlCourante);
@@ -133,10 +140,12 @@ export async function mount(objetId, photoId) {
     // montage, on garde celui de la barre basse (cohérent avec les autres
     // pages de la fiche).
     zone.querySelector('[data-role="annuler"]')?.remove();
+    if (!modifie) zone.querySelector('[data-role="valider"]').disabled = true;
   };
   monterAtelier();
 
   async function onRotClick() {
+    modifie = true;
     rotLocale = (rotLocale + 90) % 360;
     await redresser();
     monterAtelier();

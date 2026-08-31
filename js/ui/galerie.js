@@ -71,7 +71,7 @@ function rendreNav(n, idx) {
     <button type="button" class="ui-galerie-nav ui-galerie-nav--suiv" data-role="suiv" aria-label="Image suivante" ${idx === n - 1 ? 'disabled' : ''}>›</button>`;
 }
 
-function rendreCarte(img, n, idx, mode, actions, tags, libelle, ouvrable) {
+function rendreCarte(img, n, idx, mode, actions, tags, libelle, ouvrable, gerer) {
   const rot = img.rotation || 0;
   return `
     <div class="ui-galerie-carte">
@@ -79,6 +79,7 @@ function rendreCarte(img, n, idx, mode, actions, tags, libelle, ouvrable) {
         <span class="ui-galerie-titre">${esc(libelle)} ${idx + 1} sur ${n}</span>
         <span class="ui-galerie-tag-label">· ${esc(img.tag || 'sans tag')}</span>
         ${img.etat ? `<span class="ui-galerie-etat">${esc(img.etat)}</span>` : ''}
+        ${gerer ? `<button type="button" class="ui-galerie-gerer" data-role="gerer">${esc(gerer)}</button>` : ''}
       </div>
       <div class="ui-galerie-viewer ${ouvrable ? 'ui-galerie-viewer--ouvrable' : ''}" oncontextmenu="return false">
         ${img.url || img.thumbUrl
@@ -106,8 +107,11 @@ function rendreCarte(img, n, idx, mode, actions, tags, libelle, ouvrable) {
  *   peutAjouter    {boolean=}
  *   peutReordonner {boolean=}
  *   actions        {Array=}   sous-ensemble de ['modifier','couverture','supprimer']
- *   sur            {{ choisir, ajouter, reordonner, taguer, modifier, supprimer, couverture, commenter, ouvrir }}
+ *   gerer          {string=}  libellé d'un bouton d'action posé À DROITE de l'en-tête
+ *                             (ex. 'Gérer les photos'). Absent = aucun bouton.
+ *   sur            {{ choisir, ajouter, reordonner, taguer, modifier, supprimer, couverture, commenter, ouvrir, gerer }}
  *     ouvrir(image) — mode 'lecture' seulement : clic sur la grande image (pas vidéo, pas flèches) → la vue ouvre la loupe (`core/lightbox.js`)
+ *     sur.gerer()   appelé au clic sur ce bouton
  * @returns {Function|null} détache le glissé des vignettes si actif
  */
 export function galerie(el, opts = {}) {
@@ -124,11 +128,12 @@ export function galerie(el, opts = {}) {
 
   el.innerHTML = `
     <div class="ui-galerie">
-      ${img ? rendreCarte(img, n, courante, mode, actions, tags, libelle, ouvrable) : rendreVide()}
+      ${img ? rendreCarte(img, n, courante, mode, actions, tags, libelle, ouvrable, opts.gerer) : rendreVide()}
       <div class="ui-galerie-vign" data-role="vignettes"></div>
     </div>`;
 
   if (img) {
+    el.querySelector('[data-role="gerer"]')?.addEventListener('click', () => sur.gerer?.());
     el.querySelector('[data-role="modifier"]')?.addEventListener('click', () => sur.modifier?.(img));
     el.querySelector('[data-role="supprimer"]')?.addEventListener('click', () => sur.supprimer?.(img));
     el.querySelector('[data-role="couverture"]')?.addEventListener('click', () => sur.couverture?.(img));

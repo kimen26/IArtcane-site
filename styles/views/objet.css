@@ -31,7 +31,7 @@
   background:var(--ruban,#35696c);   /* repli littéral de --ruban, mécanisme JS maison (HO-041/HO-103) */
   cursor:pointer;
 }
-.obj-meta-lien{ border:none; background:none; padding:0; color:var(--blue-deep); font:inherit; cursor:pointer; }
+.obj-meta-lien{ border:none; background:none; padding:0; color:var(--blue-deep); font-size:.75rem; min-height:32px; text-decoration:underline; cursor:pointer; }
 
 /* Ligne méta discrète */
 .obj-meta-row{
@@ -261,11 +261,28 @@
    (encore utilisé par edition-photo.js, dont le canvas a besoin de flex:1
    sur son parent direct). */
 .obj-screen-body{
+  position:relative;
   flex:1;
   padding:12px 0;
   display:flex;
   flex-direction:column;
   gap:11px;
+}
+.obj-edit-fermer{
+  position:absolute;
+  top:8px; right:8px;
+  z-index:3;
+  width:36px; height:36px;
+  border-radius:50%;
+  border:1px solid var(--line-strong);
+  background:var(--surface);
+  color:var(--ink);
+  font-size:1rem;
+  line-height:1;
+  display:grid;
+  place-items:center;
+  cursor:pointer;
+  box-shadow:var(--shadow-hover);
 }
 
 /* Écran stub */

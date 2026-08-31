@@ -181,11 +181,11 @@ function renderHubEcran(body) {
   corps.innerHTML = rendreHub(o);
   galerie(corps.querySelector('[data-role="galerie"]'), {
     images: O.photos.map(mapImageHub), courante: hubIndex, mode: 'lecture', libelle: 'Photo',
-    peutAjouter: canWrite(),
+    peutAjouter: canWrite(), gerer: canWrite() ? 'Gérer les photos' : null,
     sur: {
       choisir: i => { hubIndex = i; renderObjet(); },
       ouvrir: img => openViewer({ src: img.url, alt: o.titre || 'objet' }),
-      ajouter: () => naviguer('photos'),
+      ajouter: () => naviguer('photos'), gerer: () => naviguer('photos'),
     },
   });
 }
@@ -227,7 +227,6 @@ function rendreHub(o) {
     <div class="obj-hub-body">
       <div class="obj-meta-row">
         <span class="obj-meta-comps">${nVendus} vendu${nVendus > 1 ? 's' : ''} · ${nVente} en vente</span>
-        <button type="button" class="obj-meta-lien" data-action="nav" data-ecran="photos">Photos ›</button>
         <button type="button" class="obj-meta-lien" data-action="nav" data-ecran="historique">Historique ›</button>
         <span class="obj-meta-statut">${STATUTS[o.statut] ?? esc(o.statut)} · <span class="obj-meta-date">${fmtDate(o.updated_at)}</span></span>
       </div>

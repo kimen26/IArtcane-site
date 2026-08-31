@@ -32,6 +32,7 @@
 .ui-galerie-head{
   display:flex;
   align-items:center;
+  flex-wrap:wrap;
   gap:8px;
   padding:9px 12px;
   border-bottom:1px solid var(--line-soft);
@@ -47,10 +48,25 @@
   white-space:nowrap;
 }
 .ui-galerie-etat{
-  margin-left:auto;
   font-size:.625rem;
   color:var(--ink-3);
   white-space:nowrap;
+}
+
+/* ─── Bouton « Gérer les photos » (HO-138) ─── */
+.ui-galerie-gerer{
+  margin-left:auto;
+  flex:none;
+  border:1px solid var(--line-strong);
+  border-radius:999px;
+  padding:6px 12px;
+  min-height:32px;
+  background:var(--surface);
+  color:var(--blue);
+  font-size:.75rem;
+  font-weight:600;
+  white-space:nowrap;
+  cursor:pointer;
 }
 
 /* ─── Visionneuse ─── */
