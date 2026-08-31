@@ -373,173 +373,143 @@
       "titre": "Comparables & prix — règle d'or (adjudications réelles)",
       "entrees": [
         {
-          "nom": "Drouot",
-          "acces": "NAV-AUTO",
+          "nom": "1stDibs / Chairish / Selency / Pamono",
+          "acces": "NAV-MAN",
           "cout": "Gratuit",
-          "usage": "Ventes FR, Asie/tribal",
-          "url": "https://drouot.com/",
+          "usage": "prix_demande · en_cours · monde",
+          "url": null,
           "perimetre": {
-            "domaines": [
-              "tableaux",
-              "tribal",
-              "arts décoratifs",
-              "bijoux & montres"
-            ],
-            "zones": [
-              "FR",
-              "monde"
-            ]
+            "domaines": [],
+            "zones": []
           },
-          "statut": "branchee"
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S099",
+          "hammer_ou_frais": "non_verifie"
         },
         {
-          "nom": "Interenchères",
-          "acces": "NAV-AUTO",
-          "cout": "Compte gratuit",
-          "usage": "SVV françaises hors Drouot",
-          "url": "https://www.interencheres.com/",
-          "perimetre": {
-            "domaines": [
-              "tableaux",
-              "mobilier XXe",
-              "arts décoratifs",
-              "bijoux & montres"
-            ],
-            "zones": [
-              "FR"
-            ]
-          },
-          "statut": "branchee"
-        },
-        {
-          "nom": "Catawiki",
-          "acces": "NAV-AUTO",
+          "nom": "58 Facettes",
+          "acces": "NAV-MAN",
           "cout": "Gratuit",
-          "usage": "Milieu de gamme 75-5 000 € — la zone collection familiale",
-          "url": "https://www.catawiki.fr/",
+          "usage": "prix_demande · mixte · FR",
+          "url": "https://58facettes.com",
           "perimetre": {
             "domaines": [
-              "tableaux",
-              "mobilier XXe",
-              "bijoux & montres",
-              "estampes",
-              "porcelaine asiatique",
-              "porcelaine allemande"
-            ],
-            "zones": [
-              "monde"
-            ]
-          },
-          "statut": "branchee"
-        },
-        {
-          "nom": "Barnebys",
-          "acces": "NAV-AUTO",
-          "cout": "Gratuit",
-          "usage": "Agrégateur global",
-          "url": "https://www.barnebys.fr/",
-          "perimetre": {
-            "domaines": [
-              "tableaux",
-              "mobilier XXe",
-              "bijoux & montres",
-              "arts décoratifs"
-            ],
-            "zones": [
-              "monde"
-            ]
-          },
-          "statut": "branchee"
-        },
-        {
-          "nom": "LiveAuctioneers / The Saleroom",
-          "acces": "NAV-AUTO",
-          "cout": "Compte gratuit",
-          "usage": "US / UK",
-          "url": "https://www.liveauctioneers.com/",
-          "perimetre": {
-            "domaines": [
-              "tableaux",
-              "mobilier XXe",
-              "bijoux & montres",
-              "arts décoratifs"
-            ],
-            "zones": [
-              "US",
-              "UK"
-            ]
-          },
-          "statut": "branchee"
-        },
-        {
-          "nom": "Dorotheum / Van Ham",
-          "acces": "NAV-AUTO",
-          "cout": "Gratuit",
-          "usage": "Arts décoratifs, montres, bijoux (DACH)",
-          "url": "https://www.dorotheum.com/",
-          "perimetre": {
-            "domaines": [
-              "arts décoratifs",
-              "bijoux & montres",
-              "tableaux"
-            ],
-            "zones": [
-              "DACH"
-            ]
-          },
-          "statut": "branchee"
-        },
-        {
-          "nom": "eBay sold / Terapeak",
-          "acces": "API",
-          "cout": "Gratuit",
-          "usage": "Brocante/collection — seule vraie API grand public",
-          "url": "https://www.ebay.fr/",
-          "perimetre": {
-            "domaines": [
-              "tableaux",
-              "mobilier XXe",
-              "bijoux & montres",
-              "estampes"
-            ],
-            "zones": [
-              "monde"
-            ]
-          },
-          "statut": "branchee"
-        },
-        {
-          "nom": "Gazette Drouot (Europresse)",
-          "acces": "BPI-DIST",
-          "cout": "Compte Bpi",
-          "usage": "Veille marché, contexte ventes — outillé : infra/bpi/europresse-lookup.mjs @v1 (ET logique, forcer « toutes les archives »)",
-          "perimetre": {
-            "domaines": [
-              "tableaux",
-              "arts décoratifs"
+              "bijou",
+              "montre"
             ],
             "zones": [
               "FR"
             ]
           },
           "statut": "branchee",
-          "outil": "europresse-lookup.mjs"
+          "origine": "noyau",
+          "noyau_id": "S201",
+          "hammer_ou_frais": "sans_objet"
         },
         {
-          "nom": "Chrono24 / WatchCharts",
+          "nom": "Acacia Encheres",
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
-          "usage": "Marché secondaire montres",
-          "url": "https://www.chrono24.fr/",
+          "usage": "prix_adjuge · vendu · Lorraine (Grand Est)",
+          "url": "https://acaciasvv.fr",
           "perimetre": {
             "domaines": [
-              "bijoux & montres"
+              "faience",
+              "ceramique",
+              "verrerie"
             ],
             "zones": [
-              "monde"
+              "Lorraine",
+              "Grand_Est"
             ]
           },
-          "statut": "branchee"
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S248",
+          "hammer_ou_frais": "frais_compris"
+        },
+        {
+          "nom": "Ader (ader-paris.fr)",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · FR",
+          "url": "https://www.ader-paris.fr",
+          "perimetre": {
+            "domaines": [
+              "art_asie",
+              "toutes"
+            ],
+            "zones": [
+              "FR"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S189",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Adjug art Brest-Quimper",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Bretagne",
+          "url": null,
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S070",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Aguttes — Arts d'Asie, Africain, Océanien",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · national (Neuilly-sur-Seine)",
+          "url": "https://www.aguttes.com/vente/99450",
+          "perimetre": {
+            "domaines": [
+              "art_tribal,statuaire"
+            ],
+            "zones": [
+              "Afrique,Oceanie,Asie"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S293",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Akoun",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "non_verifie · vendu · FR",
+          "url": "https://www.akoun.com/compte-dadherent/niveaux-dadhesion/",
+          "perimetre": {
+            "domaines": [
+              "peinture",
+              "sculpture",
+              "bronze",
+              "dessin",
+              "aquarelle",
+              "gouache",
+              "pastel",
+              "lithographie",
+              "gravure",
+              "affiche",
+              "photo",
+              "tapis"
+            ],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S022",
+          "hammer_ou_frais": "non_verifie"
         },
         {
           "nom": "Akoun en ligne (500 000+ enchères, cotes, bios, déchiffrage de signature)",
@@ -562,23 +532,217 @@
             "seuil": 15,
             "mesure": "artistes_non_resolus_30j",
             "etat": "arme"
-          }
+          },
+          "origine": "manuel"
         },
         {
-          "nom": "Artprice",
-          "acces": "NAV-MAN",
-          "cout": "Gratuit limité / Advanced ~359 €/an",
-          "usage": "Pages artiste, indices ; résultats complets payants. OK en navigateur réel — Cloudflare bloque les fetch automatisés",
-          "url": "https://fr.artprice.com/",
+          "nom": "Alcala Subastas",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Madrid",
+          "url": "https://www.alcalasubastas.es",
           "perimetre": {
             "domaines": [
-              "tableaux"
+              "toutes"
             ],
             "zones": [
-              "monde"
+              "ES"
             ]
           },
-          "statut": "candidate"
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S264",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Alexandre Landre Strasbourg",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Alsace",
+          "url": null,
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S066",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "alsace-collections.fr",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_demande · en_cours · Alsace",
+          "url": "https://alsace-collections.fr",
+          "perimetre": {
+            "domaines": [
+              "toutes"
+            ],
+            "zones": [
+              "FR-Alsace"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S084",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Ansorena",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit avec compte",
+          "usage": "prix_adjuge · vendu · Espagne",
+          "url": "https://www.ansorena.com",
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S109",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Antiquités Brocante — Les Estimations",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_autre · sans_objet · national",
+          "url": "https://www.antiquites-brocante.fr/index.php?c=estim&do=",
+          "perimetre": {
+            "domaines": [
+              "objets_art,mobilier,ceramique"
+            ],
+            "zones": [
+              "national"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S285",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Arenberg Auctions (ex The Romantic Agony)",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Belgique",
+          "url": "https://www.arenbergauctions.com",
+          "perimetre": {
+            "domaines": [
+              "livre",
+              "manuscrit",
+              "estampe",
+              "carte",
+              "photographie"
+            ],
+            "zones": [
+              "BE"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S131",
+          "hammer_ou_frais": "marteau"
+        },
+        {
+          "nom": "Artcurial",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · FR",
+          "url": "https://www.artcurial.com",
+          "perimetre": {
+            "domaines": [
+              "toutes"
+            ],
+            "zones": [
+              "FR"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S060",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Artencheres Lyon",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Lyon",
+          "url": "https://www.artencheres.fr",
+          "perimetre": {
+            "domaines": [
+              "peinture"
+            ],
+            "zones": [
+              "FR-Lyon"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S074",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "artexpertise.fr (articles « cote des designers »)",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "Design / mobilier XXe : cotes de designers (anti-bot au fetch — navigateur réel)",
+          "url": "https://www.artexpertise.fr/",
+          "perimetre": {
+            "domaines": [
+              "mobilier XXe",
+              "design"
+            ],
+            "zones": [
+              "FR"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "manuel"
+        },
+        {
+          "nom": "arthistoricum.net German Sales",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_historique · vendu · DE/AT/CH",
+          "url": "https://www.arthistoricum.net",
+          "perimetre": {
+            "domaines": [
+              "toutes"
+            ],
+            "zones": [
+              "DE",
+              "AT",
+              "CH"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S035",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Artinfo.pl",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit avec compte",
+          "usage": "prix_adjuge · mixte · Pologne",
+          "url": "https://artinfo.pl",
+          "perimetre": {
+            "domaines": [
+              "peinture",
+              "bijou",
+              "mobilier",
+              "antiquites"
+            ],
+            "zones": [
+              "PL"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S204",
+          "hammer_ou_frais": "non_verifie"
         },
         {
           "nom": "Artnet / WorthPoint / Gordon's",
@@ -596,7 +760,1260 @@
             ]
           },
           "statut": "ecartee",
-          "motifEcart": "abonnement pro — non retenu pour le MVP"
+          "motifEcart": "abonnement pro — non retenu pour le MVP",
+          "origine": "manuel"
+        },
+        {
+          "nom": "Artprice",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit limité / Advanced ~359 €/an",
+          "usage": "Pages artiste, indices ; résultats complets payants. OK en navigateur réel — Cloudflare bloque les fetch automatisés",
+          "url": "https://fr.artprice.com/",
+          "perimetre": {
+            "domaines": [
+              "tableaux"
+            ],
+            "zones": [
+              "monde"
+            ]
+          },
+          "statut": "candidate",
+          "origine": "manuel"
+        },
+        {
+          "nom": "Artsper / Singulart / Artmajeur / Saatchi Art",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_demande · en_cours · monde",
+          "url": null,
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S098",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Artsy",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · monde",
+          "url": "https://www.artsy.net/price-database",
+          "perimetre": {
+            "domaines": [
+              "contemporain"
+            ],
+            "zones": [
+              "monde"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S021",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Asta Enchères (Bastia)",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · mixte · Corse (Haute-Corse)",
+          "url": "https://asta-encheres.com",
+          "perimetre": {
+            "domaines": [
+              "peinture,mobilier,bijoux,montres,sculpture,livres"
+            ],
+            "zones": [
+              "Corse"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S272",
+          "hammer_ou_frais": "marteau"
+        },
+        {
+          "nom": "Auctie's (SVV) — pages designers avec ordres de valeur par type de meuble + exemples d'adjudications (ex. Pierre Paulin : canapé Elysée 200 000 €, 2022)",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "Design / mobilier XXe : ordres de valeur par créateur et par type",
+          "url": "https://www.aucties.fr/",
+          "perimetre": {
+            "domaines": [
+              "mobilier XXe",
+              "design"
+            ],
+            "zones": [
+              "FR"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "manuel"
+        },
+        {
+          "nom": "Auctionet.com",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · mixte · Scandinavie/Europe",
+          "url": "https://auctionet.com",
+          "perimetre": {
+            "domaines": [
+              "toutes"
+            ],
+            "zones": [
+              "Scandinavie",
+              "Allemagne",
+              "Espagne",
+              "Royaume-Uni"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S197",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Balclis",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit partiel",
+          "usage": "prix_adjuge · vendu · Catalogne (Barcelone)",
+          "url": "https://www.balclis.com",
+          "perimetre": {
+            "domaines": [
+              "toutes"
+            ],
+            "zones": [
+              "ES"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S266",
+          "hammer_ou_frais": "marteau"
+        },
+        {
+          "nom": "Baltic Auction House",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit partiel",
+          "usage": "prix_adjuge · sans_objet · Lettonie",
+          "url": "https://izsoles.plmm.lv",
+          "perimetre": {
+            "domaines": [
+              "peinture",
+              "porcelaine",
+              "ceramique",
+              "argenterie",
+              "montres",
+              "ambre",
+              "verre",
+              "mobilier",
+              "militaria",
+              "monnaies",
+              "livres"
+            ],
+            "zones": [
+              "LV"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S227",
+          "hammer_ou_frais": "sans_objet"
+        },
+        {
+          "nom": "Barnebys",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit partiel",
+          "usage": "prix_adjuge · mixte · monde",
+          "url": "https://www.barnebys.com",
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S007",
+          "hammer_ou_frais": "marteau_portee_limitee"
+        },
+        {
+          "nom": "Bidsquare",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · US",
+          "url": "https://www.bidsquare.com",
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S015",
+          "hammer_ou_frais": "marteau"
+        },
+        {
+          "nom": "Briscadieu Bordeaux",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Sud-Ouest",
+          "url": "https://www.briscadieu-bordeaux.com",
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S075",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Bukowskis",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Suede",
+          "url": "https://www.bukowskis.com",
+          "perimetre": {
+            "domaines": [
+              "toutes"
+            ],
+            "zones": [
+              "Suede"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S198",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Cambi Casa d Aste",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Italie",
+          "url": "https://www.cambiaste.com",
+          "perimetre": {
+            "domaines": [
+              "toutes"
+            ],
+            "zones": [
+              "IT"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S107",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Carlo Bonte",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Flandre (Bruges)",
+          "url": "https://www.carlobonte.be",
+          "perimetre": {
+            "domaines": [
+              "sculpture",
+              "montres",
+              "porcelaine",
+              "orfevrerie",
+              "peinture"
+            ],
+            "zones": [
+              "BE"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S255",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Carrere et Laborie Ciboure",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Pays basque",
+          "url": null,
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S076",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Catawiki",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · en_cours · EU",
+          "url": "https://www.catawiki.com",
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S018",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Chrono24 / WatchCharts",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "Marché secondaire montres",
+          "url": "https://www.chrono24.fr/",
+          "perimetre": {
+            "domaines": [
+              "bijoux & montres"
+            ],
+            "zones": [
+              "monde"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "manuel"
+        },
+        {
+          "nom": "Clars Auction Gallery",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Californie (Oakland)",
+          "url": "https://www.clars.com",
+          "perimetre": {
+            "domaines": [
+              "toutes"
+            ],
+            "zones": [
+              "US"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S268",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "CNES — Résultats d'enchères (article)",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · national",
+          "url": "https://www.experts-cnes.fr/fr/article/Resultats-d-encheres/155",
+          "perimetre": {
+            "domaines": [
+              "objets_art,mobilier,automates"
+            ],
+            "zones": [
+              "national"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S284",
+          "hammer_ou_frais": "frais_compris"
+        },
+        {
+          "nom": "Cotes/indices (Akoun livre, indices Artprice)",
+          "acces": "PLACE",
+          "usage": "⚠️ Contexte uniquement, jamais dans la fourchette",
+          "perimetre": {
+            "domaines": [
+              "tableaux"
+            ],
+            "zones": [
+              "FR",
+              "monde"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "manuel"
+        },
+        {
+          "nom": "Couton Veyrac Jamault",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Bretagne",
+          "url": "https://www.ivoire-nantes.com",
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S073",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Credit Municipal de Paris - Rechercher un lot",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "estimation_et_prix_adjuge · mixte · Ile-de-France",
+          "url": "https://www.creditmunicipal.fr/ventes-aux-encheres/rechercher-un-lot/",
+          "perimetre": {
+            "domaines": [
+              "faience",
+              "ceramique",
+              "bijoux",
+              "montres",
+              "mode",
+              "tableaux",
+              "objets_art",
+              "vins"
+            ],
+            "zones": [
+              "FR"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S246",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Daguerre",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · FR",
+          "url": "https://www.daguerre.fr",
+          "perimetre": {
+            "domaines": [
+              "art_asie",
+              "toutes"
+            ],
+            "zones": [
+              "FR"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S187",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "David Duggleby",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Angleterre (Yorkshire)",
+          "url": "https://www.davidduggleby.com",
+          "perimetre": {
+            "domaines": [
+              "peinture"
+            ],
+            "zones": [
+              "GB"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S263",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Delcampe",
+          "acces": "API",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · en_cours · EU",
+          "url": "https://www.delcampe.net",
+          "perimetre": {
+            "domaines": [
+              "carte_postale",
+              "estampe"
+            ],
+            "zones": [
+              "EU"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S094",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Dobiaschofsky Berne",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Suisse",
+          "url": "https://www.dobiaschofsky.com",
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S081",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Dorotheum",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · mixte · Europe centrale",
+          "url": "https://www.dorotheum.com",
+          "perimetre": {
+            "domaines": [
+              "toutes"
+            ],
+            "zones": [
+              "AT",
+              "Europe_centrale (branches Graz",
+              "Innsbruck",
+              "Klagenfurt",
+              "Linz",
+              "Salzburg",
+              "St.Poelten",
+              "Traun",
+              "Vienna",
+              "Voesendorf",
+              "Wiener_Neustadt)"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S103",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Dorotheum / Van Ham",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "Arts décoratifs, montres, bijoux (DACH)",
+          "url": "https://www.dorotheum.com/",
+          "perimetre": {
+            "domaines": [
+              "arts décoratifs",
+              "bijoux & montres",
+              "tableaux"
+            ],
+            "zones": [
+              "DACH"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "manuel"
+        },
+        {
+          "nom": "Drouot",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "Ventes FR, Asie/tribal",
+          "url": "https://drouot.com/",
+          "perimetre": {
+            "domaines": [
+              "tableaux",
+              "tribal",
+              "arts décoratifs",
+              "bijoux & montres"
+            ],
+            "zones": [
+              "FR",
+              "monde"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "manuel"
+        },
+        {
+          "nom": "Drouot.com",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit avec compte",
+          "usage": "prix_adjuge · vendu · FR/monde",
+          "url": "https://www.drouot.com",
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S012",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Duran Arte y Subastas",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Madrid",
+          "url": "https://www.duran-subastas.com",
+          "perimetre": {
+            "domaines": [
+              "toutes"
+            ],
+            "zones": [
+              "ES"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S132",
+          "hammer_ou_frais": "marteau"
+        },
+        {
+          "nom": "eBay",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_autre · mixte · monde",
+          "url": "https://developer.ebay.com",
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S096",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "eBay sold / Terapeak",
+          "acces": "API",
+          "cout": "Gratuit",
+          "usage": "Brocante/collection — seule vraie API grand public",
+          "url": "https://www.ebay.fr/",
+          "perimetre": {
+            "domaines": [
+              "tableaux",
+              "mobilier XXe",
+              "bijoux & montres",
+              "estampes"
+            ],
+            "zones": [
+              "monde"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "manuel"
+        },
+        {
+          "nom": "Eesti Kunsti Oksjonid / EKO",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · mixte · Estonie",
+          "url": "https://eestikunstioksjonid.ee",
+          "perimetre": {
+            "domaines": [
+              "peinture",
+              "art_contemporain"
+            ],
+            "zones": [
+              "EE"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S237",
+          "hammer_ou_frais": "frais_compris"
+        },
+        {
+          "nom": "E-Kunstisalong",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · sans_objet · Estonie",
+          "url": "https://e-kunstisalong.ee",
+          "perimetre": {
+            "domaines": [
+              "peinture",
+              "gravure",
+              "aquarelle",
+              "dessin",
+              "sculpture"
+            ],
+            "zones": [
+              "EE"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S236",
+          "hammer_ou_frais": "sans_objet"
+        },
+        {
+          "nom": "EST Encheres Metz",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Moselle",
+          "url": "https://www.cpmetz.com",
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S068",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Fabien Robaldo (Indochine)",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "non_verifie · sans_objet · Indochine",
+          "url": "https://fabienrobaldo.fr",
+          "perimetre": {
+            "domaines": [
+              "peinture"
+            ],
+            "zones": [
+              "VN",
+              "Indochine"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S087",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "FarsettiArte",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Italie",
+          "url": "https://www.farsettiarte.it",
+          "perimetre": {
+            "domaines": [
+              "toutes"
+            ],
+            "zones": [
+              "IT"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S196",
+          "hammer_ou_frais": "marteau"
+        },
+        {
+          "nom": "Fernando Duran",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Madrid",
+          "url": "https://www.fernandoduran.com",
+          "perimetre": {
+            "domaines": [
+              "toutes"
+            ],
+            "zones": [
+              "ES"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S267",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "France Estimations — guide méthodo estimation design (critères créateur/éditeur/date/état/rareté, reconnaître une 1re édition)",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "Design / mobilier XXe : méthode d'estimation, reconnaître une 1re édition",
+          "url": "https://www.france-estimations.fr/",
+          "perimetre": {
+            "domaines": [
+              "mobilier XXe",
+              "design"
+            ],
+            "zones": [
+              "FR"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "manuel"
+        },
+        {
+          "nom": "Galerie KODL",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · mixte · Tchequie",
+          "url": "https://galeriekodl.cz",
+          "perimetre": {
+            "domaines": [
+              "peinture"
+            ],
+            "zones": [
+              "CZ"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S212",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Gallica",
+          "acces": "API",
+          "cout": "Gratuit",
+          "usage": "non_verifie · vendu · FR",
+          "url": "https://gallica.bnf.fr",
+          "perimetre": {
+            "domaines": [
+              "toutes"
+            ],
+            "zones": [
+              "FR"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S028",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Gazette Drouot (Europresse)",
+          "acces": "BPI-DIST",
+          "cout": "Compte Bpi",
+          "usage": "Veille marché, contexte ventes — outillé : infra/bpi/europresse-lookup.mjs @v1 (ET logique, forcer « toutes les archives »)",
+          "perimetre": {
+            "domaines": [
+              "tableaux",
+              "arts décoratifs"
+            ],
+            "zones": [
+              "FR"
+            ]
+          },
+          "statut": "branchee",
+          "outil": "europresse-lookup.mjs",
+          "origine": "manuel"
+        },
+        {
+          "nom": "Getty Provenance Index",
+          "acces": "API",
+          "cout": "Gratuit",
+          "usage": "prix_historique · vendu · monde",
+          "url": "https://www.getty.edu/research/provenance/",
+          "perimetre": {
+            "domaines": [
+              "toutes"
+            ],
+            "zones": [
+              "FR",
+              "NL",
+              "ES",
+              "IT",
+              "UK",
+              "US"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S027",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Gros & Delettrez",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · FR",
+          "url": "https://www.gros-delettrez.com",
+          "perimetre": {
+            "domaines": [
+              "art_asie",
+              "toutes"
+            ],
+            "zones": [
+              "FR"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S186",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Heritage Auctions",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit avec compte",
+          "usage": "prix_adjuge · vendu · monde",
+          "url": "https://www.ha.com",
+          "perimetre": {
+            "domaines": [
+              "toutes"
+            ],
+            "zones": [
+              "US",
+              "monde"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S101",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Heritage Auctions - departements montres bijoux",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit avec compte",
+          "usage": "prix_adjuge · vendu · monde",
+          "url": "https://www.ha.com",
+          "perimetre": {
+            "domaines": [
+              "horlogerie",
+              "bijou"
+            ],
+            "zones": [
+              "US",
+              "monde"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S177",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "HiBid",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · US",
+          "url": "https://www.hibid.com",
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S016",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Hodgins Art Auctions",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Alberta (Calgary)",
+          "url": "https://www.hodginsauction.com",
+          "perimetre": {
+            "domaines": [
+              "toutes"
+            ],
+            "zones": [
+              "CA"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S270",
+          "hammer_ou_frais": "frais_compris"
+        },
+        {
+          "nom": "Hôtel des Ventes de Beaune",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · non_verifie · Bourgogne (Beaune)",
+          "url": "https://www.drouot.com/fr/auctioneer/118/h-tel-des-ventes-de-beaune",
+          "perimetre": {
+            "domaines": [
+              "NON VERIFIE"
+            ],
+            "zones": [
+              "Bourgogne"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S275",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Hotel des Ventes de Saint-Omer",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "estimation_et_prix_adjuge · vendu · Hauts-de-France (Pas-de-Calais)",
+          "url": "https://www.hoteldesventes-saintomer.fr",
+          "perimetre": {
+            "domaines": [
+              "faience",
+              "ceramique"
+            ],
+            "zones": [
+              "FR",
+              "Hauts-de-France",
+              "Pas-de-Calais"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S249",
+          "hammer_ou_frais": "marteau"
+        },
+        {
+          "nom": "Hotel des Ventes des Notaires (Strasbourg-Encheres)",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Alsace",
+          "url": "https://www.strasbourg-encheres.com",
+          "perimetre": {
+            "domaines": [
+              "toutes"
+            ],
+            "zones": [
+              "FR-Alsace"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S065",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Huutokaupat.com",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · mixte · Finlande",
+          "url": "https://huutokaupat.com",
+          "perimetre": {
+            "domaines": [
+              "antiquites",
+              "art",
+              "generaliste"
+            ],
+            "zones": [
+              "FI"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S245",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Il Ponte Casa d'Aste",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · mixte · Lombardie (Milan)",
+          "url": "https://www.ponteonline.com",
+          "perimetre": {
+            "domaines": [
+              "toutes"
+            ],
+            "zones": [
+              "IT"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S265",
+          "hammer_ou_frais": "frais_compris"
+        },
+        {
+          "nom": "im Kinsky",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Autriche",
+          "url": "https://www.imkinsky.com",
+          "perimetre": {
+            "domaines": [
+              "toutes"
+            ],
+            "zones": [
+              "AT"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S117",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Interencheres",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · FR",
+          "url": "https://www.interencheres.com",
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S014",
+          "hammer_ou_frais": "variable_par_maison"
+        },
+        {
+          "nom": "Jean-Claude Commenchal — Résultats de vente (étains)",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · national",
+          "url": "https://www.commenchal-expert-etains.com/resultats-de-vente",
+          "perimetre": {
+            "domaines": [
+              "etain,orfevrerie"
+            ],
+            "zones": [
+              "national (Strasbourg confirme)"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S291",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Jura Enchères (Dole / Lons-le-Saunier)",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · non_verifie · Franche-Comté (Jura)",
+          "url": "https://www.interencheres.com/en-US/commissaire-priseur/jura-encheres-46",
+          "perimetre": {
+            "domaines": [
+              "NON VERIFIE"
+            ],
+            "zones": [
+              "Franche-Comté"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S274",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Kiefer Pforzheim",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Bade",
+          "url": "https://www.kiefer.de",
+          "perimetre": {
+            "domaines": [
+              "livre",
+              "estampe",
+              "peinture"
+            ],
+            "zones": [
+              "FR-Alsace",
+              "DE"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S079",
+          "hammer_ou_frais": "marteau"
+        },
+        {
+          "nom": "Kieselbach Galeria",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · mixte · Hongrie",
+          "url": "https://kieselbach.hu",
+          "perimetre": {
+            "domaines": [
+              "peinture"
+            ],
+            "zones": [
+              "HU"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S219",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Koller Zurich",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Suisse",
+          "url": "https://www.kollerauktionen.ch",
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S082",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Leboncoin",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_demande · en_cours · FR",
+          "url": "https://www.leboncoin.fr",
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S097",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Leclere",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Provence",
+          "url": "https://www.leclere-mdv.com",
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S064",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "LiveAuctioneers",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · monde",
+          "url": "https://www.liveauctioneers.com/auction-results",
+          "perimetre": {
+            "domaines": [
+              "toutes"
+            ],
+            "zones": [
+              "US",
+              "monde"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S006",
+          "hammer_ou_frais": "marteau"
+        },
+        {
+          "nom": "LiveAuctioneers / The Saleroom",
+          "acces": "NAV-AUTO",
+          "cout": "Compte gratuit",
+          "usage": "US / UK",
+          "url": "https://www.liveauctioneers.com/",
+          "perimetre": {
+            "domaines": [
+              "tableaux",
+              "mobilier XXe",
+              "bijoux & montres",
+              "arts décoratifs"
+            ],
+            "zones": [
+              "US",
+              "UK"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "manuel"
+        },
+        {
+          "nom": "Livebid.cz",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · mixte · Tchequie",
+          "url": "https://livebid.cz",
+          "perimetre": {
+            "domaines": [
+              "peinture",
+              "numismatique",
+              "philatelie",
+              "antiquites",
+              "bijou",
+              "montre",
+              "ceramique",
+              "verre"
+            ],
+            "zones": [
+              "CZ"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S211",
+          "hammer_ou_frais": "non_verifie"
         },
         {
           "nom": "Lot-Tissimo (DACH)",
@@ -614,73 +2031,693 @@
               "DACH"
             ]
           },
-          "statut": "candidate"
+          "statut": "candidate",
+          "origine": "manuel"
         },
         {
-          "nom": "Cotes/indices (Akoun livre, indices Artprice)",
-          "acces": "PLACE",
-          "usage": "⚠️ Contexte uniquement, jamais dans la fourchette",
-          "perimetre": {
-            "domaines": [
-              "tableaux"
-            ],
-            "zones": [
-              "FR",
-              "monde"
-            ]
-          },
-          "statut": "branchee"
-        },
-        {
-          "nom": "Auctie's (SVV) — pages designers avec ordres de valeur par type de meuble + exemples d'adjudications (ex. Pierre Paulin : canapé Elysée 200 000 €, 2022)",
-          "acces": "NAV-AUTO",
-          "cout": "Gratuit",
-          "usage": "Design / mobilier XXe : ordres de valeur par créateur et par type",
-          "url": "https://www.aucties.fr/",
-          "perimetre": {
-            "domaines": [
-              "mobilier XXe",
-              "design"
-            ],
-            "zones": [
-              "FR"
-            ]
-          },
-          "statut": "branchee"
-        },
-        {
-          "nom": "France Estimations — guide méthodo estimation design (critères créateur/éditeur/date/état/rareté, reconnaître une 1re édition)",
-          "acces": "NAV-AUTO",
-          "cout": "Gratuit",
-          "usage": "Design / mobilier XXe : méthode d'estimation, reconnaître une 1re édition",
-          "url": "https://www.france-estimations.fr/",
-          "perimetre": {
-            "domaines": [
-              "mobilier XXe",
-              "design"
-            ],
-            "zones": [
-              "FR"
-            ]
-          },
-          "statut": "branchee"
-        },
-        {
-          "nom": "artexpertise.fr (articles « cote des designers »)",
+          "nom": "May Associes Roubaix",
           "acces": "NAV-MAN",
           "cout": "Gratuit",
-          "usage": "Design / mobilier XXe : cotes de designers (anti-bot au fetch — navigateur réel)",
-          "url": "https://www.artexpertise.fr/",
+          "usage": "prix_adjuge · vendu · Nord",
+          "url": null,
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S078",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Menorinka.lt",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Lituanie",
+          "url": "https://menorinka.lt",
           "perimetre": {
             "domaines": [
-              "mobilier XXe",
-              "design"
+              "peinture",
+              "arts_graphiques",
+              "icones"
+            ],
+            "zones": [
+              "LT"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S231",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Mercier & Cie Lille",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Nord",
+          "url": "https://www.mercier-art.com",
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S077",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Metayer-Mermoz (Nevers / Paris / Antibes / Moulins)",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Bourgogne (Nevers) + Paris/PACA",
+          "url": "https://www.metayer-auction.com",
+          "perimetre": {
+            "domaines": [
+              "faience,ceramique,mobilier,objets_art"
+            ],
+            "zones": [
+              "Bourgogne (Nevers)"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S276",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Millon",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · FR",
+          "url": "https://www.millon.com",
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S061",
+          "hammer_ou_frais": "marteau"
+        },
+        {
+          "nom": "Millon Belgique",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit partiel",
+          "usage": "prix_adjuge · non_verifie · Belgique",
+          "url": "https://www.millon.be",
+          "perimetre": {
+            "domaines": [
+              "toutes"
+            ],
+            "zones": [
+              "BE"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S252",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Millon créateurs — Guillaume Guillon-Lethière",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · national",
+          "url": "https://www.millon.com/createurs/guillaume-guillon-lethiere",
+          "perimetre": {
+            "domaines": [
+              "peinture"
+            ],
+            "zones": [
+              "Guadeloupe (DOM)"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S288",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Moskovskii Auktsionnyi Dom (Moscow Auction House)",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_demande · en_cours · Russie",
+          "url": "https://moscow-auction.ru",
+          "perimetre": {
+            "domaines": [
+              "peinture"
+            ],
+            "zones": [
+              "RU"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S242",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Mutargy.com",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · mixte · Hongrie",
+          "url": "https://mutargy.com",
+          "perimetre": {
+            "domaines": [
+              "generaliste"
+            ],
+            "zones": [
+              "HU"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S216",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Nabecor Encheres",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Lorraine",
+          "url": "https://www.nabecor.fr",
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S067",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Nagel Auktionen Stuttgart",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Bade-Wurtemberg",
+          "url": "https://www.auction.de",
+          "perimetre": {
+            "domaines": [
+              "toutes"
+            ],
+            "zones": [
+              "DE",
+              "FR"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S118",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Neal Auction Company",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit partiel",
+          "usage": "prix_adjuge · vendu · Louisiane (New Orleans)",
+          "url": "https://www.nealauction.com",
+          "perimetre": {
+            "domaines": [
+              "toutes"
+            ],
+            "zones": [
+              "US"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S269",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Nyborgs Auctions (nyborgs.no)",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Norvege",
+          "url": "https://nyborgs.no",
+          "perimetre": {
+            "domaines": [
+              "bijoux",
+              "art",
+              "mobilier"
+            ],
+            "zones": [
+              "NO"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S244",
+          "hammer_ou_frais": "frais_compris"
+        },
+        {
+          "nom": "OneBid (onebid.pl / .cz / .hu / .ro / .lt)",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · mixte · Europe centrale",
+          "url": "https://onebid.pl",
+          "perimetre": {
+            "domaines": [
+              "peinture",
+              "gravure",
+              "sculpture",
+              "art_asiatique",
+              "numismatique",
+              "ceramique",
+              "verre",
+              "luminaires",
+              "textiles",
+              "antiquites",
+              "arts_appliques",
+              "mobilier",
+              "livres",
+              "militaria",
+              "bijou",
+              "montre"
+            ],
+            "zones": [
+              "PL",
+              "CZ",
+              "HU",
+              "RO",
+              "LT"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S203",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Osenat",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · FR",
+          "url": "https://www.osenat.com",
+          "perimetre": {
+            "domaines": [
+              "art_asie",
+              "toutes"
             ],
             "zones": [
               "FR"
             ]
           },
-          "statut": "branchee"
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S190",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Pandolfini Casa d Aste",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit avec compte",
+          "usage": "prix_adjuge · vendu · Italie",
+          "url": "https://www.pandolfini.it",
+          "perimetre": {
+            "domaines": [
+              "toutes"
+            ],
+            "zones": [
+              "IT"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S195",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Piasa",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · FR",
+          "url": "https://piasa.fr",
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S062",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Pierre Berge & Associes (PBA)",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · FR",
+          "url": "https://www.pba-auctions.com",
+          "perimetre": {
+            "domaines": [
+              "art_asie",
+              "toutes"
+            ],
+            "zones": [
+              "FR"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S185",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Proxibid",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · US",
+          "url": "https://www.proxibid.com",
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S017",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Quimper Encheres",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Bretagne",
+          "url": "https://quimper-encheres.com",
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S071",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Quittenbaum",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Baviere (Munich)",
+          "url": "https://www.quittenbaum.de",
+          "perimetre": {
+            "domaines": [
+              "art_nouveau",
+              "art_deco",
+              "design",
+              "verre",
+              "bijoux"
+            ],
+            "zones": [
+              "DE"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S259",
+          "hammer_ou_frais": "marteau"
+        },
+        {
+          "nom": "Rago | Wright",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Etats-Unis",
+          "url": "https://www.ragoarts.com/auctions/archive",
+          "perimetre": {
+            "domaines": [
+              "design",
+              "mobilier",
+              "arts_decoratifs"
+            ],
+            "zones": [
+              "US"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S153",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Rennes Encheres",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Bretagne",
+          "url": "https://www.bretagne-encheres.com (ex-rennesencheres.com, redirection)",
+          "perimetre": {
+            "domaines": [
+              "toutes",
+              "ceramique"
+            ],
+            "zones": [
+              "FR-Bretagne"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S069",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Rogers Jones & Co",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Pays de Galles",
+          "url": "https://www.rogersjones.co.uk",
+          "perimetre": {
+            "domaines": [
+              "peinture",
+              "mobilier",
+              "porcelaine"
+            ],
+            "zones": [
+              "GB-Wales"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S262",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Rossini",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · FR",
+          "url": "https://www.rossini.fr",
+          "perimetre": {
+            "domaines": [
+              "art_asie",
+              "toutes"
+            ],
+            "zones": [
+              "FR"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S191",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Ruellan Vannes",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Bretagne",
+          "url": "https://www.svvruellan.com",
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S072",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Schuler Auktionen Zurich",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Suisse",
+          "url": "https://www.schulerauktionen.ch",
+          "perimetre": {
+            "domaines": [
+              "toutes",
+              "verre"
+            ],
+            "zones": [
+              "CH"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S080",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Setdart",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit avec compte",
+          "usage": "prix_adjuge · vendu · Espagne",
+          "url": "https://www.setdart.com",
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S108",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Skanfil (skanfil.no)",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Norvege",
+          "url": "https://skanfil.no",
+          "perimetre": {
+            "domaines": [
+              "timbres",
+              "monnaies",
+              "antiquites",
+              "art",
+              "argenterie",
+              "bijoux"
+            ],
+            "zones": [
+              "NO"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S243",
+          "hammer_ou_frais": "marteau"
+        },
+        {
+          "nom": "Subastas Segre",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Madrid",
+          "url": "https://www.subastassegre.es",
+          "perimetre": {
+            "domaines": [
+              "toutes"
+            ],
+            "zones": [
+              "ES"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S133",
+          "hammer_ou_frais": "marteau"
+        },
+        {
+          "nom": "Tajan",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · FR",
+          "url": "https://www.tajan.com",
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S063",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Thierry de Maigret",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · FR",
+          "url": "https://www.thierrydemaigret.com",
+          "perimetre": {
+            "domaines": [
+              "art_asie",
+              "toutes"
+            ],
+            "zones": [
+              "FR"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S188",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Todocoleccion",
+          "acces": "NAV-MAN",
+          "cout": "Gratuit",
+          "usage": "prix_demande · en_cours · Espagne",
+          "url": "https://www.todocoleccion.net",
+          "perimetre": {
+            "domaines": [],
+            "zones": []
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S110",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Villa Grisebach",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Allemagne",
+          "url": "https://www.grisebach.com",
+          "perimetre": {
+            "domaines": [
+              "toutes"
+            ],
+            "zones": [
+              "DE"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S116",
+          "hammer_ou_frais": "frais_compris"
+        },
+        {
+          "nom": "Vilniaus Aukcionas (Vilnius Auction)",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Lituanie",
+          "url": "https://menorinka.lt",
+          "perimetre": {
+            "domaines": [
+              "peinture",
+              "arts_graphiques",
+              "icones"
+            ],
+            "zones": [
+              "LT"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S228",
+          "hammer_ou_frais": "non_verifie"
+        },
+        {
+          "nom": "Waddington s",
+          "acces": "NAV-AUTO",
+          "cout": "Gratuit",
+          "usage": "prix_adjuge · vendu · Canada",
+          "url": "https://www.waddingtons.ca/prices-realised",
+          "perimetre": {
+            "domaines": [
+              "toutes"
+            ],
+            "zones": [
+              "CA"
+            ]
+          },
+          "statut": "branchee",
+          "origine": "noyau",
+          "noyau_id": "S128",
+          "hammer_ou_frais": "frais_compris"
         }
       ]
     },
