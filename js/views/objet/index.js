@@ -23,7 +23,7 @@ import { loadViewCss } from '../../core/css.js';
 import { page } from '../../ui/page.js';
 import { galerie } from '../../ui/galerie.js';
 import { openViewer } from '../../core/lightbox.js';
-import { O, hooks, CHAMPS_OBLIGATOIRES, estValide, toggleValidation, chargerNLens } from './etat.js';
+import { O, hooks, CHAMPS_OBLIGATOIRES, estValide, toggleValidation, chargerNLens, libelleTag } from './etat.js';
 import { brancherUploads } from './uploads.js';
 
 await loadViewCss('objet');
@@ -208,7 +208,7 @@ function titreSansAuteur(titre, auteur) {
 // chantier et sans export) — juste ce que la galerie en lecture consomme.
 // Candidat à un `services/photos` un jour (signalé au rapport HO-116).
 function mapImageHub(p) {
-  return { id: p.id, url: p.url, thumbUrl: p.thumbUrl, tag: p.tag, couverture: !!p.couverture, video: isVideo(p), rotation: p.rotation || 0 };
+  return { id: p.id, url: p.url, thumbUrl: p.thumbUrl, tag: libelleTag(p), couverture: !!p.couverture, video: isVideo(p), rotation: p.rotation || 0 };
 }
 
 function rendreHub(o) {

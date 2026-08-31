@@ -49,6 +49,18 @@ export const hooks = {
   naviguer: null,   // (ecran, focus?) => void — index.js pose O.ecran/O.focus puis re-rend
 };
 
+// ─── Vocabulaire des tags photo (partagé écran Photos ↔ hub, revue HO-116) ──
+export const KINDS = [
+  { key: 'face', label: 'face' }, { key: 'profil', label: 'profil' },
+  { key: 'revers', label: 'revers' }, { key: 'signature', label: 'signature' },
+  { key: 'poincon', label: 'marque / poinçon' }, { key: 'detail', label: 'détail décor' },
+  { key: 'defaut', label: 'défaut' }, { key: 'echelle', label: 'échelle' },
+  { key: 'infos', label: 'infos' }, { key: 'autre', label: 'autre' },
+  { key: 'sans_tag', label: '✕ pas de tag' },
+];
+/** Libellé du tag d'une photo (`kind` → label), `null` = à taguer. */
+export const libelleTag = p => KINDS.find(k => k.key === p.kind)?.label || (p.kind === 'video' ? 'vidéo' : null);
+
 // ─── Validation par champ (motif central HO-046) ────────────────────────────
 
 export const CHAMPS_VALIDABLES = ['titre','categorie','auteur','technique','periode','ecole','etat','marques','dimensions','prix','description'];

@@ -13,19 +13,10 @@ import { openCamera } from '../../core/camera.js';
 import { page } from '../../ui/page.js';
 import { galerie } from '../../ui/galerie.js';
 import { micButton } from '../../ui/mic.js';
-import { O, hooks } from './etat.js';
+import { O, hooks, KINDS, libelleTag } from './etat.js';
 import { supprimer, taguer, definirCouverture, reordonner, cibleObjet } from '../../services/photos.js';
 
 await loadViewCss('objet-photos');
-
-const KINDS = [
-  { key: 'face', label: 'face' }, { key: 'profil', label: 'profil' },
-  { key: 'revers', label: 'revers' }, { key: 'signature', label: 'signature' },
-  { key: 'poincon', label: 'marque / poinçon' }, { key: 'detail', label: 'détail décor' },
-  { key: 'defaut', label: 'défaut' }, { key: 'echelle', label: 'échelle' },
-  { key: 'infos', label: 'infos' }, { key: 'autre', label: 'autre' },
-  { key: 'sans_tag', label: '✕ pas de tag' },
-];
 
 const VUE_LABELS = {
   face: 'face', profil: 'profil', revers: 'revers', signature: 'signature',
@@ -86,7 +77,7 @@ export function rendre(el) {
 }
 
 function mapImage(p) {
-  const kindLabel = KINDS.find(k => k.key === p.kind)?.label || (p.kind === 'video' ? 'vidéo' : null);
+  const kindLabel = libelleTag(p);
   return {
     id: p.id, url: p.url, thumbUrl: p.thumbUrl, tag: kindLabel, couverture: !!p.couverture,
     commentaire: p.commentaire, video: isVideo(p), rotation: p.rotation || 0,
