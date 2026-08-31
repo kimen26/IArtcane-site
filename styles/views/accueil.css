@@ -159,7 +159,7 @@
 
 /* ─── Bloc 4 : la collection à date (seul fond de couleur pleine) ───────── */
 .acc-resume {
-  background: var(--ink);
+  background: var(--encre-fond);
   border-radius: var(--r-lg);
   padding: 16px;
   color: var(--ink-sur-navy);
@@ -174,7 +174,7 @@
   color: var(--ink-sur-navy);
   padding-bottom: 10px;
   margin-bottom: 10px;
-  border-bottom: 1px solid rgba(255,255,255,.12);
+  border-bottom: 1px solid var(--encre-bord);
 }
 .acc-resume-date { text-transform: none; letter-spacing: 0; }
 .acc-resume-ligne {
@@ -187,7 +187,7 @@
 .acc-resume-chiffre {
   font-family: var(--serif);
   font-size: 19px;
-  color: #fff;
+  color: var(--encre-texte-fort);
 }
 .acc-resume-libelle { font-size: 11.5px; color: var(--ink-sur-navy); }
 .acc-resume-precision { font-size: 10px; color: var(--ink-sur-navy); text-align: right; }
@@ -197,12 +197,12 @@
   border-radius: 4px;
   overflow: hidden;
   margin-top: 12px;
-  background: rgba(255,255,255,.08);
+  background: var(--encre-frise-fond);
 }
 .acc-resume-frise-seg { height: 100%; }
 .acc-resume-frise-seg--validees { background: var(--accent-teal); }
 .acc-resume-frise-seg--estimees { background: var(--gold); }
-.acc-resume-frise-seg--reste { background: rgba(255,255,255,.16); }
+.acc-resume-frise-seg--reste { background: var(--encre-frise-reste); }
 
 /* ─── Squelette de chargement ────────────────────────────────────────────── */
 .acc-chargement { display: flex; flex-direction: column; gap: 20px; }

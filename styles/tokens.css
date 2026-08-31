@@ -92,4 +92,13 @@
   --ombre-carte-flottante:rgba(13,27,62,.35);
   --shadow-carte-img:0 1px 2px rgba(20,30,55,.12),0 5px 12px rgba(20,30,55,.15);
   --shadow-carte-img-survol:0 2px 4px rgba(20,30,55,.14),0 10px 22px rgba(20,30,55,.18);
+
+  /* ─── Bloc encre (accueil, résumé de collection) — HO-131, valeurs actuelles
+     reprises à l'identique, aucun pixel changé. --encre-fond alias sur --ink
+     pour pouvoir détacher la teinte du jour où Yann arbitre la palette. ─── */
+  --encre-fond: var(--ink);
+  --encre-bord: rgba(255,255,255,.12);
+  --encre-texte-fort: #fff;
+  --encre-frise-fond: rgba(255,255,255,.08);
+  --encre-frise-reste: rgba(255,255,255,.16);
 }
