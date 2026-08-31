@@ -11,11 +11,8 @@ import { sb } from './js/core/data.js';
 import { withBusy } from './js/core/feedback.js';
 import { viewLabel, filDe } from './js/core/nav.js';
 
-// ─── Service worker (D-013) : shell offline + réception « Partager avec » ───
-// http(s) uniquement (pas de SW en file://) ; échec silencieux — l'app marche sans.
-if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-  navigator.serviceWorker.register('./sw.js').catch(() => {});
-}
+import { surveillerMiseAJour } from './js/core/maj.js';
+surveillerMiseAJour(); // D-013 + HO-117 : SW offline/partage, nouvelle version annoncée
 
 // ═══════════════════════════════════════════════════════════════════════════
 // AUTH

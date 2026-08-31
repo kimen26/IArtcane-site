@@ -1,6 +1,10 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // IArtcane — service worker (D-013)
-// 1) Shell offline minimal : l'app s'ouvre sans réseau (cache-first statique,
+// 1) Le SW neuf attend, la page annonce et recharge (HO-117) : à l'installation
+//    il reste en `waiting` tant qu'un onglet ancien tourne, la page annonce la
+//    mise à jour (core/maj.js) et ne bascule (`skipWaiting`) qu'au clic de
+//    l'utilisateur — plus jamais deux versions mélangées dans un même onglet.
+// 1bis) Shell offline minimal : l'app s'ouvre sans réseau (cache-first statique,
 //    fallback navigation → index.html pré-caché). Les uploads partiront au
 //    retour du réseau (hors scope : on assure juste l'ouverture + capture).
 // 2) Web Share Target : « Partager avec » une photo Android → la PWA installée
@@ -10,10 +14,10 @@
 // écrit ici, dans site/js/core/version.js et dans site/index.html d'un seul coup ;
 // `--check` (appelé par infra/deploy-site.sh) échoue si les trois divergent (L-013).
 // ═══════════════════════════════════════════════════════════════════════════
-const VERSION = 'iartcane-2026-08-31i-ho116'; // sync : js/core/version.js + ?v= dans index.html
+const VERSION = 'iartcane-2026-08-31n-ho117'; // sync : js/core/version.js + ?v= dans index.html
 const SHELL_CACHE = `shell-${VERSION}`;
 const SHARE_CACHE = 'share-inbox'; // hors purge : survit aux changements de VERSION
-const V = '?v=2026-08-31i-ho116'; // query des assets versionnés (sync index.html)
+const V = '?v=2026-08-31n-ho117'; // query des assets versionnés (sync index.html)
 const SHELL = [
   './', './index.html',
   // CSS TRANSVERSE seulement (D-041) : le CSS des écrans est chargé à la demande
@@ -25,13 +29,14 @@ const SHELL = [
   // jamais visitée ne s'ouvre pas hors ligne).
   './js/core/state.js', './js/core/dom.js', './js/core/format.js', './js/core/data.js',
   './js/core/version.js', './js/core/css.js', './js/core/camera.js', './js/core/lightbox.js',
+  './js/core/maj.js', './js/core/feedback.js',
   './manifest.webmanifest',
   './assets/logo.png', './assets/logo-glyph.png', './assets/mark-cygne.svg',
   './assets/favicon.png', './assets/apple-touch-icon.png',
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(SHELL_CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(SHELL_CACHE).then(c => c.addAll(SHELL)));
 });
 
 self.addEventListener('activate', e => {
@@ -40,9 +45,12 @@ self.addEventListener('activate', e => {
       .then(keys => Promise.all(keys
         .filter(k => k !== SHELL_CACHE && k !== SHARE_CACHE)
         .map(k => caches.delete(k))))
-      .then(() => self.clients.claim())
   );
 });
+
+// La page demande la bascule (core/maj.js, au clic « Recharger ») : c'est le
+// SEUL chemin vers skipWaiting — jamais à l'installation (HO-117).
+self.addEventListener('message', e => { if (e.data?.type === 'SKIP_WAITING') self.skipWaiting(); });
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
