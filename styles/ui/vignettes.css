@@ -6,9 +6,11 @@
 
 .ui-vign-grid{
   display:grid;
-  grid-template-columns:repeat(3, 1fr);
-  gap:8px;
+  grid-template-columns:repeat(5, 1fr);
+  gap:6px;
 }
+
+.ui-vign-case{ min-width:0; cursor:pointer; }
 
 .ui-vign{
   position:relative;
@@ -16,7 +18,6 @@
   border-radius:var(--r-sm);
   overflow:hidden;
   background:linear-gradient(135deg,var(--ink-3),var(--blue-deep));
-  cursor:pointer;
   border:2px solid transparent;
   user-select:none;
   touch-action:none;
@@ -63,22 +64,6 @@
   color:var(--gold);
   text-shadow:0 1px 2px var(--ombre-texte-forte);
 }
-.ui-vign-num{
-  position:absolute;
-  left:4px;
-  bottom:20px;
-  min-width:15px;
-  height:15px;
-  padding:0 3px;
-  border-radius:8px;
-  background:var(--badge-vignette-bg);
-  color:var(--surface);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:.5625rem;
-  font-weight:700;
-}
 .ui-vign-point{
   position:absolute;
   right:5px; top:5px;
@@ -89,7 +74,7 @@
 }
 .ui-vign-tag{
   display:block;
-  font-size:.625rem;
+  font-size:.5625rem;
   color:var(--ink-faint);
   margin-top:3px;
   padding:0 2px;
@@ -99,8 +84,8 @@
 }
 .ui-vign-tag--warn{color:var(--amber)}
 
-.ui-vign.drag-ghost{opacity:.35}
-.ui-vign.dragging{
+.ui-vign-case.drag-ghost{opacity:.35}
+.ui-vign-case.dragging{
   position:fixed;
   z-index:200;
   pointer-events:none;

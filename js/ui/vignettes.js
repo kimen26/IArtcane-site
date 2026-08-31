@@ -23,24 +23,28 @@ function vignetteHtml(img, i, courante) {
   // (kind/zone absent) — cf. p.kind==null dans l'ancien objet/photos.js,
   // !p.zone dans l'ancien artiste/images.js. Le libellé « sans tag » en ambre
   // sous la vignette reste : ce n'est pas un signal de plus, c'est le texte.
+  // HO-135 : le tag vit désormais SOUS le carré, dans une enveloppe qui porte
+  // l'identité et le clic — .ui-vign a overflow:hidden (nécessaire au carré),
+  // le tag ne peut donc plus être un enfant du carré sans être rogné.
   const sansTag = !img.tag;
   const libelleAria = img.tag ? `, ${img.tag}` : '';
   return `
-    <div class="ui-vign ${selectionnee ? 'ui-vign--courante' : ''}"
-      data-idx="${i}" role="listitem" tabindex="0" aria-label="Image ${i + 1}${esc(libelleAria)}">
-      ${img.thumbUrl
-        ? (img.video ? '<span class="ui-vign-vid">▶</span>' : `<img src="${esc(img.thumbUrl)}" alt="" loading="lazy" decoding="async" draggable="false">`)
-        : '<span class="ui-vign-placeholder">📷</span>'}
-      ${img.couverture ? '<span class="ui-vign-cover" aria-label="Couverture">★</span>' : ''}
-      <span class="ui-vign-num">${i + 1}</span>
-      ${sansTag ? '<span class="ui-vign-point" aria-label="À traiter"></span>' : ''}
+    <div class="ui-vign-case" data-idx="${i}" role="listitem" tabindex="0" aria-label="Image ${i + 1}${esc(libelleAria)}">
+      <div class="ui-vign ${selectionnee ? 'ui-vign--courante' : ''}">
+        ${img.thumbUrl
+          ? (img.video ? '<span class="ui-vign-vid">▶</span>' : `<img src="${esc(img.thumbUrl)}" alt="" loading="lazy" decoding="async" draggable="false">`)
+          : '<span class="ui-vign-placeholder">📷</span>'}
+        ${img.couverture ? '<span class="ui-vign-cover" aria-label="Couverture">★</span>' : ''}
+        ${sansTag ? '<span class="ui-vign-point" aria-label="À traiter"></span>' : ''}
+      </div>
       <span class="ui-vign-tag ${sansTag ? 'ui-vign-tag--warn' : ''}">${esc(img.tag || 'sans tag')}</span>
     </div>`;
 }
 
 /**
- * Bande de vignettes carrées : toutes les images, la courante en highlight,
- * badges (couverture, numéro, alerte, vidéo), ajout et glissé paramétrables.
+ * Bande de vignettes carrées (5/ligne) : toutes les images, la courante en
+ * highlight, badges (couverture, alerte, vidéo), tag visible sous chaque
+ * vignette, ajout et glissé paramétrables.
  * @param {HTMLElement} el
  * @param {object} opts
  *   images         {Array}   [{ id, thumbUrl, tag, couverture, video }] — `tag` vide/absent = « à taguer »
@@ -63,7 +67,7 @@ export function vignettes(el, opts = {}) {
 
   const grille = el.querySelector('.ui-vign-grid');
 
-  grille.querySelectorAll('.ui-vign').forEach(item => {
+  grille.querySelectorAll('.ui-vign-case').forEach(item => {
     item.addEventListener('click', () => sur.choisir?.(Number(item.dataset.idx)));
   });
 
@@ -71,11 +75,7 @@ export function vignettes(el, opts = {}) {
 
   if (opts.peutReordonner && images.length > 1) {
     return activerGlisser(grille, {
-      selecteurItem: '.ui-vign',
-      surNumero: (item, i) => {
-        const num = item.querySelector('.ui-vign-num');
-        if (num) num.textContent = String(i + 1);
-      },
+      selecteurItem: '.ui-vign-case',
       surFin: (ordre) => sur.reordonner?.(ordre),
     });
   }
