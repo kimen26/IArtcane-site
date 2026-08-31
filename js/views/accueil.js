@@ -73,12 +73,15 @@ const RESTE_SOUS_TITRE = {
   infosNonValidees: 'parmi : catégorie, auteur, technique, titre, état, dimensions',
 };
 
+// Clé du journal → clé de liste prédéfinie de la collection (views/collection/listes.js) —
+// un clic sur une ligne ouvre EXACTEMENT la liste correspondante (arbitrage Yann 2026-08-31).
+const LISTE_PAR_CLE = { photosNonTaguees: 'photos_a_taguer', artistesNonTrouves: 'artistes_a_chercher', infosNonValidees: 'infos_a_valider' };
+
 function ligneReste(l) {
   const vignettes = (l.apercu || []).map(a => a.thumbUrl
     ? `<img class="acc-reste-vignette" src="${esc(a.thumbUrl)}" alt="" loading="lazy">`
     : `<span class="acc-reste-vignette acc-reste-vignette--vide"></span>`).join('');
-  const cible = l.apercu?.[0]?.objetId;
-  return `<div class="acc-reste-ligne" data-acc-objet="${esc(cible || '')}" role="button" tabindex="0">
+  return `<div class="acc-reste-ligne" data-acc-liste="${esc(LISTE_PAR_CLE[l.cle] || '')}" role="button" tabindex="0">
     <div class="acc-reste-corps">
       <span class="acc-reste-chiffre">${esc(String(l.n))}</span>
       <span class="acc-reste-libelle">${esc(RESTE_LIBELLE[l.cle](l.n))}</span>
@@ -147,6 +150,16 @@ function rendreBlocs(journal) {
 
 function bindNavigation(corps) {
   corps.addEventListener('click', (evt) => {
+    const cibleListe = evt.target?.closest ? evt.target.closest('[data-acc-liste]') : null;
+    if (cibleListe) {
+      const cle = cibleListe.getAttribute('data-acc-liste');
+      if (cle) {
+        S.filters.q = ''; S.filters.cats = []; S.filters.prixMin = null; S.filters.prixMax = null;
+        S.filters.list = cle;
+        location.hash = '#/collection';
+      }
+      return;
+    }
     const cible = evt.target?.closest ? evt.target.closest('[data-acc-objet]') : null;
     if (!cible) return;
     const oid = cible.getAttribute('data-acc-objet');

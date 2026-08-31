@@ -29,6 +29,27 @@ function champRempli(o, champ) {
   return v != null && v !== '';
 }
 
+// ─── Prédicats partagés avec views/collection/listes.js (HO-125) ───────────
+// Un objet compté « à traiter » sur l'accueil (calculerReste) est EXACTEMENT
+// un objet de la liste prédéfinie correspondante — d'où l'extraction ici,
+// consommée à la fois par calculerReste (ci-dessous) et par les listes.
+/** photos → Map objet_id → [kind…] (kind null = photo sans tag). Clé normalisée en String (objets.id est chaîne, photos.objet_id peut être numérique). */
+export function photosParObjet(photos) {
+  const parObjet = new Map();
+  for (const p of photos || []) {
+    const oid = String(p.objet_id);
+    if (!parObjet.has(oid)) parObjet.set(oid, []);
+    parObjet.get(oid).push(p.kind ?? null);
+  }
+  return parObjet;
+}
+export const objetAvecPhotoSansTag = (o, parObjet) => (parObjet.get(String(o.id)) || []).some(k => k == null);
+export const objetSansArtiste = o => (!o.auteur || o.auteur === '') && o.statut !== 'en_attente';
+export const objetInfosNonValidees = o => {
+  const vc = o.validation_champs || {};
+  return CHAMPS_OBLIGATOIRES.some(c => champRempli(o, c) && !vc[c]);
+};
+
 // ─── calculerTravail() — bloc 1, agrégé, humain seulement ──────────────────
 // Un évènement est humain si son acteur n'est ni 'site', ni 'cron', ni
 // préfixé 'ia ' (R1/R2/R3/R9 tracent 'ia R1', etc. — cf. ACT_LABELS).
@@ -113,8 +134,11 @@ export function calculerTrouvailles(evts, objets, photoMap) {
  */
 export function calculerReste(objets, photos) {
   const lignes = [];
+  const list = objets || [];
 
-  // photosNonTaguees : photos kind == null, aperçu = 3 objets distincts
+  // photosNonTaguees : photos kind == null, aperçu = 3 objets distincts.
+  // (compte des PHOTOS, pas d'objets — cf. photosParObjet pour le pendant
+  // « objets » consommé par views/collection/listes.js)
   const photosSansKind = (photos || []).filter(p => p.kind == null);
   if (photosSansKind.length) {
     const objetsVus = [];
@@ -129,7 +153,7 @@ export function calculerReste(objets, photos) {
   }
 
   // artistesNonTrouves : auteur vide et statut !== 'en_attente'
-  const sansArtiste = (objets || []).filter(o => (!o.auteur || o.auteur === '') && o.statut !== 'en_attente');
+  const sansArtiste = list.filter(objetSansArtiste);
   if (sansArtiste.length) {
     lignes.push({
       cle: 'artistesNonTrouves', n: sansArtiste.length,
@@ -138,10 +162,7 @@ export function calculerReste(objets, photos) {
   }
 
   // infosNonValidees : ≥ 1 champ obligatoire rempli et non validé (validation_champs[champ] absent)
-  const nonValidees = (objets || []).filter(o => {
-    const vc = o.validation_champs || {};
-    return CHAMPS_OBLIGATOIRES.some(champ => champRempli(o, champ) && !vc[champ]);
-  });
+  const nonValidees = list.filter(objetInfosNonValidees);
   if (nonValidees.length) {
     lignes.push({
       cle: 'infosNonValidees', n: nonValidees.length,

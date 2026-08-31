@@ -6,6 +6,7 @@ import { S } from '../core/state.js';
 import { catCanon, catEmoji, cardHtml, STATUTS } from '../core/format.js';
 import { sb, loadPhotoMap } from '../core/data.js';
 import { loadViewCss } from '../core/css.js';
+import { LISTES, matchListe, libelleListe, chargerContexteListes } from './collection/listes.js';
 
 // CSS de la vue chargé par la vue (D-041) : aucun <link> dans index.html,
 // donc aucun fichier transverse touché par un chantier sur cet écran.
@@ -28,6 +29,7 @@ async function loadCollection() {
   if (error) { console.warn('collection:', error); toast(`Collection non chargée — ${humaniser(error)}.`, 'panne'); body.innerHTML = ''; return; }
   S.collection = data ?? [];
   await loadPhotoMap();
+  await chargerContexteListes(); // les compteurs « Photos à taguer » ont besoin des `kind`
   // Ligne de titre du bandeau (HO-042) : « N objets · M à estimer » (HO-043)
   const n = S.collection.length;
   const m = S.collection.filter(o => o.prix_bas == null).length;
@@ -40,9 +42,7 @@ async function loadCollection() {
 // Prédicat de filtrage pur — utilisé par objMatches (filtre courant) et par
 // renderLists (compteurs des listes sauvegardées, filtres « virtuels »).
 function matchFiltre(o, f) {
-  if (f.list === 'a_localiser' && o.zone && o.zone.trim()) return false;
-  if (f.list === 'a_valider' && o.statut !== 'analyse') return false;
-  if (f.list === 'chere' && !(o.prix_haut >= 1000)) return false;
+  if (!matchListe(f.list, o)) return false;
   if (f.cats?.length && !f.cats.includes(catCanon(o.categorie))) return false;
   if (f.q) {
     const hay = norm([o.id, o.titre, o.description, o.categorie, o.sous_categorie, o.auteur, o.periode, o.ecole,
@@ -125,14 +125,7 @@ const compteListe = l => S.collection.filter(o => matchFiltre(o, {
 // Rendu des listes (3 prédéfinies + sauvegardées) — désormais DANS la feuille
 // de filtres (HO-044) : #lists a été déplacé de la toolbar vers #filter-sheet.
 function renderLists() {
-  const nLoc = S.collection.filter(o => !o.zone || !o.zone.trim()).length;
-  const nVal = S.collection.filter(o => o.statut === 'analyse').length;
-  const nCher = S.collection.filter(o => o.prix_haut >= 1000).length;
-  const defs = [
-    ['a_localiser', 'var(--amber)', 'À localiser', nLoc],
-    ['a_valider', 'var(--violet)', 'Fiches à valider', nVal],
-    ['chere', 'var(--green)', '> 1 000 €', nCher],
-  ];
+  const defs = LISTES.map(l => [l.cle, l.couleur, l.label, S.collection.filter(l.match).length]);
   const actId = listeActive()?.id;
   $('#lists').innerHTML = defs.map(([k, col, label, n]) =>
     `<button class="ls ${S.filters.list === k ? 'active' : ''}" data-list="${k}"><span class="dot" style="background:${col}"></span>${label} <span class="n">${n}</span></button>`
@@ -226,7 +219,6 @@ function closeSearchLine() {
 // ─── Pastilles des critères actifs (HO-044, état 4) ─────────────────────────
 // Chaque critère actif (recherche validée incluse) = une pastille retirable ;
 // « Tout effacer » réinitialise tout. Le badge de l'entonnoir les compte.
-const LIBELLES_LISTES = { a_localiser: 'À localiser', a_valider: 'Fiches à valider', chere: '≥ 1 000 €' };
 const LOUPE_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>';
 
 function compteCriteres() {
@@ -249,7 +241,7 @@ function renderPills() {
     p.push(pill('prix', esc(t), `prix ${t}`));
   }
   if (f.list) {
-    const t = LIBELLES_LISTES[f.list] ?? f.list;
+    const t = libelleListe(f.list);
     p.push(pill('list', esc(t), t));
   }
   const la = listeActive();
