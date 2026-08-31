@@ -6,10 +6,11 @@
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, $$, esc, toast } from './js/core/dom.js';
 import { S, canWrite } from './js/core/state.js';
-import { catCanon, catEmoji } from './js/core/format.js';
 import { sb } from './js/core/data.js';
 import { withBusy } from './js/core/feedback.js';
 import { viewLabel, filDe } from './js/core/nav.js';
+import { initMenu, renderMenu, closeMenu } from './js/core/menu.js';
+import { VERSION } from './js/core/version.js';
 
 import { surveillerMiseAJour } from './js/core/maj.js';
 surveillerMiseAJour(); // D-013 + HO-117 : SW offline/partage, nouvelle version annoncée
@@ -93,11 +94,15 @@ function watchLive() {
 async function resolveTenant() {
   const { data: membres } = await sb.from('collection_members').select('owner_id,role').eq('member_id', S.user.id);
   const ids = [S.user.id, ...(membres ?? []).map(m => m.owner_id)];
-  const { data: noms } = await sb.from('tenants').select('owner_id,name,couleur').in('owner_id', ids);
+  const { data: noms } = await sb.from('tenants').select('owner_id,name,couleur,accent').in('owner_id', ids);
   const ligneDe = id => (noms ?? []).find(t => t.owner_id === id);
+  const tenantDe = (id, role) => {
+    const l = ligneDe(id);
+    return { id, name: l?.name ?? '', couleur: l?.couleur ?? null, accent: l?.accent ?? null, role };
+  };
   S.mesTenants = [
-    { id: S.user.id, name: ligneDe(S.user.id)?.name ?? '', couleur: ligneDe(S.user.id)?.couleur ?? null, role: 'owner' },
-    ...(membres ?? []).map(m => ({ id: m.owner_id, name: ligneDe(m.owner_id)?.name ?? '', couleur: ligneDe(m.owner_id)?.couleur ?? null, role: m.role })),
+    tenantDe(S.user.id, 'owner'),
+    ...(membres ?? []).map(m => tenantDe(m.owner_id, m.role)),
   ];
   // Choix persisté si encore valide, sinon la 1re membership (comportement D-015 :
   // un membre/lecteur tombe sur la maison partagée, pas sur sa collection vide),
@@ -116,14 +121,17 @@ async function resolveTenant() {
   S.tenantId = courant.id;
   S.tenantRole = courant.role;
   S.tenantName = courant.name;
-  applyRuban(courant);
+  applyCouleursMaison(courant);
   applyRole();
 }
 
-// Couleur du ruban d'estimation, choisie par maison (HO-041) : couleur NULL →
-// chaîne vide = la propriété est retirée, le fallback CSS #35696c reprend.
-function applyRuban(t) {
+// Couleurs de la maison : le RUBAN d'estimation (HO-041) et l'ACCENT d'ambiance
+// (2026-08-31, demande Yann « une 2e couleur qui fasse sortir du lot »). Dans
+// les deux cas, NULL → chaîne vide = la propriété est retirée et le repli CSS
+// reprend (#35696c pour le ruban, le bleu primaire pour l'accent).
+function applyCouleursMaison(t) {
   document.documentElement.style.setProperty('--ruban', t?.couleur || '');
+  document.documentElement.style.setProperty('--accent-maison', t?.accent || '');
 }
 
 // Bascule sur une autre maison (switcher du menu) : persiste le choix et
@@ -135,7 +143,7 @@ function selectTenant(id) {
   S.tenantId = t.id;
   S.tenantRole = t.role;
   S.tenantName = t.name;
-  applyRuban(t);
+  applyCouleursMaison(t);
   applyRole();
   renderMenu();
   loadHeader();
@@ -189,7 +197,35 @@ async function loadHeader() {
   renderMenu(); // le tiroir affiche les comptes (HO-042)
   $('#header-maison-nom').textContent = S.tenantName;
   $('#header-maison-n').textContent = `${S.objetsCount} objet${S.objetsCount > 1 ? 's' : ''}`;
+  poserLogoMaison(S.tenantName);
   $('#header-maison').classList.remove('hidden');
+}
+
+// Logo de maison (demande Yann 2026-08-31 : la calligraphie PONAIRE dans
+// l'en-tête, les autres maisons gardant leur nom écrit).
+//
+// La liste est EXPLICITE, et non « on tente l'image, on retombe sur le texte au
+// 404 » : ce repli-là marche à l'écran mais salit la console d'une erreur à
+// chaque maison sans logo — or la recette échoue sur toute erreur console, et
+// une porte qui hurle sur un comportement normal finit par être ignorée.
+// Ajouter une maison = déposer `assets/maisons/<slug>.webp` ET son slug ici.
+const LOGOS_MAISON = new Set(['ponaire']);
+
+const slugMaison = nom => String(nom ?? '').toLowerCase()
+  .normalize('NFD').replace(/\p{Diacritic}/gu, '')
+  .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+function poserLogoMaison(nom) {
+  const img = $('#header-maison-logo');
+  const nomEl = $('#header-maison-nom');
+  const slug = slugMaison(nom);
+  const avecLogo = LOGOS_MAISON.has(slug);
+  if (avecLogo) {
+    img.alt = nom ?? '';
+    img.src = `assets/maisons/${slug}.webp?v=${VERSION}`;
+  }
+  img.classList.toggle('hidden', !avecLogo);
+  nomEl.classList.toggle('hidden', avecLogo);
 }
 
 // Hooks transverses : les vues rafraîchissent en-tête/menu sans importer le shell.
@@ -201,126 +237,21 @@ S.refreshDemandes = async () => { await (await import('./js/views/demandes.js'))
 // ROUTEUR (hash) — lazy import des vues (D-039)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ─── Tiroir de navigation (HO-042, design handoff étape 2) ──────────────────
-// Remplace le menu déroulant ☰ (D-028) : panneau glissant 280px — frise
-// d'avancement, CTA capture, entrées Maison/Artistes/Collection (+ rayons en
-// second niveau), pied Activité/Sources/Catégories, profil + déconnexion.
-const MENU_GOUV = [
-  { hash: '#/activite',   label: 'Activité' },
-  { hash: '#/sources',    label: 'Sources' },
-  { hash: '#/categories', label: 'Catégories & familles' },
-  { hash: '#/demandes',   label: 'Demandes' },
-];
-const drawerEl = () => $('#menu-panel');
-const veilEl = () => $('#drawer-veil');
-function openMenu() {
-  renderMenu(); // contenu frais (comptes, frise) à chaque ouverture
-  drawerEl().classList.add('open');
-  veilEl().classList.add('open');
-  $('#menu-btn').setAttribute('aria-expanded', 'true');
-  // HO-123 : verrouille le défilement de la page derrière le tiroir — sans
-  // ça, deux barres de défilement coexistent (celle du tiroir + celle de la
-  // page masquée) sur mobile, tiroir ouvert.
-  document.body.classList.add('drawer-open');
-}
-function closeMenu() {
-  drawerEl().classList.remove('open');
-  veilEl().classList.remove('open');
-  $('#menu-btn').setAttribute('aria-expanded', 'false');
-  document.body.classList.remove('drawer-open');
-}
-// Frise d'avancement : calculée depuis le cache collection s'il est chargé
-// (découpage disjoint : sans photo → à estimer (prix_bas null) → estimées).
-function friseHtml() {
-  if (!S.collection?.length || !S.photoMap) return '';
-  const total = S.collection.length;
-  const sansPhoto = S.collection.filter(o => !S.photoMap[o.id]).length;
-  const aEstimer = S.collection.filter(o => S.photoMap[o.id] && o.prix_bas == null).length;
-  const ok = total - sansPhoto - aEstimer;
-  const pct = n => (n / total * 100).toFixed(1) + '%';
-  return `<div class="frise" role="img" aria-label="${ok} fiches estimées, ${aEstimer} à estimer, ${sansPhoto} sans photo">
-    <span class="frise-ok" style="width:${pct(ok)}"></span><span class="frise-todo" style="width:${pct(aEstimer)}"></span><span class="frise-nophoto" style="width:${pct(sansPhoto)}"></span>
-  </div>
-  <div class="frise-legende">
-    <span><i class="dot frise-ok"></i>${ok} estimée${ok > 1 ? 's' : ''}</span>
-    <span><i class="dot frise-todo"></i>${aEstimer} à estimer</span>
-    <span><i class="dot frise-nophoto"></i>${sansPhoto} sans photo</span>
-  </div>`;
-}
-// Rayons du second niveau « Collection » : catégories canoniques présentes dans
-// le cache, vignette = 1re photo du rayon (emoji en repli). Cible #/rayon/<cat>
-// (route ajoutée en HO-043 — le routeur retombe sur la collection en attendant).
-function rayonsHtml() {
-  if (!S.collection?.length) return '';
-  const parCat = new Map();
-  for (const o of S.collection) {
-    const c = catCanon(o.categorie);
-    if (!c) continue;
-    if (!parCat.has(c)) parCat.set(c, []);
-    parCat.get(c).push(o);
-  }
-  const lignes = [...parCat.entries()].sort((a, b) => a[0].localeCompare(b[0], 'fr')).map(([c, arr]) => {
-    const ph = arr.map(o => S.photoMap?.[o.id]).find(p => p?.url);
-    const visuel = ph ? `<img src="${esc(ph.url)}" alt="" loading="lazy">` : `<span class="rayon-emoji">${catEmoji(c)}</span>`;
-    return `<button class="drawer-rayon" data-hash="#/rayon/${encodeURIComponent(c)}"><span class="rayon-thumb">${visuel}</span><span class="rayon-nom">${esc(c)}</span><span class="rayon-n">${arr.length}</span></button>`;
-  }).join('');
-  return `<div class="drawer-sub">${lignes}</div>`;
-}
-// Rendu dépendant du contexte : frise + comptes (données chargées), switcher
-// multi-locataires (si > 1 maison), entrées filtrées selon le rôle (Maison =
-// owner + admin), profil + déconnexion en pied.
-function renderMenu() {
-  const badgeRO = canWrite() ? '' : '<span class="badge-ro">lecture seule</span>';
-  const switcher = S.mesTenants.length > 1 ? `
-    <div class="menu-sec">Maison</div>
-    ${S.mesTenants.map(t => `<button class="drawer-item menu-tenant ${t.id === S.tenantId ? 'current' : ''}" data-tenant="${esc(t.id)}">
-      <span class="tenant-check">${t.id === S.tenantId ? '✓' : ''}</span>
-      <span class="drawer-label">${esc(t.name || 'Ma collection')}</span><span class="drawer-meta">${esc(t.role)}</span>
-    </button>`).join('')}` : '';
-  drawerEl().innerHTML = `
-    <div class="drawer-head">
-      <div class="logo-name drawer-logo"><span class="w-i">I</span><img class="logo-glyph" src="assets/logo-glyph.png" alt="ART">cane<img class="logo-mark" src="assets/mark-cygne.svg" alt=""></div>
-      ${friseHtml()}
-      ${switcher}
-    </div>
-    <button class="btn primary drawer-cta hide-lecteur" data-hash="#/capture">+ Capturer un objet</button>
-    <nav class="drawer-nav">
-      <button class="drawer-item ${currentView?.view === 'accueil' ? 'current' : ''}" data-hash="#/"><span class="drawer-label">Accueil</span></button>
-      ${canWrite() ? '<button class="drawer-item" data-hash="#/maison"><span class="drawer-label">Maison</span></button>' : ''}
-      <button class="drawer-item" data-hash="#/artistes"><span class="drawer-label">Artistes</span><span class="drawer-n">${S.artistesCount ?? ''}</span></button>
-      <button class="drawer-item ${currentView?.view === 'collection' ? 'current' : ''}" data-hash="#/collection"><span class="drawer-label"><b>Collection</b></span><span class="drawer-n">${S.objetsCount ?? ''}</span></button>
-      ${rayonsHtml()}
-    </nav>
-    <div class="drawer-foot">
-      ${MENU_GOUV.map(e => `<button class="drawer-foot-item" data-hash="${esc(e.hash)}">${esc(e.label)}${e.hash === '#/demandes' && S.demandesOuvertes ? `<span class="drawer-n">${S.demandesOuvertes}</span>` : ''}</button>`).join('')}
-      <div class="drawer-user">
-        <span class="menu-user-name">${esc(profileName || '…')}${badgeRO}</span>
-        ${S.user?.email && S.user.email !== profileName ? `<span class="menu-user-mail">${esc(S.user.email)}</span>` : ''}
-        <button class="drawer-foot-item" data-action="logout">Se déconnecter</button>
-      </div>
-    </div>`;
-}
-$('#menu-btn').addEventListener('click', e => {
-  e.stopPropagation();
-  drawerEl().classList.contains('open') ? closeMenu() : openMenu();
+// ─── Tiroir de navigation ───────────────────────────────────────────────────
+// Le tiroir vit dans core/menu.js (extrait le 2026-08-31, plafond des 400
+// lignes). Le shell lui fournit ce que lui seul sait : la vue courante, le nom
+// du profil, la bascule de maison et le routage.
+initMenu({
+  vueCourante: () => currentView?.view ?? null,
+  nomProfil: () => profileName,
+  choisirMaison: selectTenant,
+  // Hash identique = pas de hashchange = écran figé (retour Yann 2026-08-31 :
+  // « je clique sur Collection, rien ne s'ouvre »). On rejoue alors la route.
+  aller: cible => {
+    if (location.hash === cible || (cible === '#/' && !location.hash)) route();
+    else location.hash = cible;
+  },
 });
-drawerEl().addEventListener('click', async e => {
-  const out = e.target.closest('[data-action="logout"]');
-  if (out) { closeMenu(); await sb.auth.signOut(); location.hash = ''; return; }
-  const t = e.target.closest('[data-tenant]');
-  if (t) { closeMenu(); selectTenant(t.dataset.tenant); return; }
-  const b = e.target.closest('[data-hash]');
-  if (b) { closeMenu(); location.hash = b.dataset.hash; }
-});
-veilEl().addEventListener('click', closeMenu);
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
-// Swipe gauche sur le tiroir = fermeture (design étape 2).
-let touchX0 = null;
-drawerEl().addEventListener('touchstart', e => { touchX0 = e.touches[0].clientX; }, { passive: true });
-drawerEl().addEventListener('touchend', e => {
-  if (touchX0 != null && e.changedTouches[0].clientX - touchX0 < -50) closeMenu();
-  touchX0 = null;
-}, { passive: true });
 
 // ─── Bandeau : loupe / entonnoir (HO-042 — la recherche détaillée arrive en HO-044)
 // La loupe bascule ligne de titre ↔ ligne de recherche ; la vue collection écoute

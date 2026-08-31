@@ -31,6 +31,18 @@ export function mountDetail(nom) {
 }
 
 // ─── Liste des fiches artistes (#/artistes) ─────────────────────────────────
+// Mini-cartes en 2 colonnes (retour Yann 2026-08-31) : la grille 3 colonnes
+// mettait tout nom sur 2 lignes en 360 px. Visuel = le PORTRAIT de l'artiste
+// (photo de zone 'portrait', même convention que le hero du hub) ; à défaut,
+// ses initiales. Sous-titre unique et prévisible : le métier quand le dossier
+// IA le connaît, sinon le nombre d'objets liés — jamais un bout de bio tronqué.
+
+// Initiales de repli : 2 lettres max, sur les mots signifiants du nom.
+function initiales(nom) {
+  const mots = String(nom ?? '').split(/[\s'’-]+/).filter(m => m.length > 1);
+  return mots.slice(0, 2).map(m => m[0].toUpperCase()).join('') || '?';
+}
+
 async function loadArtistesList() {
   const el = $('#artistes-body');
   el.innerHTML = '<div class="skeleton" style="height:220px"></div>';
@@ -44,27 +56,46 @@ async function loadArtistesList() {
     corps.innerHTML = emptyHtml('Aucune fiche artiste pour l\'instant', 'Le cron les crée lors des passes d\'identification.');
     return;
   }
+
+  // Portraits : une requête pour toute la liste, signés en un lot (jamais une
+  // requête par carte).
+  const noms = data.map(a => a.nom);
+  const { data: portraits } = await sb.from('artistes_photos')
+    .select('artiste_nom,storage_path,thumb_path')
+    .eq('owner_id', S.tenantId).eq('zone', 'portrait').in('artiste_nom', noms)
+    .order('ordre', { nullsFirst: false }).order('created_at');
+  const parNom = {};
+  for (const p of portraits ?? []) if (!parNom[p.artiste_nom]) parNom[p.artiste_nom] = p;
+  const chemins = Object.values(parNom).map(p => p.thumb_path ?? p.storage_path).filter(Boolean);
+  const urlByPath = chemins.length ? await signPaths(chemins) : {};
+
   const nbObjets = nom => S.collection.filter(o => auteurMatch(o.auteur, nom)).length;
-  corps.innerHTML = `<div class="grid">${data.map(a => {
-    const extrait = String(a.bio_md ?? '')
-      .replace(/^\s*#{1,4}\s+/gm, '')
-      .replace(/^\s*[-*]\s+/gm, '')
-      .replace(/[*`>_]/g, ' ')
-      .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
-      .replace(/\s+/g, ' ').trim();
-    const court = extrait.length > 220 ? extrait.slice(0, 220).replace(/\s+\S*$/, '') + '…' : extrait;
+  corps.innerHTML = `<div class="art-liste">${data.map(a => {
     const n = nbObjets(a.nom);
-    return `<article class="card" data-nom="${esc(a.nom)}">
-      <div class="card-body">
-        <div class="card-title">🎨 ${esc(a.nom)}</div>
-        <div class="card-meta art-extrait">${esc(court)}</div>
-        <div class="card-foot"><span class="price none">${n} objet${n > 1 ? 's' : ''} lié${n > 1 ? 's' : ''}</span><span class="conf-label">maj ${fmtDate(a.updated_at)}</span></div>
+    const p = parNom[a.nom];
+    const url = p ? urlByPath[p.thumb_path ?? p.storage_path] : null;
+    const visuel = url
+      ? `<img src="${esc(url)}" alt="" loading="lazy" decoding="async">`
+      : `<span class="art-mini-initiales" aria-hidden="true">${esc(initiales(a.nom))}</span>`;
+    // Métier possiblement long et énumératif (« céramiste, peintre, illustratrice… ») :
+    // on garde la première spécialité, le reste vit sur la fiche.
+    const metier = String(a.dossier?.identite?.metier ?? '').split(',')[0].trim();
+    const sous = metier || `${n} objet${n > 1 ? 's' : ''}`;
+    return `<article class="art-mini" data-nom="${esc(a.nom)}" tabindex="0" role="button">
+      <div class="art-mini-visuel${url ? '' : ' art-mini-visuel--vide'}">${visuel}</div>
+      <div class="art-mini-texte">
+        <span class="art-mini-nom">${esc(a.nom)}</span>
+        <span class="art-mini-sous">${esc(sous)}</span>
       </div>
+      ${n ? `<span class="art-mini-n">${n}</span>` : ''}
     </article>`;
   }).join('')}</div>`;
-  $$('.card', corps).forEach(c => c.addEventListener('click', () => {
-    location.hash = '#/artiste/' + encodeURIComponent(c.dataset.nom);
-  }));
+
+  $$('.art-mini', corps).forEach(c => {
+    const go = () => { location.hash = '#/artiste/' + encodeURIComponent(c.dataset.nom); };
+    c.addEventListener('click', go);
+    c.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+  });
 }
 
 // ─── Détail artiste (hub 3a) ───────────────────────────────────────────────

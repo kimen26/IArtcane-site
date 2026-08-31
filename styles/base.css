@@ -25,6 +25,12 @@ header{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:
    les pages (masqué sur la vue collection en mobile — show() dans app.js,
    le nom y est déjà porté par la ligne de titre). */
 .header-maison{margin-left:auto;min-width:0;display:flex;flex-direction:column;align-items:flex-end;line-height:1.15}
+/* Logo de maison (assets/maisons/<slug>.webp) : remplace le nom écrit quand le
+   fichier existe. Hauteur bornée pour ne jamais pousser l'en-tête (42 px en
+   mobile) ; la largeur suit le ratio de l'image, plafonnée pour laisser vivre
+   le logo IArtcane et la bulle de droite. */
+.header-maison-logo{display:block;height:22px;width:auto;max-width:38vw;object-fit:contain}
+@media (max-width:640px){.header-maison-logo{height:19px;max-width:34vw}}
 .header-maison-nom{font-family:var(--serif);font-size:.84375rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:42vw}
 .header-maison-n{font-size:.59375rem;letter-spacing:.04em;color:var(--ink-3)}
 @media (max-width:640px){ .header-maison{margin-right:6px} .header-maison-nom{max-width:34vw} }
@@ -77,8 +83,16 @@ html:has(> body.drawer-open),body.drawer-open{overflow:hidden} /* tiroir ouvert 
 .drawer-label{flex:1}
 .drawer-n{font-size:.75rem;color:var(--ink-3);font-family:var(--mono)}
 .drawer-meta{font-size:.75rem;color:var(--ink-3)}
-.tenant-check{width:16px;text-align:center;color:var(--green);font-weight:700}
-.menu-tenant.current{background:var(--blue-softer)}
+/* Switcher de maison replié : la courante est le résumé cliquable, les autres
+   se déplient (retour Yann 2026-08-31 — « liste déroulante pour voir les autres »). */
+.menu-maison{border:1px solid var(--line-soft);border-radius:var(--r-sm);padding:6px 10px}
+.menu-maison-resume{display:flex;align-items:center;gap:8px;min-height:36px;cursor:pointer;list-style:none}
+.menu-maison-resume::-webkit-details-marker{display:none}
+.menu-maison-nom{flex:1;font-family:var(--serif);font-size:.875rem;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.menu-maison-chevron{color:var(--ink-3);font-size:.75rem;transition:transform .18s}
+.menu-maison[open] .menu-maison-chevron{transform:rotate(180deg)}
+.menu-maison-liste{border-top:1px solid var(--line-soft);margin-top:4px;padding-top:2px}
+.menu-maison--seule{display:flex;align-items:center;gap:8px;min-height:36px}
 /* Second niveau « Collection » : un rayon par ligne, vignette 26×26 */
 .drawer-sub{display:flex;flex-direction:column;margin:2px 0 4px}
 .drawer-rayon{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:7px 4px;border:none;background:none;text-align:left;font-size:.8125rem;color:var(--ink);border-radius:var(--r-sm)}

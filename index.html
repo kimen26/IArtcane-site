@@ -19,9 +19,9 @@
      propre module via core/css.js → un chantier de vue ne touche plus ce fichier.
      Cache-buster ?v= : NE PAS éditer à la main — `node infra/bump-version.mjs <version>`
      écrit ici, dans js/core/version.js et dans sw.js d'un seul coup (L-013). -->
-<link rel="stylesheet" href="styles/tokens.css?v=2026-08-31zi-demandes">
-<link rel="stylesheet" href="styles/base.css?v=2026-08-31zi-demandes">
-<link rel="stylesheet" href="styles/components.css?v=2026-08-31zi-demandes">
+<link rel="stylesheet" href="styles/tokens.css?v=2026-08-31zj-recette">
+<link rel="stylesheet" href="styles/base.css?v=2026-08-31zj-recette">
+<link rel="stylesheet" href="styles/components.css?v=2026-08-31zj-recette">
 </head>
 <body>
 
@@ -36,6 +36,9 @@
       <div class="logo-name"><span class="w-i">I</span><img class="logo-glyph" src="assets/logo-glyph.png" alt="ART">cane<img class="logo-mark" src="assets/mark-cygne.svg" alt=""></div>
     </div>
     <div class="header-maison hidden" id="header-maison" title="Maison courante">
+      <!-- Maison ayant un logo (assets/maisons/<slug>.webp) : l'image REMPLACE
+           le nom écrit ; les autres gardent le texte (app.js::loadHeader). -->
+      <img class="header-maison-logo hidden" id="header-maison-logo" alt="" decoding="async">
       <span class="header-maison-nom" id="header-maison-nom"></span>
       <span class="header-maison-n" id="header-maison-n"></span>
     </div>
@@ -263,7 +266,7 @@
   </div>
 </div>
 
-<script src="config.js?v=2026-08-31zi-demandes"></script>
-<script type="module" src="app.js?v=2026-08-31zi-demandes"></script>
+<script src="config.js?v=2026-08-31zj-recette"></script>
+<script type="module" src="app.js?v=2026-08-31zj-recette"></script>
 </body>
 </html>

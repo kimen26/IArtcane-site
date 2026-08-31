@@ -99,6 +99,21 @@
 .ms-hex{ width:100%; box-sizing:border-box; border:1px solid var(--ms-field-line); border-radius:8px;
   padding:8px 9px; font-family:var(--mono); font-size:12px; color:var(--ink); background:var(--ms-field); outline:none; }
 .ms-hex:focus{ border-color:var(--ms-action); }
+
+/* ─── Couleur d'ambiance (2e couleur de maison, 2026-08-31) ────────────────
+   Une rangée de teintes franches plutôt qu'une seconde roue : l'ambiance se
+   choisit d'un coup d'œil, et deux roues côte à côte brouilleraient le rôle
+   distinct des deux couleurs (le ruban porte un chiffre, l'accent non). */
+.ms-accent-row{ display:flex; gap:6px; flex-wrap:wrap; margin:10px 0 12px; }
+.ms-accent-dot{ width:34px; height:34px; border:none; padding:0; border-radius:50%; cursor:pointer;
+  box-shadow:0 0 0 1px var(--ombre-legere); }
+.ms-accent-dot.is-sel{ box-shadow:0 0 0 2px #fff, 0 0 0 4px var(--ms-navy); }
+.ms-accent-apercu{ display:flex; align-items:center; gap:9px; margin-top:12px; }
+/* Réplique fidèle de la pastille d'artiste (styles/views/artistes.css) : un
+   aperçu qui ne ressemble pas au rendu réel ne sert à rien. */
+.ms-accent-pastille{ width:34px; height:34px; border-radius:50%; display:grid; place-items:center;
+  font-family:var(--serif); font-size:14px; line-height:1; flex:0 0 auto; }
+.ms-accent-legende{ font-size:11.5px; color:var(--ms-ink-3); }
 .ms-ruban-etat{ display:flex; align-items:flex-start; gap:7px; font-size:10.5px; line-height:1.4; color:var(--ms-ink-3); }
 .ms-etat-chip{ flex:none; width:7px; height:7px; margin-top:3px; border-radius:2px; }
 

@@ -12,11 +12,13 @@ import { S, canWrite } from '../../core/state.js';
 import { sb } from '../../core/data.js';
 import { champs } from '../../ui/champs.js';
 import {
-  M, hooks, RUBAN_DEFAUT, roueTeintes, NEUTRES, rubanTexte, hex2rgb,
+  M, hooks, RUBAN_DEFAUT, ACCENT_DEFAUT, roueTeintes, NEUTRES, rubanTexte, hex2rgb,
 } from './etat.js';
 
 /** Couleur de ruban effective (choix maison ou défaut). */
 const rubanCourant = () => M.tenant?.couleur || RUBAN_DEFAUT;
+/** Accent d'ambiance effectif (choix maison ou bleu du socle). */
+const accentCourant = () => M.tenant?.accent || ACCENT_DEFAUT;
 
 export function rendre(zone) {
   const t = M.tenant;
@@ -72,6 +74,23 @@ export function rendre(zone) {
           <button class="ms-btn ms-btn-ghost" id="ms-ruban-defaut" ${lecture ? 'disabled' : ''}>Revenir au défaut</button>
         </div>
       </div>
+    </div>
+
+    <div class="ms-card">
+      <div class="ms-sec-title"><span>Couleur d'ambiance</span><span class="ms-rule"></span></div>
+      <p class="ms-note">La seconde couleur de la maison. Elle ne touche jamais un chiffre : elle colore les touches d'interface — pastilles d'initiales des artistes, accents de l'écran Maison. Sans choix, le bleu d'IArtcane reprend.</p>
+
+      <div class="ms-accent-row" id="ms-accent-teintes">${rendreAccents()}</div>
+
+      <div class="ms-field-row">
+        <div class="ms-mini-block">
+          <div class="ms-mini-label">Code hexadécimal</div>
+          <input id="ms-accent-hex" class="ms-hex" value="${esc(accentCourant().toUpperCase())}" placeholder="#2456E0" ${lecture ? 'disabled' : ''} autocomplete="off" spellcheck="false">
+        </div>
+        <button class="ms-btn ms-btn-ghost" id="ms-accent-defaut" ${lecture ? 'disabled' : ''}>Revenir au bleu</button>
+      </div>
+
+      <div class="ms-accent-apercu" id="ms-accent-apercu">${rendreAccentApercu()}</div>
     </div>`;
 
   // Champ « Nom » via ui/champs.js (HO-107) : pas de sur.changer — cette
@@ -115,6 +134,30 @@ function rendreEtat() {
     <span>Texte <b>${rt.texteNom}</b> · contraste ${esc(rt.contraste)}</span>`;
 }
 
+// Accent : une rangée de teintes franches (pas la roue du ruban — l'ambiance se
+// choisit d'un coup d'œil, et une teinte trop pâle ne se verrait pas derrière
+// deux initiales), plus la saisie hexa pour tout le reste.
+const ACCENTS = [
+  ACCENT_DEFAUT, // le bleu du socle, toujours en tête
+  '#0F766E', '#B45309', '#9D174D', '#4C1D95', '#166534', '#B91C1C', '#1E3A5F',
+];
+
+function rendreAccents() {
+  const courant = accentCourant().toLowerCase();
+  return ACCENTS.map(hex => {
+    const sel = hex.toLowerCase() === courant;
+    return `<button class="ms-accent-dot ${sel ? 'is-sel' : ''}" data-accent="${hex}" style="background:${hex}" aria-label="${hex}" title="${hex}"></button>`;
+  }).join('');
+}
+
+// Aperçu honnête : les deux endroits où l'accent se voit vraiment.
+function rendreAccentApercu() {
+  const a = accentCourant();
+  return `
+    <span class="ms-accent-pastille" style="background:color-mix(in srgb,${a} 12%,#fff);color:color-mix(in srgb,${a} 75%,#0D1B3E)">AM</span>
+    <span class="ms-accent-legende">Pastille d'un artiste sans portrait</span>`;
+}
+
 function rendreVignette() {
   const rt = rubanTexte(rubanCourant());
   return `
@@ -149,7 +192,38 @@ async function enregistrerCouleur(couleur) {
   return true;
 }
 
+// Accent d'ambiance : même mécanique que le ruban, autre colonne, autre variable
+// CSS. null = retour au bleu du socle.
+async function enregistrerAccent(accent) {
+  const ok = await enregistrer(() => sb.from('tenants').upsert({ owner_id: S.tenantId, accent }), 'Couleur d\'ambiance');
+  if (!ok) return false;
+  M.tenant.accent = accent;
+  const mienne = S.mesTenants.find(x => x.id === S.tenantId);
+  if (mienne) mienne.accent = accent;
+  document.documentElement.style.setProperty('--accent-maison', accent || '');
+  return true;
+}
+
 const normHex = h => (h.startsWith('#') ? h : '#' + h);
+
+async function choisirAccent(hex) {
+  const norm = normHex(String(hex).trim());
+  if (!hex2rgb(norm)) return;
+  if (!await enregistrerAccent(norm)) return;
+  const input = $('#ms-accent-hex'); if (input) input.value = norm.toUpperCase();
+  rafraichirAccent();
+}
+
+function rafraichirAccent() {
+  const t = $('#ms-accent-teintes'); if (t) { t.innerHTML = rendreAccents(); brancherAccents(); }
+  const a = $('#ms-accent-apercu'); if (a) a.innerHTML = rendreAccentApercu();
+}
+
+function brancherAccents() {
+  document.querySelectorAll('#ms-accent-teintes .ms-accent-dot').forEach(b => {
+    b.addEventListener('click', () => choisirAccent(b.dataset.accent));
+  });
+}
 
 // Choix confirmé (pastille, saisie hexa validée, bouton défaut) → persiste + re-rend.
 async function choisir(hex) {
@@ -207,6 +281,25 @@ function brancher(zone) {
     if (await enregistrerCouleur(null)) {
       const hexInput = $('#ms-hex'); if (hexInput) hexInput.value = RUBAN_DEFAUT.toUpperCase();
       rafraichir();
+    }
+  });
+
+  // ─── Accent d'ambiance ───────────────────────────────────────────────────
+  brancherAccents();
+
+  const accentHex = $('#ms-accent-hex');
+  // Aperçu instantané pendant la frappe (sans écrire), écriture au `change` —
+  // même parti pris que le ruban.
+  accentHex.addEventListener('input', () => {
+    const norm = normHex(accentHex.value.trim());
+    if (hex2rgb(norm)) document.documentElement.style.setProperty('--accent-maison', norm);
+  });
+  accentHex.addEventListener('change', () => choisirAccent(accentHex.value));
+
+  $('#ms-accent-defaut').addEventListener('click', async () => {
+    if (await enregistrerAccent(null)) {
+      accentHex.value = ACCENT_DEFAUT.toUpperCase();
+      rafraichirAccent();
     }
   });
 }

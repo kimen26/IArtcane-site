@@ -35,7 +35,7 @@ async function chargerMaison() {
   body.innerHTML = '<div class="skeleton" style="height:260px"></div>';
 
   const [{ data: t, error: eT }, { data: membres, error: eM }, { data: invits }, { data: objets }] = await Promise.all([
-    sb.from('tenants').select('name, couleur').eq('owner_id', S.tenantId).maybeSingle(),
+    sb.from('tenants').select('name, couleur, accent').eq('owner_id', S.tenantId).maybeSingle(),
     sb.from('collection_members').select('member_id, role, created_at').eq('owner_id', S.tenantId).order('created_at'),
     sb.from('maison_invitations').select('id, email, role, created_at, relance_le').eq('owner_id', S.tenantId).order('created_at', { ascending: false }),
     sb.from('objets').select('id, auteur, created_at').eq('owner_id', S.tenantId).order('created_at'),

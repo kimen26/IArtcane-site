@@ -21,6 +21,10 @@ export const M = {
 /** Valeur par défaut du ruban (fallback CSS + bouton « Revenir au défaut »). */
 export const RUBAN_DEFAUT = '#35696c';
 
+/** Valeur par défaut de l'accent d'ambiance : le bleu primaire du socle
+    (tokens.css --blue) — c'est lui qui reprend quand la maison n'a rien choisi. */
+export const ACCENT_DEFAUT = '#2456E0';
+
 /** Branchés par views/maison/index.js au chargement du module. */
 export const hooks = {
   recharger: null,  // ()            => Promise — recharge tout le territoire

@@ -32,6 +32,11 @@
   --ink-hero-text:#9FB2DF;
   /* HO-052 : ruban d'estimation (token transverse référencé HO-041, manquant en static) */
   --ruban:#35696c;
+  /* Deuxième couleur de maison (2026-08-31, demande Yann) : l'AMBIANCE, quand
+     --ruban porte le chiffre. Écrite par app.js::applyCouleursMaison depuis
+     tenants.accent ; sans choix de la maison, le bleu primaire reprend — d'où
+     le repli sur --blue et non une teinte à elle. */
+  --accent-maison:var(--blue);
   --r-lg:16px; --r-md:12px; --r-sm:8px;
   --shadow:0 1px 2px rgba(13,27,62,.05),0 4px 16px rgba(13,27,62,.06);
   --shadow-hover:0 2px 4px rgba(13,27,62,.07),0 10px 28px rgba(13,27,62,.12);
@@ -63,7 +68,7 @@
 
   /* --accent-teal partage la valeur PAR DÉFAUT de --ruban (#35696c) mais n'est
      PAS un alias de --ruban : --ruban est réécrit en direct par la maison
-     (app.js::applyRuban, HO-041) tandis que ce teal reste fixe (indicateurs
+     (app.js::applyCouleursMaison, HO-041) tandis que ce teal reste fixe (indicateurs
      "complet"/"rendement" d'activite.css et sources.css, sans rapport avec le
      ruban d'estimation). Bug détecté et corrigé en recette HO-103 : une maison
      à ruban bleu (#07688F) faisait virer ces indicateurs au bleu par erreur. */
@@ -84,6 +89,10 @@
   --icone-sur-fonce:rgba(255,255,255,.9);
 
   --ombre-carte:rgba(20,30,55,.09); --ombre-carte-douce:rgba(20,30,55,.1);
+  /* Ombre des cartes en mobile — volontairement plus discrète que --shadow.
+     Deux consommateurs : la carte de collection (components.css) et la
+     mini-carte artiste (views/artistes.css). */
+  --ombre-carte-mobile:rgba(13,27,62,.08);
   --ombre-legere:rgba(13,27,62,.10); --ombre-vignette:rgba(20,30,55,.2);
   --ombre-barre-basse:rgba(20,30,55,.07); --ombre-texte-forte:rgba(0,0,0,.45);
   --ombre-texte-douce:rgba(0,0,0,.55); --ombre-texte-photo:rgba(0,0,0,.6);

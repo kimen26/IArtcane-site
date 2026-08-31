@@ -92,9 +92,10 @@
 /* Mobile : cartes artistes en grille dense 3 colonnes (HO-033) */
 @media (max-width:640px){
   .grid{grid-template-columns:repeat(3,1fr);gap:10px}
-  /* ombre carte mobile, valeur unique — nuance volontairement plus
-     discrète que --shadow, non fusionnée d'office (HO-103) */
-  .card{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 1px 4px rgba(13,27,62,.08);margin-top:8px}
+  /* ombre carte mobile — nuance volontairement plus discrète que --shadow.
+     Promue en token --ombre-carte-mobile le 2026-08-31, quand la mini-carte
+     artiste en a fait un second consommateur. */
+  .card{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 1px 4px var(--ombre-carte-mobile);margin-top:8px}
   .card-body{padding:8px 8px 9px;gap:2px}
   .card-title{font-size:.8125rem;font-weight:700;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .card-meta{display:block;font-size:.6875rem;line-height:1.25;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

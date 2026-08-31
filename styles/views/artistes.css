@@ -1,7 +1,59 @@
 /* ─── Vue Artistes (HO-052) — hub fiche artiste 3a + liste ────────────────── */
 
-/* Liste : extrait de bio tronqué sur 3 lignes (conservé de l'ancienne vue) */
-.art-extrait{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+/* ─── Liste : mini-cartes en 2 colonnes (retour Yann 2026-08-31) ───────────
+   La grille 3 colonnes de components.css cassait tout nom sur 2 lignes en
+   360 px. Ici : 2 colonnes, portrait rond, nom sur UNE ligne (ellipse au-delà),
+   sous-titre unique (métier, ou nombre d'objets). Aucune hauteur fixe sur les
+   zones de texte — la carte grandit au zoom 200 % au lieu de rogner. */
+/* Colonnes pilotées par la largeur DISPONIBLE en `rem` : à police normale il
+   en tient 2 sur un 360 px, et quand Alain grossit sa police (rem plus large),
+   le seuil de 9rem cesse d'être tenu et la liste retombe d'elle-même sur une
+   colonne — le nom y respire au lieu d'être coupé. Une media query n'aurait
+   pas suffi : ses unités suivent la police du NAVIGATEUR, pas celle de la page.
+   `minmax(…,1fr)` avec un minimum explicite, jamais `auto` : une cellule à
+   `min-width:auto` refuse de descendre sous son contenu et un nom long
+   poussait la 2e colonne hors écran (constaté en recette). */
+.art-liste{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(9rem,100%),1fr));gap:9px}
+.art-mini{
+  min-width:0;
+  display:flex;align-items:center;gap:9px;min-height:56px;padding:8px 10px 8px 8px;
+  background:var(--surface);border:1px solid var(--line);border-radius:12px;
+  box-shadow:0 1px 4px var(--ombre-carte-mobile);cursor:pointer;
+  transition:box-shadow .15s,transform .15s,border-color .15s;
+}
+.art-mini:hover{box-shadow:var(--shadow-hover);transform:translateY(-1px);border-color:var(--line-strong)}
+.art-mini:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.art-mini-visuel{
+  flex:0 0 auto;width:38px;height:38px;border-radius:50%;overflow:hidden;
+  background:var(--surface-2);display:grid;place-items:center;
+}
+.art-mini-visuel img{width:100%;height:100%;object-fit:cover;display:block}
+/* Sans portrait : initiales sur aplat discret — jamais un emoji générique
+   répété 49 fois, qui ne distingue aucun artiste d'un autre. La pastille porte
+   l'ACCENT de la maison (tenants.accent) : c'est un des endroits où chaque
+   maison se reconnaît. `color-mix` garde l'aplat très clair quelle que soit la
+   teinte choisie — un accent saturé ne doit pas hurler derrière deux lettres. */
+.art-mini-visuel--vide{background:color-mix(in srgb,var(--accent-maison) 12%,var(--surface))}
+.art-mini-initiales{font-family:var(--serif);font-size:.875rem;line-height:1;color:color-mix(in srgb,var(--accent-maison) 75%,var(--ink))}
+.art-mini-texte{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.art-mini-nom{font-size:.8125rem;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.art-mini-sous{font-size:.6875rem;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.art-mini-n{flex:0 0 auto;font-family:var(--mono);font-size:.6875rem;color:var(--ink-3)}
+
+/* Mobile : chaque pixel pris par le chrome est un caractère de nom en moins.
+   Le compteur d'objets disparaît (il est déjà dit par le sous-titre quand il
+   n'y a pas de métier, et par la fiche sinon) et le rond rétrécit — mesuré :
+   ~40 px rendus au nom, la plupart des noms cessent d'être tronqués. */
+@media (max-width:640px){
+  .art-mini{gap:8px;padding:8px}
+  .art-mini-n{display:none}
+  .art-mini-visuel{width:34px;height:34px}
+}
+
+/* Desktop : `auto-fit` remplit seul la largeur (4 colonnes vers 1240 px) —
+   aucune media query de colonnes à maintenir, juste un peu plus d'air. */
+@media (min-width:700px){.art-liste{gap:11px}}
+
 
 /* Corps de la fiche artiste : empilement des 11 blocs. En-tête, fil d'Ariane
    et barre basse sont posés par `ui/page.js` + `ui/barre-basse.js` (HO-104) —
