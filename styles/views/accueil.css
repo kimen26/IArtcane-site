@@ -1,0 +1,214 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   IArtcane — Vue Accueil : le journal (HO-119). Quatre blocs empilés, un seul
+   scroll (posé par ui/page.js). Zéro couleur littérale : tokens.css only.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.acc-bloc { margin: 0 0 20px; }
+.acc-bloc:last-child { margin-bottom: 0; }
+
+.acc-carte {
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow);
+}
+
+/* ─── Bloc 1 : travail agrégé ────────────────────────────────────────────── */
+.acc-phrase {
+  margin: 0 0 4px;
+  font-family: var(--serif);
+  font-size: 22px;
+  line-height: 1.25;
+  color: var(--ink);
+}
+.acc-detail {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+
+/* ─── Bloc 2 : iArcane a trouvé ──────────────────────────────────────────── */
+.acc-trouvailles { padding: 0 16px; }
+.acc-trouv-tete {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 0 10px;
+  font-size: 10px;
+  letter-spacing: .13em;
+  color: var(--amber);
+  font-weight: 600;
+}
+.acc-trouv-pastille {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--gold);
+  flex: 0 0 auto;
+}
+.acc-trouv-ligne {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line-soft);
+}
+.acc-trouv-ligne:first-of-type { border-top: none; }
+.acc-trouv-vignette {
+  width: 46px; height: 46px;
+  border-radius: var(--r-sm);
+  object-fit: cover;
+  flex: 0 0 auto;
+  background: var(--surface-image);
+}
+.acc-trouv-vignette--vide { background: var(--surface-image); }
+.acc-trouv-corps {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.acc-trouv-surtitre {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.acc-trouv-valeur {
+  font-family: var(--serif);
+  font-size: 15.5px;
+  color: var(--ink);
+}
+.acc-trouv-sur {
+  font-size: 10px;
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.acc-trouv-voir {
+  flex: 0 0 auto;
+  border: none;
+  background: var(--blue-soft);
+  color: var(--blue-deep);
+  font-size: 11.5px;
+  font-weight: 600;
+  border-radius: var(--r-sm);
+  padding: 8px 14px;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+/* ─── Bloc 3 : il vous reste ─────────────────────────────────────────────── */
+.acc-reste-titre {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 2px 8px;
+  font-family: var(--serif);
+  font-size: 17px;
+  color: var(--ink);
+}
+.acc-reste-total {
+  font-family: var(--sans);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+.acc-reste-ligne {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  min-height: 44px;
+  border-top: 1px solid var(--line-soft);
+  cursor: pointer;
+}
+.acc-reste-ligne:first-child { border-top: none; }
+.acc-reste-corps {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 8px;
+  row-gap: 1px;
+}
+.acc-reste-chiffre {
+  font-family: var(--serif);
+  font-size: 16px;
+  color: var(--ink);
+  grid-row: 1 / 3;
+  align-self: center;
+}
+.acc-reste-libelle { font-size: 12.5px; color: var(--ink); }
+.acc-reste-sous { font-size: 10px; color: var(--ink-3); grid-column: 2; }
+.acc-reste-vignettes {
+  display: flex;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+.acc-reste-vignette {
+  width: 28px; height: 28px;
+  border-radius: 4px;
+  object-fit: cover;
+  background: var(--surface-image);
+}
+.acc-reste-vignette--vide { background: var(--surface-image); }
+.acc-reste-chevron {
+  flex: 0 0 auto;
+  color: var(--ink-3);
+  font-size: 16px;
+}
+
+/* ─── Bloc 4 : la collection à date (seul fond de couleur pleine) ───────── */
+.acc-resume {
+  background: var(--ink);
+  border-radius: var(--r-lg);
+  padding: 16px;
+  color: var(--ink-sur-navy);
+}
+.acc-resume-tete {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 10px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-sur-navy);
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(255,255,255,.12);
+}
+.acc-resume-date { text-transform: none; letter-spacing: 0; }
+.acc-resume-ligne {
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 0;
+}
+.acc-resume-chiffre {
+  font-family: var(--serif);
+  font-size: 19px;
+  color: #fff;
+}
+.acc-resume-libelle { font-size: 11.5px; color: var(--ink-sur-navy); }
+.acc-resume-precision { font-size: 10px; color: var(--ink-sur-navy); text-align: right; }
+.acc-resume-frise {
+  display: flex;
+  height: 7px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 12px;
+  background: rgba(255,255,255,.08);
+}
+.acc-resume-frise-seg { height: 100%; }
+.acc-resume-frise-seg--validees { background: var(--accent-teal); }
+.acc-resume-frise-seg--estimees { background: var(--gold); }
+.acc-resume-frise-seg--reste { background: rgba(255,255,255,.16); }
+
+/* ─── Squelette de chargement ────────────────────────────────────────────── */
+.acc-chargement { display: flex; flex-direction: column; gap: 20px; }
+.acc-chargement-bloc {
+  display: block;
+  height: 64px;
+  border-radius: var(--r-lg);
+  background: var(--surface-2);
+}
