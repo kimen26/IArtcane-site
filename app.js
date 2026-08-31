@@ -209,7 +209,10 @@ async function loadHeader() {
 // chaque maison sans logo — or la recette échoue sur toute erreur console, et
 // une porte qui hurle sur un comportement normal finit par être ignorée.
 // Ajouter une maison = déposer `assets/maisons/<slug>.webp` ET son slug ici.
-const LOGOS_MAISON = new Set(['ponaire']);
+// Vide tant qu'aucun fichier n'est déposé : déclarer un slug sans son image
+// afficherait une vignette cassée dans l'en-tête, pire que le nom écrit.
+// (`ponaire` attend la calligraphie de Yann — TODO §Côté Yann.)
+const LOGOS_MAISON = new Set([]);
 
 const slugMaison = nom => String(nom ?? '').toLowerCase()
   .normalize('NFD').replace(/\p{Diacritic}/gu, '')
