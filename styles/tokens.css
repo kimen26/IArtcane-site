@@ -99,6 +99,9 @@
   --encre-fond: var(--ink);
   --encre-bord: rgba(255,255,255,.12);
   --encre-texte-fort: #fff;
+  --encre-texte: #cfd7ea;          /* libellés — maquette « Accueil - retenu » (arbitrage Yann 31/08) */
+  --encre-texte-discret: #8fa0cc;  /* tête, précisions, date — idem maquette */
   --encre-frise-fond: rgba(255,255,255,.08);
-  --encre-frise-reste: rgba(255,255,255,.16);
+  --encre-frise-reste: #3a4a72;          /* segment « reste » — exact maquette */
+  --encre-frise-validees: #4d9c9c;       /* segment « validées » — exact maquette (l'--accent-teal global ne bouge pas) */
 }
