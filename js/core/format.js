@@ -11,7 +11,10 @@ import { S } from './state.js';
 // catCanon() rabat les formes rendues par les LLM (« ceramiques », « Céramique »…)
 // sur la forme canonique d'affichage.
 export function catCanon(c) {
-  const k = norm(c).trim().replace(/s$/, '');
+  // Les catégories composées s'écrivent « gravure/estampe » (forme prompt, R1) ou
+  // « Gravure / estampe » (forme affichage) : sans neutraliser les espaces autour
+  // du slash, les deux survivent comme deux rayons distincts (demande Alain n°12).
+  const k = norm(c).trim().replace(/\s*\/\s*/g, '/').replace(/s$/, '');
   if (!k) return c;
   return VARIANTES[k] ?? (String(c).trim().charAt(0).toUpperCase() + String(c).trim().slice(1));
 }
