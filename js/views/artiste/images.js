@@ -20,6 +20,7 @@ import { createOverlay } from '../../core/lightbox.js';
 import { page } from '../../ui/page.js';
 import { galerie } from '../../ui/galerie.js';
 import { micButton } from '../../ui/mic.js';
+import { recadrage, decouper } from '../../ui/recadrage.js';
 import { A, hooks } from './etat.js';
 import { insererArtistePhoto } from './uploads.js';
 import { supprimer, taguer, remplacer, reordonner, cibleArtiste } from '../../services/photos.js';
@@ -297,91 +298,23 @@ async function onReordonner(ordre) {
 // ─── Recadrage (overlay, gardé faute d'équivalent routé — cf. tête de fichier) ─
 
 function openCutter(p) {
-  const { el: lb, close } = createOverlay({
-    className: 'cut art-images-cut',
-    html: `<img src="${esc(p.url)}" alt="Image à recadrer">
-      <div class="cut-bar"><span class="cut-hint">Tire les poignées (bords et coins) pour délimiter la zone à garder</span>
-      <button class="btn primary small" data-ok disabled>✂️ Recadrer</button>
-      <button class="btn small" data-cancel>Annuler</button></div>`,
-  });
-
-  const img = lb.querySelector('img');
-  const ok = lb.querySelector('[data-ok]');
-  let sel = { x0: 0, y0: 0, x1: 1, y1: 1 };
-  let box = null;
-  let drag = null;
-  const MIN = 0.05;
-  const toRel = e => {
-    const r = img.getBoundingClientRect();
-    return { x: Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1), y: Math.min(Math.max((e.clientY - r.top) / r.height, 0), 1) };
-  };
-  const H = {
-    nw: (s, p) => ({ ...s, x0: Math.min(p.x, s.x1 - MIN), y0: Math.min(p.y, s.y1 - MIN) }),
-    n:  (s, p) => ({ ...s, y0: Math.min(p.y, s.y1 - MIN) }),
-    ne: (s, p) => ({ ...s, x1: Math.max(p.x, s.x0 + MIN), y0: Math.min(p.y, s.y1 - MIN) }),
-    e:  (s, p) => ({ ...s, x1: Math.max(p.x, s.x0 + MIN) }),
-    se: (s, p) => ({ ...s, x1: Math.max(p.x, s.x0 + MIN), y1: Math.max(p.y, s.y0 + MIN) }),
-    s:  (s, p) => ({ ...s, y1: Math.max(p.y, s.y0 + MIN) }),
-    sw: (s, p) => ({ ...s, x0: Math.min(p.x, s.x1 - MIN), y1: Math.max(p.y, s.y0 + MIN) }),
-    w:  (s, p) => ({ ...s, x0: Math.min(p.x, s.x1 - MIN) }),
-  };
-  const draw = () => {
-    if (!box) {
-      box = document.createElement('div');
-      box.className = 'cut-sel';
-      box.innerHTML = Object.keys(H).map(h => `<i data-h="${h}" class="h-${h}"></i>`).join('');
-      lb.append(box);
-    }
-    const r = img.getBoundingClientRect();
-    box.style.left = `${r.left + sel.x0 * r.width}px`;
-    box.style.top = `${r.top + sel.y0 * r.height}px`;
-    box.style.width = `${(sel.x1 - sel.x0) * r.width}px`;
-    box.style.height = `${(sel.y1 - sel.y0) * r.height}px`;
-  };
-  if (img.complete && img.naturalWidth) draw(); else img.addEventListener('load', draw, { once: true });
-  lb.addEventListener('pointerdown', e => {
-    const h = e.target.dataset?.h;
-    if (!h) return;
-    e.preventDefault(); e.stopPropagation();
-    drag = h;
-  });
-  lb.addEventListener('pointermove', e => {
-    if (!drag) return;
-    sel = H[drag](sel, toRel(e));
-    draw();
-    ok.disabled = false;
-  });
-  lb.addEventListener('pointerup', () => { drag = null; });
-  lb.querySelector('[data-cancel]').addEventListener('click', e => { e.stopPropagation(); close(); });
-  ok.addEventListener('click', async e => {
-    e.stopPropagation();
-    ok.disabled = true; ok.textContent = 'Recadrage…';
-    try {
-      await withBusy(async () => {
-        const blob = await (await fetch(p.url)).blob();
-        const bmp = await createImageBitmap(blob);
-        const sx = Math.round(sel.x0 * bmp.width);
-        const sy = Math.round(sel.y0 * bmp.height);
-        const sw = Math.round((sel.x1 - sel.x0) * bmp.width);
-        const sh = Math.round((sel.y1 - sel.y0) * bmp.height);
-        if (sw < 20 || sh < 20) throw new Error('zone trop petite');
-        const c = document.createElement('canvas');
-        c.width = sw; c.height = sh;
-        c.getContext('2d').drawImage(bmp, sx, sy, sw, sh, 0, 0, sw, sh);
-        const out = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.92));
-        if (!out) throw new Error('encodage impossible');
-        const r = await remplacer(cibleArtiste(A.nom), p, out);
-        if (!r.ok) throw new Error(r.error);
-        close();
-        toast('✓ Image recadrée — résolution d’origine conservée');
-        logEvent('artiste_image_recadree', { image: p.storage_path });
-        await hooks.recharger(A.nom);
-      }, { titre: 'Recadrage de l\'image…' });
-    } catch (err) {
-      console.warn('recadrage artiste:', err); toast(`Recadrage échoué — ${humaniser(err)}. Réessaie.`, 'action');
-      ok.disabled = false; ok.textContent = '✂️ Recadrer';
-    }
-  });
+  const { el, close } = createOverlay({ className: 'cut' });
+  recadrage(el, { src: p.url, alt: 'Image à recadrer', sur: {
+    annuler: close,
+    valider: async sel => {
+      try {
+        await withBusy(async () => {
+          const out = await decouper(await (await fetch(p.url)).blob(), sel);
+          const r = await remplacer(cibleArtiste(A.nom), p, out);
+          if (!r.ok) throw new Error(r.error);
+          close();
+          toast('✓ Image recadrée — résolution d’origine conservée');
+          logEvent('artiste_image_recadree', { image: p.storage_path });
+          await hooks.recharger(A.nom);
+        }, { titre: 'Recadrage de l\'image…' });
+      } catch (err) { console.warn('recadrage artiste:', err); toast(`Recadrage échoué — ${humaniser(err)}. Réessaie.`, 'action'); }
+    },
+  } });
 }
 
 function fmtShortDate(iso) {

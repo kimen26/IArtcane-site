@@ -230,20 +230,4 @@ body.role-lecteur .art-chez-relever{display:none}
    vivent désormais dans la barre basse uniforme `ui/barre-basse.js`). */
 .art-images-status{font-size:10.5px;color:var(--ink-3);padding-top:2px}
 
-/* Recadrage (lightbox cut) */
-.lightbox.art-images-cut img{display:block;max-width:100%;max-height:70vh;margin:0 auto}
-/* recadrage remplacé côté objet par HO-099 (obj-edit-canvas) ; ce chemin
-   artiste reste sur l'ancien overlay, valeurs uniques ici (HO-103) */
-.lightbox.art-images-cut .cut-bar{position:absolute;left:0;right:0;bottom:0;background:#fff;padding:12px;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 -2px 10px rgba(0,0,0,.1)}
-.lightbox.art-images-cut .cut-hint{flex:1;font-size:11px;color:var(--ink-2);margin-right:8px}
-/* idem : overlay de recadrage propre à artiste, valeur unique (HO-103) */
-.lightbox.art-images-cut .cut-sel{position:fixed;border:2px dashed #fff;pointer-events:none;background:rgba(255,255,255,.1)}
-.lightbox.art-images-cut .cut-sel i{position:absolute;width:12px;height:12px;background:#fff;border-radius:50%;pointer-events:auto}
-.lightbox.art-images-cut .cut-sel .h-nw{left:-6px;top:-6px;cursor:nw-resize}
-.lightbox.art-images-cut .cut-sel .h-n{left:50%;top:-6px;transform:translateX(-50%);cursor:n-resize}
-.lightbox.art-images-cut .cut-sel .h-ne{right:-6px;top:-6px;cursor:ne-resize}
-.lightbox.art-images-cut .cut-sel .h-e{right:-6px;top:50%;transform:translateY(-50%);cursor:e-resize}
-.lightbox.art-images-cut .cut-sel .h-se{right:-6px;bottom:-6px;cursor:se-resize}
-.lightbox.art-images-cut .cut-sel .h-s{left:50%;bottom:-6px;transform:translateX(-50%);cursor:s-resize}
-.lightbox.art-images-cut .cut-sel .h-sw{left:-6px;bottom:-6px;cursor:sw-resize}
-.lightbox.art-images-cut .cut-sel .h-w{left:-6px;top:50%;transform:translateY(-50%);cursor:w-resize}
+/* Recadrage : atelier commun HO-115 (ui/recadrage.js + ui/recadrage.css) */

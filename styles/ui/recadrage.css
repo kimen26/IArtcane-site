@@ -1,0 +1,62 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   IArtcane — styles/ui/recadrage.css : atelier de recadrage (HO-115).
+   Version tactile unique (poignées 44 px) — reprend capture.css l. 358-411 ;
+   la version artiste (poignées 12 px blanches) disparaît, Yann veut un seul
+   atelier. Couleurs via les tokens existants, aucune couleur littérale créée.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.ui-recadrage { cursor: default; }
+.ui-recadrage-img {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100dvh - 132px);
+  margin: 0 auto;
+}
+.ui-recadrage-sel {
+  position: fixed;
+  border: 2px dashed var(--surface);
+  box-shadow: 0 0 0 9999px var(--voile-bloquant);
+  pointer-events: none;
+  z-index: 10;
+}
+.ui-recadrage-h {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  background: var(--blue);
+  border: 3px solid var(--surface);
+  border-radius: 50%;
+  pointer-events: auto;
+  touch-action: none;
+  box-shadow: 0 2px 6px var(--ombre-texte-forte);
+  transform: translate(-50%, -50%);
+  transition: transform .1s, background .1s;
+}
+.ui-recadrage-h:hover { background: var(--blue-deep); transform: translate(-50%, -50%) scale(1.15); }
+.ui-recadrage-h:active { background: var(--blue-deep); transform: translate(-50%, -50%) scale(1.05); }
+.ui-recadrage-h--nw { left: 0; top: 0; cursor: nwse-resize; }
+.ui-recadrage-h--n { left: 50%; top: 0; cursor: ns-resize; }
+.ui-recadrage-h--ne { right: 0; top: 0; cursor: nesw-resize; }
+.ui-recadrage-h--e { right: 0; top: 50%; cursor: ew-resize; }
+.ui-recadrage-h--se { right: 0; bottom: 0; cursor: nwse-resize; }
+.ui-recadrage-h--s { left: 50%; bottom: 0; cursor: ns-resize; }
+.ui-recadrage-h--sw { left: 0; bottom: 0; cursor: nesw-resize; }
+.ui-recadrage-h--w { left: 0; top: 50%; cursor: ew-resize; }
+.ui-recadrage-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 14px;
+  background: var(--voile-lightbox);
+  border-top: 1px solid var(--bordure-claire-fine);
+  z-index: 12;
+}
+.ui-recadrage-hint {
+  color: var(--surface);
+  font-size: 13.5px;
+  opacity: .85;
+}
