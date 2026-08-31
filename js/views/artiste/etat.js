@@ -16,6 +16,7 @@ export const A = {
   notes: [],           // artistes_notes triées created_at asc
   ecran: 'fiche',      // 'fiche' pour l'instant ; HO-053 ajoutera d'autres écrans
   focus: null,         // { objetId } | null — prévu pour surligner les ventes
+  pendingPhotos: [],   // ids des photos jointes au composeur de notes (index.js les mute, blocs-maison.js les lit)
 };
 
 /** Branchés par views/artiste/index.js au chargement du module. */

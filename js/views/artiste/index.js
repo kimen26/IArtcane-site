@@ -7,7 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, $$, esc, emptyHtml } from '../../core/dom.js';
 import { S, canWrite } from '../../core/state.js';
-import { auteurMatch, cardHtml, fmtDate, fmtNum, mdToHtml } from '../../core/format.js';
+import { auteurMatch, fmtDate } from '../../core/format.js';
 import { sb, signPaths, logEvent, ensureCollection, loadPhotoMap } from '../../core/data.js';
 import { toast, enregistrer, humaniser } from '../../core/feedback.js';
 import { openViewer } from '../../core/lightbox.js';
@@ -16,11 +16,10 @@ import { page } from '../../ui/page.js';
 import { texte } from '../../ui/texte.js';
 import { A, hooks } from './etat.js';
 import { insererArtistePhoto } from './uploads.js';
+import { rendreFiche } from './blocs.js';
 
 await loadViewCss('artistes');
 
-// Photos jointées en cours de rédaction dans le composeur de notes.
-let pendingPhotos = [];
 let filePickerTarget = 'note'; // 'note' | 'quick'
 
 export function mountList() {
@@ -73,7 +72,7 @@ async function loadArtiste(nom) {
   const body = $('#artiste-body');
   body.innerHTML = '<div class="skeleton" style="height:320px"></div>';
   // Si on change d'artiste, on abandonne les photos en cours de composition.
-  if (A.nom && A.nom !== nom) pendingPhotos = [];
+  if (A.nom && A.nom !== nom) A.pendingPhotos = [];
   A.nom = nom;
   A.ecran = 'fiche';
   A.focus = null;
@@ -198,7 +197,7 @@ function brancherJournal(corps) {
   if (cible) texte(cible, {
     contenu: '', mode: 'edition', micro: true, lignes: 2,
     enregistrerSiIdentique: true, // composeur : une note « photo seule » (rien tapé) doit partir — ajouterNote() garde « ni texte ni photo »
-    sur: { enregistrer: ajouterNote, annuler: () => { pendingPhotos = []; hooks.rendre?.(); } },
+    sur: { enregistrer: ajouterNote, annuler: () => { A.pendingPhotos = []; hooks.rendre?.(); } },
   });
 }
 
@@ -217,371 +216,6 @@ function naviguer(ecran, focus = null) {
 hooks.recharger = loadArtiste;
 hooks.naviguer = naviguer;
 hooks.rendre = renderArtiste;
-
-// ─── Helpers de données ─────────────────────────────────────────────────────
-function dossier() {
-  return A.artiste?.dossier ?? {};
-}
-
-function identite() {
-  return dossier().identite ?? {};
-}
-
-// ─── Rendu HTML du hub 3a ───────────────────────────────────────────────────
-function rendreFiche() {
-  const a = A.artiste;
-  const d = dossier();
-  const id = identite();
-
-  const blocs = [
-    rendreHero(a, d, id),
-    rendreCote(d),
-    rendreIdentite(id),
-    rendreSignature(d),
-    rendreParcours(d),
-    rendreVentes(),
-    rendreAlertes(d),
-    rendreChezToi(),
-    rendreExterne(),
-    rendrePresse(d),
-    rendreJournal(),
-  ].filter(Boolean);
-
-  const objetsSection = `
-    <section class="art-objets" id="art-objets">
-      <div class="art-sec-title">Objets de la collection</div>
-      ${A.objets.length
-        ? `<div class="grid">${A.objets.map(cardHtml).join('')}</div>`
-        : '<div class="art-empty">Aucun objet rattaché à cet artiste pour l\'instant.</div>'}
-    </section>`;
-
-  return `<div class="art-body">${blocs.join('')}${objetsSection}</div>`;
-}
-
-// 1. Hero identité
-function rendreHero(a, d, id) {
-  const portrait = A.images.find(p => p.zone === 'portrait');
-  const imgHtml = portrait
-    ? `<img src="${esc(portrait.thumbUrl || portrait.url)}" alt="" loading="eager" decoding="async">`
-    : '';
-  const metier = id.metier ? esc(id.metier) : '';
-  const chips = [];
-  if (d.cote) chips.push('coté en salle');
-  const nMusees = Array.isArray(id.musees) ? id.musees.length : 0;
-  if (nMusees) chips.push(`${nMusees} musée${nMusees > 1 ? 's' : ''}`);
-  const portraitAction = portrait ? ' data-action="zoom-artiste-photo" data-pid="' + esc(portrait.id) + '"' : '';
-
-  return `
-    <section class="art-hero" aria-labelledby="art-hero-name">
-      <div class="art-hero-portrait ${portrait ? '' : 'placeholder'}"${portraitAction}>
-        ${imgHtml}
-        ${!portrait ? '<span class="art-hero-placeholder-label">portrait d\'artiste</span>' : ''}
-      </div>
-      <div class="art-hero-text">
-        <h1 class="art-hero-name" id="art-hero-name">${esc(a?.nom ?? A.nom)}</h1>
-        ${metier ? `<div class="art-hero-meta">${metier}</div>` : ''}
-        ${chips.length ? `<div class="art-hero-chips">${chips.map(c => `<span class="art-hero-chip">${esc(c)}</span>`).join('')}</div>` : ''}
-      </div>
-    </section>`;
-}
-
-// 2. Cote du segment
-function rendreCote(d) {
-  const c = d.cote;
-  if (!c) return '';
-  const bas = c.bas != null ? fmtNum(c.bas) : '—';
-  const haut = c.haut != null ? fmtNum(c.haut) : '—';
-  const tendance = c.tendance === 'hausse' ? '↗ hausse' : c.tendance === 'baisse' ? '↘ baisse' : c.tendance === 'stable' ? '→ stable' : '';
-
-  return `
-    <section class="art-cote" aria-label="Cote du segment">
-      <div class="art-cote-main">
-        <div class="art-cote-label">Cote du segment</div>
-        <div class="art-cote-value">${bas} – ${haut} €</div>
-        ${c.segment ? `<div class="art-cote-note">${esc(c.segment)}</div>` : ''}
-        ${c.note ? `<div class="art-cote-note">${esc(c.note)}</div>` : ''}
-      </div>
-      <div class="art-cote-trend">
-        <span class="art-cote-trend-arrow">${tendance ? tendance.split(' ')[0] : '—'}</span>
-        <span class="art-cote-trend-word">${tendance ? tendance.split(' ')[1] : 'stable'}</span>
-        ${tendance ? '<span class="art-cote-trend-seg">segment</span>' : ''}
-      </div>
-    </section>`;
-}
-
-// 3. Identité
-function rendreIdentite(id) {
-  const keys = [
-    { k: 'metier', label: 'Métier' },
-    { k: 'formation', label: 'Formation' },
-    { k: 'ateliers', label: 'Ateliers' },
-    { k: 'musees', label: 'Musées' },
-    { k: 'decors', label: 'Décors' },
-  ];
-  const lignes = keys.filter(({ k }) => {
-    const v = id[k];
-    return Array.isArray(v) ? v.length : (v != null && String(v).trim());
-  });
-  if (!lignes.length) return '';
-
-  return `
-    <section class="art-identite" aria-label="Identité">
-      ${lignes.map(({ k, label }) => {
-        const v = id[k];
-        const val = Array.isArray(v)
-          ? (k === 'decors'
-              ? `<span class="art-id-chips">${v.map((d, i) => `<span class="art-id-chip ${i === 0 ? 'active' : ''}">${esc(d)}</span>`).join('')}</span>`
-              : esc(v.join(' · ')))
-          : esc(v);
-        return `<div class="art-id-row"><span class="art-id-label">${esc(label)}</span><span class="art-id-value">${val}</span></div>`;
-      }).join('')}
-    </section>`;
-}
-
-// 4. Signature de référence
-function rendreSignature(d) {
-  const img = A.images.find(p => p.zone === 'signature') || A.signatures[0];
-  const ref = d.signature_ref ?? {};
-  const hasText = ref.transcription || (Array.isArray(ref.variantes) && ref.variantes.length);
-  if (!img && !hasText) return '';
-
-  return `
-    <section class="art-signature" aria-label="Signature de référence">
-      <div class="art-signature-head">
-        <span>Signature de référence</span>
-        <span class="art-signature-hint">à comparer au revers</span>
-      </div>
-      <div class="art-signature-body">
-        ${img ? `<div class="art-signature-img" data-action="${img.objetId ? 'zoom-signature' : 'zoom-artiste-photo'}" data-pid="${esc(img.id)}" data-oid="${esc(img.objetId ?? '')}"><img src="${esc(img.thumbUrl || img.url)}" alt="" loading="lazy" decoding="async"></div>` : ''}
-        <div class="art-signature-txt">
-          ${ref.transcription ? `<div class="art-signature-trans">${esc(ref.transcription)}</div>` : ''}
-          ${Array.isArray(ref.variantes) && ref.variantes.length ? `<div class="art-signature-var">Variantes d'atelier : ${ref.variantes.map(esc).join(' · ')}</div>` : ''}
-        </div>
-      </div>
-    </section>`;
-}
-
-// 5. Parcours
-function rendreParcours(d) {
-  const bio = A.artiste?.bio_md ?? '';
-  const reperes = d.reperes ?? [];
-  if (!bio.trim() && !reperes.length) return '';
-  const bioLong = bio.length > 600;
-
-  return `
-    <section class="art-parcours" aria-label="Parcours">
-      ${bio
-        ? (bioLong
-            ? `<details class="art-bio acc"><summary><span>Parcours</span><span>▾</span></summary><div class="art-bio-body">${mdToHtml(bio)}</div></details>`
-            : `<div class="art-bio-body">${mdToHtml(bio)}</div>`)
-        : ''}
-      ${reperes.length ? `<div class="art-frise">${reperes.map((r, i) => {
-        const last = i === reperes.length - 1;
-        return `<div class="art-frise-item">
-          <div class="art-frise-year ${last ? 'last' : ''}">${esc(r.annee)}</div>
-          <div class="art-frise-dot ${last ? 'last' : ''}"></div>
-          <div class="art-frise-text ${last ? 'last' : ''}">${esc(r.texte)}</div>
-        </div>`;
-      }).join('')}</div>` : ''}
-    </section>`;
-}
-
-// 6. Ventes vérifiées
-function rendreVentes() {
-  if (!A.ventes.length) return '';
-  const focusId = A.focus?.objetId;
-  const affichees = A.ventes.slice(0, 3);
-  const cachees = A.ventes.slice(3);
-
-  function ligneHtml(v, highlighted = false) {
-    const prix = v.prix != null ? `${fmtNum(v.prix)} €` : '';
-    const estim = (v.estimation_bas != null && v.estimation_haut != null)
-      ? `est. ${fmtNum(v.estimation_bas)}–${fmtNum(v.estimation_haut)}`
-      : '';
-    const dateStr = v.date_vente ? fmtDate(v.date_vente) : '—';
-    const lot = v.lot ? esc(v.lot) : 'Lot sans titre';
-    const meta = [esc(v.maison ?? ''), dateStr].filter(Boolean).join(' · ');
-    return `
-      <div class="art-vente-row ${highlighted ? 'highlight' : ''}">
-        <div class="art-vente-main">
-          <div class="art-vente-title">${lot}</div>
-          <div class="art-vente-meta">${meta}</div>
-        </div>
-        <div class="art-vente-price">
-          <div>${prix}</div>
-          ${estim ? `<div class="art-vente-est">${estim}</div>` : ''}
-        </div>
-      </div>`;
-  }
-
-  return `
-    <section class="art-ventes" aria-label="Ventes vérifiées">
-      <div class="art-section-head">
-        <span>Ventes vérifiées</span>
-        <span class="art-section-meta">${A.ventes.length} · liens au procès-verbal</span>
-      </div>
-      ${affichees.map(v => ligneHtml(v, focusId && v.objet_id === focusId)).join('')}
-      ${cachees.length ? `<details class="art-ventes-more acc"><summary>voir les ${A.ventes.length}</summary>${cachees.map(v => ligneHtml(v, focusId && v.objet_id === focusId)).join('')}</details>` : ''}
-    </section>`;
-}
-
-// 7. Contrefaçons & confusions
-function rendreAlertes(d) {
-  const alertes = d.alertes ?? [];
-  if (!alertes.length) return '';
-
-  return `
-    <section class="art-alertes" aria-label="Contrefaçons et confusions">
-      <div class="art-alertes-puce"></div>
-      <div class="art-alertes-body">
-        <div class="art-alertes-head">
-          <span>Contrefaçons &amp; confusions</span>
-          <span class="art-alertes-pill">démarquer</span>
-        </div>
-        ${alertes.map(al => `<div class="art-alerte-text">${esc(al.texte)}</div>`).join('')}
-      </div>
-    </section>`;
-}
-
-// 8. Chez toi
-function rendreChezToi() {
-  const objetsAffiches = A.objets.slice(0, 2);
-  const avecPrix = A.objets.filter(o => o.prix_bas != null);
-  let estimHtml = '';
-  if (avecPrix.length) {
-    const bas = avecPrix.reduce((s, o) => s + Number(o.prix_bas), 0);
-    const haut = avecPrix.reduce((s, o) => s + Number(o.prix_haut ?? o.prix_bas), 0);
-    estimHtml = `<div class="art-chez-estim"><div class="art-chez-estim-value">${fmtNum(bas)}–${fmtNum(haut)} €</div><div class="art-chez-estim-label">estimation cumulée</div></div>`;
-  }
-
-  const objetsHtml = objetsAffiches.map(o => {
-    const img = S.photoMap[o.id];
-    return `<div class="art-chez-obj" data-action="nav-objet" data-oid="${esc(o.id)}">
-      ${img?.url ? `<img src="${esc(img.url)}" alt="" loading="lazy" decoding="async">` : `<span class="art-chez-noimg">${o.categorie ? esc(o.categorie.charAt(0)) : '•'}</span>`}
-      <div class="art-chez-obj-id">#${esc(o.id)} · ${esc(o.titre || 'objet')}</div>
-    </div>`;
-  }).join('');
-
-  const objetsSansSig = A.objets.filter(o => !A.signatures.some(s => s.objetId === o.id));
-  const signaturesHtml = A.signatures.map(s => `
-    <div class="art-chez-sigcase" data-action="zoom-signature" data-pid="${esc(s.id)}" data-oid="${esc(s.objetId)}">
-      <img src="${esc(s.thumbUrl || s.url)}" alt="" loading="lazy" decoding="async">
-      <div class="art-chez-sigcode">#${esc(s.objetId)}<br>${esc(s.transcription || '')}</div>
-    </div>`).join('');
-
-  const releverHtml = objetsSansSig.length ? `
-    <div class="art-chez-relever-wrap">
-      <button class="art-chez-relever" data-action="show-relever">
-        <span>＋</span><span>relever</span>
-      </button>
-      <div class="art-chez-relever-menu hidden">
-        ${objetsSansSig.map(o => `<button data-action="nav-objet" data-oid="${esc(o.id)}">#${esc(o.id)} · ${esc(o.titre || 'objet')}</button>`).join('')}
-      </div>
-    </div>` : '';
-
-  return `
-    <section class="art-cheztoi" aria-label="Chez toi">
-      <div class="art-section-head">
-        <span>Chez toi</span>
-        <span class="art-section-meta">${A.objets.length} objet${A.objets.length > 1 ? 's' : ''}${avecPrix.length ? ` · ${avecPrix.length} à valider` : ''}</span>
-      </div>
-      <div class="art-chez-objets">
-        ${objetsHtml}
-        ${estimHtml}
-      </div>
-      ${A.signatures.length || objetsSansSig.length ? `
-        <div class="art-chez-sigs">
-          <div class="art-chez-sigs-head">
-            <span>Signatures relevées chez toi</span>
-            ${A.signatures.length ? `<button class="art-chez-sigs-compare" data-action="comparer-signatures">comparer ›</button>` : ''}
-          </div>
-          <div class="art-chez-siggrid">
-            ${signaturesHtml}${releverHtml}
-          </div>
-        </div>` : ''}
-    </section>`;
-}
-
-// 9. Galerie externe
-function rendreExterne() {
-  const imgs = A.images.filter(p => p.zone === 'externe');
-  if (!imgs.length) return '';
-
-  return `
-    <section class="art-externe" aria-label="Galerie externe">
-      <div class="art-section-head">
-        <span>Galerie externe</span>
-        <span class="art-section-meta">ni vente, ni chez toi · ${imgs.length}</span>
-      </div>
-      <div class="art-ext-grid">
-        ${imgs.map(p => `
-          <div class="art-ext-item" data-action="zoom-artiste-photo" data-pid="${esc(p.id)}">
-            <img src="${esc(p.thumbUrl || p.url)}" alt="" loading="lazy" decoding="async">
-            <div class="art-ext-caption">${esc(p.caption || p.commentaire || '')}</div>
-          </div>`).join('')}
-      </div>
-    </section>`;
-}
-
-// 10. Presse & références
-function rendrePresse(d) {
-  const presse = d.presse ?? [];
-  if (!presse.length) return '';
-  const aff = presse.slice(0, 3);
-  const cache = presse.slice(3);
-
-  function ligneHtml(p) {
-    const meta = [esc(p.source ?? ''), p.date ? fmtDate(p.date) : ''].filter(Boolean).join(' · ');
-    return `
-      <div class="art-presse-row">
-        <div class="art-presse-main">
-          <div class="art-presse-title">${esc(p.titre)}</div>
-          <div class="art-presse-meta">${meta}</div>
-        </div>
-        ${p.url
-          ? `<a class="art-presse-link" href="${esc(p.url)}" target="_blank" rel="noopener">↗</a>`
-          : `<span class="art-presse-link">note</span>`}
-      </div>`;
-  }
-
-  return `
-    <section class="art-presse" aria-label="Presse et références">
-      <div class="art-section-head">
-        <span>Presse &amp; références</span>
-        <span class="art-section-meta">${presse.length}</span>
-      </div>
-      ${aff.map(ligneHtml).join('')}
-      ${cache.length ? `<details class="art-presse-more acc"><summary>voir les ${presse.length}</summary>${cache.map(ligneHtml).join('')}</details>` : ''}
-    </section>`;
-}
-
-// 11. Notes & journal — les entrées et le composeur sont des coquilles vides
-// ici (texte() a besoin d'éléments DOM réels pour se brancher) : voir
-// brancherJournal(), appelé juste après l'insertion de ce HTML.
-function rendreJournal() {
-  const composer = canWrite() ? `
-    <div class="art-composer" id="art-composer">
-      <div id="art-composer-texte"></div>
-      <button class="art-composer-photo" type="button" title="Joindre une photo" data-action="attach-photo">📷</button>
-    </div>` : '';
-
-  const pendingThumbs = pendingPhotos.map(pid => {
-    const p = A.images.find(i => i.id === pid);
-    return p ? `<div class="art-pending-thumb"><img src="${esc(p.thumbUrl || p.url)}" alt=""></div>` : `<div class="art-pending-thumb art-pending-loading"></div>`;
-  }).join('');
-
-  const notesHtml = A.notes.length
-    ? A.notes.map((n, i) => `<div class="art-note-slot" data-note-idx="${i}"></div>`).join('')
-    : '<div class="art-empty-note">Aucune note pour l\'instant.</div>';
-
-  return `
-    <section class="art-journal" aria-label="Notes et journal">
-      <div class="art-section-head"><span>Notes &amp; journal</span><span class="art-section-meta">jamais réécrit par l'IA</span></div>
-      <div class="art-notes">${notesHtml}</div>
-      ${composer}
-      ${pendingThumbs ? `<div class="art-pending-photos">${pendingThumbs}</div>` : ''}
-    </section>`;
-}
 
 // ─── Actions de la vue Artiste (délégation) ─────────────────────────────────
 function openArtistePhoto(pid) {
@@ -645,7 +279,7 @@ $('#artiste-body').addEventListener('click', async e => {
 
 async function ajouterNote(saisie) {
   const texteNote = (saisie ?? '').trim();
-  if (!texteNote && !pendingPhotos.length) {
+  if (!texteNote && !A.pendingPhotos.length) {
     toast('Tape une note ou ajoute une photo', true);
     return;
   }
@@ -654,10 +288,10 @@ async function ajouterNote(saisie) {
     artiste_nom: A.nom,
     auteur: 'humain',
     texte: texteNote || null,
-    photos: pendingPhotos,
+    photos: A.pendingPhotos,
   }), 'Note')) return;
   logEvent('artiste_note', { artiste: A.nom }, null);
-  pendingPhotos = [];
+  A.pendingPhotos = [];
   await loadArtiste(A.nom);
 }
 
@@ -677,7 +311,7 @@ $('#file-artiste-photo').addEventListener('change', async e => {
   } else {
     const id = await insererArtistePhoto(files[0], null);
     if (id) {
-      pendingPhotos.push(id);
+      A.pendingPhotos.push(id);
       await loadArtiste(A.nom);
     }
   }
