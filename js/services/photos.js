@@ -145,7 +145,7 @@ export async function remplacer(cible, photo, blob) {
   const d = await deps();
   const maitre = (await d.makeVariantBlob(blob, MAITRE_PX, MAITRE_Q)) ?? blob;
   const { error: e1 } = await d.sb.storage.from('photos')
-    .upload(photo.storage_path, maitre, { contentType: 'image/jpeg', upsert: true });
+    .upload(photo.storage_path, maitre, { contentType: 'image/jpeg', upsert: true, cacheControl: d.CACHE_IMAGES });
   if (e1) return { ok: false, error: e1.message };
 
   // Nom neuf à chaque enregistrement pour les dérivées (cache CDN cassé
@@ -162,7 +162,7 @@ export async function remplacer(cible, photo, blob) {
   for (const [col, px, q] of bornes) {
     const vb = await d.makeVariantBlob(blob, px, q); // ← `blob`, TOUJOURS. Jamais la variante précédente.
     const p = vb && `${base}.${col.replace('_path', '')}.jpg`;
-    patch[col] = p && !(await d.sb.storage.from('photos').upload(p, vb, { contentType: 'image/jpeg' })).error ? p : null;
+    patch[col] = p && !(await d.sb.storage.from('photos').upload(p, vb, { contentType: 'image/jpeg', cacheControl: d.CACHE_IMAGES })).error ? p : null;
   }
   const { error: e2 } = await d.sb.from(cible.table).update(patch).eq('owner_id', S.tenantId).eq('id', photo.id);
   if (e2) return { ok: false, error: e2.message };

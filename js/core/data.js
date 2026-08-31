@@ -218,6 +218,12 @@ export async function loadPhotoMap() {
 // réencodages successifs dégradent — HO-089).
 const MINI_PX = 160;           // vignettes de rayon, mini-cartes, objets similaires
 const THUMB_PX = 480;          // collection, fiche produit, galerie, navigation photo
+// Cache navigateur des images du bucket (Yann 2026-08-31). Défaut Supabase = 1 h :
+// l'URL signée restait stable 24 h mais le navigateur retéléchargeait le fichier
+// toutes les heures, d'où un `cached egress` ridicule (0,64 Go) face à l'uncached.
+// Une semaine : une photo est immuable sous son chemin, sauf édition destructive
+// (D-081) — et celle-ci appelle `oublierSignatures()`, qui produit une URL neuve.
+export const CACHE_IMAGES = '604800'; // 7 j, en secondes (option `cacheControl`)
 export const MAITRE_PX = 2048; // image maîtresse : grande zone, atelier, envoi LLM
 export const MAITRE_Q = 0.85;
 
@@ -256,7 +262,7 @@ export async function uploadImageWithThumb(dossier, file) {
   const maitre = video ? null : await makeVariantBlob(file, MAITRE_PX, MAITRE_Q);
   const ext = maitre ? 'jpg' : ((file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg');
   const path = `${base}.${ext}`;
-  const { error } = await sb.storage.from('photos').upload(path, maitre ?? file, { contentType: maitre ? 'image/jpeg' : (file.type || undefined) });
+  const { error } = await sb.storage.from('photos').upload(path, maitre ?? file, { contentType: maitre ? 'image/jpeg' : (file.type || undefined), cacheControl: CACHE_IMAGES });
   if (error) { console.warn('uploadImageWithThumb:', error); toast(`Photo « ${file.name} » non envoyée — ${humaniser(error)}.`, 'action'); return null; }
 
   let thumbPath = null, miniPath = null;
@@ -269,12 +275,12 @@ export async function uploadImageWithThumb(dossier, file) {
     ]);
     if (mb) {
       const p = `${base}.mini.jpg`;
-      const { error: e } = await sb.storage.from('photos').upload(p, mb, { contentType: 'image/jpeg' });
+      const { error: e } = await sb.storage.from('photos').upload(p, mb, { contentType: 'image/jpeg', cacheControl: CACHE_IMAGES });
       if (!e) miniPath = p;
     }
     if (tb) {
       const p = `${base}.thumb.jpg`;
-      const { error: e } = await sb.storage.from('photos').upload(p, tb, { contentType: 'image/jpeg' });
+      const { error: e } = await sb.storage.from('photos').upload(p, tb, { contentType: 'image/jpeg', cacheControl: CACHE_IMAGES });
       if (!e) thumbPath = p;
     }
   }
