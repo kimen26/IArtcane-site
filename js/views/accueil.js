@@ -49,7 +49,7 @@ function ligneTrouvaille(t) {
       <span class="acc-trouv-valeur">${esc(t.valeur)}</span>
       <span class="acc-trouv-sur">sur ${esc(t.objetTitre)}</span>
     </div>
-    <button type="button" class="acc-trouv-voir" data-acc-objet="${esc(t.objetId)}">Voir</button>
+    <button type="button" class="acc-trouv-voir" data-acc-objet="${esc(t.objetId)}" data-acc-focus="${esc(t.type)}">Voir</button>
   </div>`;
 }
 
@@ -163,7 +163,9 @@ function bindNavigation(corps) {
     const cible = evt.target?.closest ? evt.target.closest('[data-acc-objet]') : null;
     if (!cible) return;
     const oid = cible.getAttribute('data-acc-objet');
-    if (oid) location.hash = `#/objet/${oid}`;
+    if (!oid) return;
+    const focus = cible.getAttribute('data-acc-focus');
+    location.hash = focus ? `#/objet/${oid}?focus=${focus}` : `#/objet/${oid}`;
   });
 }
 

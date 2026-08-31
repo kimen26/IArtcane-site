@@ -32,34 +32,32 @@ export function mount(id) {
   loadObjet(id);
 }
 
+// Routeur : capture `id?focus=…` en un segment (transverse gelé) — le parsing de la query se fait ici (HO-130), `oid` remplace `id` partout.
 async function loadObjet(id) {
+  const [oid, query] = String(id).split('?');
+  const focus = new URLSearchParams(query || '').get('focus');
   const body = $('#objet-body');
   body.innerHTML = '<div class="skeleton" style="height:320px"></div>';
-  const { data: o, error } = await sb.from('objets').select('*').eq('owner_id', S.tenantId).eq('id', id).maybeSingle();
-  if (error || !o) {
-    body.innerHTML = emptyHtml('Objet introuvable', `Aucun objet #${id} dans ta collection.`);
-    return;
-  }
+  const { data: o, error } = await sb.from('objets').select('*').eq('owner_id', S.tenantId).eq('id', oid).maybeSingle();
+  if (error || !o) { body.innerHTML = emptyHtml('Objet introuvable', `Aucun objet #${oid} dans ta collection.`); return; }
   S.currentObjet = o;
-  O.ecran = O.ecranRetour ?? 'hub';
-  O.ecranRetour = null;
-  O.focus = null;
-  // Fil d'Ariane (HO-104) : filDe('objet', …) fournit la forme (S.fil posé par
-  // le shell avant mount()) sans connaître la catégorie — cette vue la complète.
-  // Le segment à compléter est celui libellé « Objet » — jamais un index en dur :
-  // HO-118 a inséré « Accueil » en tête et l'index 1 est devenu « Collection ».
+  const retourAtelier = O.ecranRetour != null; // prime sur le focus URL (HO-130)
+  O.ecran = O.ecranRetour ?? 'hub'; O.ecranRetour = null; O.focus = null;
+  if (!retourAtelier && focus === 'artiste') { O.ecran = 'identification'; O.focus = { champ: 'auteur' }; }
+  else if (!retourAtelier && focus === 'vente') O.ecran = 'ventes';
+  // Fil d'Ariane (HO-104) : « Objet » = catégorie (jamais un index en dur, HO-118) ; dernier segment = id brut posé par nav.js → `#<oid>` (HO-130).
   const iCat = S.fil?.findIndex(seg => seg.label === 'Objet') ?? -1;
-  if (iCat >= 0 && o.categorie) {
-    S.fil[iCat] = { label: catCanon(o.categorie), hash: `#/rayon/${encodeURIComponent(catCanon(o.categorie))}` };
-  }
+  if (iCat >= 0 && o.categorie) S.fil[iCat] = { label: catCanon(o.categorie), hash: `#/rayon/${encodeURIComponent(catCanon(o.categorie))}` };
+  const iObjet = (S.fil?.length ?? 0) - 1;
+  if (iObjet >= 0 && S.fil[iObjet]?.label === `#${id}`) S.fil[iObjet] = { ...S.fil[iObjet], label: `#${oid}` };
   const [{ data: photos }, { data: comps }, { data: fiches }, { data: events }, { data: artiste }, { data: jobs }, nLens] = await Promise.all([
-    sb.from('photos').select('*').eq('owner_id', S.tenantId).eq('objet_id', id).order('ordre', { nullsFirst: false }).order('created_at'),
-    sb.from('comparables').select('*').eq('owner_id', S.tenantId).eq('objet_id', id).order('date_vente', { ascending: false, nullsFirst: false }),
-    sb.from('fiches').select('*').eq('owner_id', S.tenantId).eq('objet_id', id).order('version', { ascending: false }).limit(1),
-    sb.from('evenements').select('*').eq('owner_id', S.tenantId).eq('objet_id', id).order('created_at', { ascending: false }).limit(50),
+    sb.from('photos').select('*').eq('owner_id', S.tenantId).eq('objet_id', oid).order('ordre', { nullsFirst: false }).order('created_at'),
+    sb.from('comparables').select('*').eq('owner_id', S.tenantId).eq('objet_id', oid).order('date_vente', { ascending: false, nullsFirst: false }),
+    sb.from('fiches').select('*').eq('owner_id', S.tenantId).eq('objet_id', oid).order('version', { ascending: false }).limit(1),
+    sb.from('evenements').select('*').eq('owner_id', S.tenantId).eq('objet_id', oid).order('created_at', { ascending: false }).limit(50),
     o.auteur ? sb.from('artistes').select('*').eq('owner_id', S.tenantId).eq('nom', o.auteur).maybeSingle() : Promise.resolve({ data: null }),
-    sb.from('jobs').select('type,statut').eq('owner_id', S.tenantId).eq('objet_id', id).in('statut', ['en_attente','en_cours']),
-    chargerNLens(id),
+    sb.from('jobs').select('type,statut').eq('owner_id', S.tenantId).eq('objet_id', oid).in('statut', ['en_attente','en_cours']),
+    chargerNLens(oid),
   ]);
   const compPaths = (comps ?? []).map(c => c.image_path).filter(Boolean);
   const grand = p => (isVideo(p) ? p.storage_path : (p.moyen_path ?? p.storage_path)), urlByPath = await signPaths([...(photos ?? []).flatMap(p => [grand(p), p.thumb_path].filter(Boolean)), ...compPaths]); // grande zone 2048 : ex-`moyen` s'il existe, sinon la maîtresse (D-081)
