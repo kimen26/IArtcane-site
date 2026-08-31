@@ -7,7 +7,7 @@ import { $, esc } from '../core/dom.js';
 import { S, canWrite } from '../core/state.js';
 import { loadViewCss } from '../core/css.js';
 import { page } from '../ui/page.js';
-import { fmtNum, fmtDate, plur } from '../core/format.js';
+import { fmtDate, plur } from '../core/format.js';
 import { chargerJournal } from '../services/journal.js';
 
 await loadViewCss('accueil');
@@ -100,7 +100,7 @@ function blocReste(reste) {
 
 // ─── Bloc 4 : la collection à date ──────────────────────────────────────────
 function blocResume(resume) {
-  const { objets, artistesIdentifies, fichesEstimees, valeurTotale, fichesValidees, ajoutsDuMois } = resume;
+  const { objets, artistesIdentifies, fichesEstimees, fichesValidees, ajoutsDuMois } = resume;
   const restant = Math.max(0, objets - fichesEstimees - fichesValidees);
   const total = Math.max(1, fichesValidees + Math.max(0, fichesEstimees - fichesValidees) + restant);
   const pct = n => `${Math.round((n / total) * 100)}%`;
@@ -122,7 +122,7 @@ function blocResume(resume) {
     <div class="acc-resume-ligne">
       <span class="acc-resume-chiffre">${esc(String(fichesEstimees))}</span>
       <span class="acc-resume-libelle">fiches estimées</span>
-      <span class="acc-resume-precision">${valeurTotale != null ? esc(fmtNum(valeurTotale)) + ' € au total (milieu des fourchettes)' : 'aucune estimation'}</span>
+      <span class="acc-resume-precision">${fichesEstimees ? 'avec comparables vendus' : 'aucune estimation'}</span>
     </div>
     <div class="acc-resume-ligne">
       <span class="acc-resume-chiffre">${esc(String(fichesValidees))}</span>

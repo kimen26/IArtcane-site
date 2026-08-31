@@ -156,17 +156,15 @@ export function calculerReste(objets, photos) {
 /**
  * @param {Array} objets
  * @param {Date} maintenant
- * @returns {{objets:number, artistesIdentifies:number, fichesEstimees:number, valeurTotale:number|null, fichesValidees:number, ajoutsDuMois:number}}
+ * @returns {{objets:number, artistesIdentifies:number, fichesEstimees:number, fichesValidees:number, ajoutsDuMois:number}}
  */
 export function calculerResume(objets, maintenant) {
   const list = objets || [];
   const objetsN = list.length;
   const artistesIdentifies = list.filter(o => o.auteur && o.auteur !== '').length;
-  const estimees = list.filter(o => o.prix_bas != null);
-  const fichesEstimees = estimees.length;
-  const valeurTotale = estimees.length
-    ? Math.round(estimees.reduce((s, o) => s + (o.prix_bas + o.prix_haut) / 2, 0) / 100) * 100
-    : null;
+  // Pas de total en euros (arbitrage Yann 2026-08-31) : le journal relaie des
+  // fourchettes par objet, il n'additionne rien — un total ressemblerait à une valeur.
+  const fichesEstimees = list.filter(o => o.prix_bas != null).length;
   const fichesValidees = list.filter(o => o.statut === 'validee').length;
   const m = maintenant.getMonth(), y = maintenant.getFullYear();
   const ajoutsDuMois = list.filter(o => {
@@ -174,7 +172,7 @@ export function calculerResume(objets, maintenant) {
     const d = new Date(o.created_at);
     return d.getMonth() === m && d.getFullYear() === y;
   }).length;
-  return { objets: objetsN, artistesIdentifies, fichesEstimees, valeurTotale, fichesValidees, ajoutsDuMois };
+  return { objets: objetsN, artistesIdentifies, fichesEstimees, fichesValidees, ajoutsDuMois };
 }
 
 // ─── chargerJournal() — assemblage, seul point qui touche le réseau ────────
