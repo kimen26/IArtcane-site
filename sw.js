@@ -14,10 +14,10 @@
 // écrit ici, dans site/js/core/version.js et dans site/index.html d'un seul coup ;
 // `--check` (appelé par infra/deploy-site.sh) échoue si les trois divergent (L-013).
 // ═══════════════════════════════════════════════════════════════════════════
-const VERSION = 'iartcane-2026-08-31u-ho123'; // sync : js/core/version.js + ?v= dans index.html
+const VERSION = 'iartcane-2026-08-31v-demo-jamais-defaut'; // sync : js/core/version.js + ?v= dans index.html
 const SHELL_CACHE = `shell-${VERSION}`;
 const SHARE_CACHE = 'share-inbox'; // hors purge : survit aux changements de VERSION
-const V = '?v=2026-08-31u-ho123'; // query des assets versionnés (sync index.html)
+const V = '?v=2026-08-31v-demo-jamais-defaut'; // query des assets versionnés (sync index.html)
 const SHELL = [
   './', './index.html',
   // CSS TRANSVERSE seulement (D-041) : le CSS des écrans est chargé à la demande
