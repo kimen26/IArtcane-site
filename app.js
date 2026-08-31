@@ -208,11 +208,11 @@ async function loadHeader() {
 // 404 » : ce repli-là marche à l'écran mais salit la console d'une erreur à
 // chaque maison sans logo — or la recette échoue sur toute erreur console, et
 // une porte qui hurle sur un comportement normal finit par être ignorée.
-// Ajouter une maison = déposer `assets/maisons/<slug>.webp` ET son slug ici.
-// Vide tant qu'aucun fichier n'est déposé : déclarer un slug sans son image
-// afficherait une vignette cassée dans l'en-tête, pire que le nom écrit.
-// (`ponaire` attend la calligraphie de Yann — TODO §Côté Yann.)
-const LOGOS_MAISON = new Set([]);
+// Ajouter une maison = déposer `assets/maisons/<slug>.webp` ET son slug ici
+// (`python infra/logo-maison.py <source> <slug>` fait le fichier). Ne JAMAIS
+// déclarer un slug sans son image : l'en-tête afficherait une vignette cassée,
+// pire que le nom écrit.
+const LOGOS_MAISON = new Set(['ponaire']);
 
 const slugMaison = nom => String(nom ?? '').toLowerCase()
   .normalize('NFD').replace(/\p{Diacritic}/gu, '')

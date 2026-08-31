@@ -6,13 +6,15 @@
   display:flex;
   align-items:center;
   gap:6px;
-  /* 20px, pas 28 (retour Yann 2026-08-31 : « presque autant de vide que le
-     header »). Mesuré : l'écart header→fil est déjà nul, tout le blanc perçu
-     venait de la hauteur du fil lui-même autour d'un texte de 12 px.
+  /* Hauteur resserrée depuis 28 px (retour Yann 2026-08-31 : « presque autant
+     de vide que le header »). Mesuré : l'écart header→fil était déjà nul, tout
+     le blanc perçu venait de la bande elle-même autour d'un texte de 12 px.
+     Marges dissymétriques, demandées après coup : un filet en haut pour
+     décoller du header, davantage en bas pour séparer du contenu.
      `min-height` et non `height` : au zoom texte, la bande s'agrandit avec le
      contenu au lieu de le rogner. */
   min-height:20px;
-  padding:0 var(--ecran-x, 6px);
+  padding:3px var(--ecran-x, 6px) 6px;
   padding-left:14px; /* le premier mot s'aligne sur le logo de l'en-tête (header-in : 13-14 px), pas sur le contenu */
   font-size:.75rem;
   white-space:nowrap;
