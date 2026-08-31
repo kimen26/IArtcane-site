@@ -170,7 +170,7 @@ function augmentCategorie(corps, o) {
       ${sous.map(s => `<option value="${esc(s)}" ${s === sousVal ? 'selected' : ''}>${esc(s)}</option>`).join('')}
     </select>`);
   const sousSel = carte.querySelector('.obj-id-sous');
-  catSel.addEventListener('change', () => updateSousCategories(carte, catSel.value));
+  catSel.addEventListener('change', () => { updateSousCategories(carte, catSel.value); if (S.currentObjet?.sous_categorie != null) onFieldChange('sous_categorie', ''); });
   sousSel.addEventListener('change', () => onFieldChange('sous_categorie', sousSel.value));
 }
 
