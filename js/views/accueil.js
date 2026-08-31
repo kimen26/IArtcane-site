@@ -177,7 +177,12 @@ export function mount() {
 
   // Écrite à la SORTIE de l'écran, pas à l'entrée (sinon un rechargement
   // efface le journal avant même de l'avoir montré) — hashchange { once:true }.
-  window.addEventListener('hashchange', () => {
+  // Un hashchange qui reste sur l'accueil (`''` → `#/`, cas de la recette) ne
+  // compte pas comme une sortie : on ne pose la date qu'en quittant vraiment.
+  const surSortie = () => {
+    if (/^#\/?$/.test(location.hash)) return;
+    window.removeEventListener('hashchange', surSortie);
     try { localStorage.setItem(cle, new Date().toISOString()); } catch { /* stockage bloqué */ }
-  }, { once: true });
+  };
+  window.addEventListener('hashchange', surSortie);
 }

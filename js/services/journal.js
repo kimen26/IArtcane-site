@@ -47,7 +47,9 @@ function estHumain(evt) {
  */
 export function calculerTravail(evts, depuis) {
   if (!depuis) return null;
-  const humains = (evts || []).filter(estHumain);
+  // Seuls les évènements POSTÉRIEURS à la dernière visite comptent : la fenêtre
+  // chargée est plus large (30 j mini, pour les trouvailles).
+  const humains = (evts || []).filter(e => estHumain(e) && e.created_at >= depuis);
   const objetsSet = new Set(humains.map(e => e.objet_id).filter(Boolean));
   if (objetsSet.size === 0) return null;
   const COMMENTAIRE_ACTIONS = new Set(['commentaire_photo', 'artiste_note', 'note_maison', 'artiste_image_commentaire']);
@@ -187,7 +189,12 @@ export async function chargerJournal({ depuis }) {
   await d.ensureCollection();
   const objets = S.collection;
 
-  const bornePhotos = depuis ?? new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+  // Fenêtre des évènements : au moins 30 jours, quel que soit `depuis` — les
+  // trouvailles sont « les 2 plus récentes » (maquette), pas « depuis la visite » ;
+  // seul `calculerTravail` se borne à `depuis` (revue HO-119 : un `depuis` posé à
+  // l'instant vidait le bloc « iArcane a trouvé »).
+  const trenteJours = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+  const bornePhotos = depuis && depuis < trenteJours ? depuis : trenteJours;
   const [{ data: photos }, { data: evts }] = await Promise.all([
     d.sb.from('photos').select('objet_id,kind,thumb_path,couverture,created_at').eq('owner_id', S.tenantId),
     d.sb.from('evenements').select('*').eq('owner_id', S.tenantId).gte('created_at', bornePhotos)
