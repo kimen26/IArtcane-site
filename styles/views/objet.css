@@ -23,6 +23,7 @@
   background:var(--ink);
   cursor:pointer;
   clip-path:inset(0 0 -1px 0);
+  overflow:hidden; /* le ruban (right:-46px) ne doit pas créer d'ascenseur horizontal maintenant que le bandeau est bord à bord (recette HO-113) */
   /* Le bandeau n'est plus le premier élément de l'écran (HO-104 : l'en-tête
      et le fil d'Ariane le précèdent désormais, posés par `ui/page.js`) — seul
      le padding LATÉRAL de main (base.css) est encore à annuler pour rester
