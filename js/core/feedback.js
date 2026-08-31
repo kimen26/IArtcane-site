@@ -187,9 +187,12 @@ export async function enregistrer(requete, label, { silencieuxSiOk = false, atte
  * @param opts.titre      message principal (« Envoi des photos… »)
  * @param opts.annulable  défaut true — affiche le bouton « Annuler »
  * @param opts.seuilLent  ms avant le sous-message de patience — défaut 15000
+ * @param opts.bloquant  défaut true — overlay plein écran qui prend l'écran.
+ *                       false → bandeau discret en haut, l'utilisateur continue
+ *                       à travailler pendant l'opération (R1, HO-127).
  * @returns { valeur, annule }  valeur = ce que rend fn (undefined si annulé)
  */
-export async function withBusy(fn, { titre, annulable = true, seuilLent = 15000 } = {}) {
+export async function withBusy(fn, { titre, annulable = true, seuilLent = 15000, bloquant = true } = {}) {
   const focusAvant = document.activeElement;
   const ctrl = new AbortController();
   let annule = false;
@@ -198,7 +201,7 @@ export async function withBusy(fn, { titre, annulable = true, seuilLent = 15000 
   // et portera des donnees (titre d'objet, nom d'artiste, nom de fichier) des que les
   // vues consommeront withBusy — une interpolation ici serait une injection HTML.
   const el = document.createElement('div');
-  el.className = 'busy-overlay';
+  el.className = bloquant ? 'busy-overlay' : 'busy-overlay busy-flottant';
   const carte = document.createElement('div');
   carte.className = 'busy-card';
   carte.setAttribute('role', 'alertdialog');
@@ -233,7 +236,9 @@ export async function withBusy(fn, { titre, annulable = true, seuilLent = 15000 
     ctrl.abort();
     demonter();
   });
-  btnAnnuler?.focus();
+  // En mode non bloquant, on ne vole PAS le focus : l'utilisateur est peut-être
+  // en train de taper dans un champ de la fiche pendant que la R1 tourne.
+  if (bloquant) btnAnnuler?.focus();
 
   const minuteurLent = setTimeout(() => {
     const sub = el.querySelector('.busy-sub');
@@ -249,7 +254,7 @@ export async function withBusy(fn, { titre, annulable = true, seuilLent = 15000 
     demontee = true;
     clearTimeout(minuteurLent);
     el.remove();
-    if (focusAvant instanceof HTMLElement) focusAvant.focus();
+    if (bloquant && focusAvant instanceof HTMLElement) focusAvant.focus();
   }
 
   const ctx = {

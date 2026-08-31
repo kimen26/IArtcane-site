@@ -387,7 +387,7 @@ async function onValiderFiche() {
 async function onRelancerHub(evt) {
   const o = S.currentObjet;
   if (!o || !canWrite()) return;
-  if (!confirm(`Relancer les recherches de #${o.id} ?\n\nR1 (Kimi, ~40 s) repart si des photos ont changé, puis R2 (Lens) est enfilée — le cron la prend sous ~2 min.`)) return;
+  if (!confirm(`Relancer les recherches de #${o.id} ?\n\nR1 repart si des photos ont changé, puis R2 (Lens) est enfilée. Tu peux continuer à travailler pendant ce temps — si c'est trop long, la recherche finit en tâche de fond.`)) return;
   const btn = evt?.target?.closest ? evt.target.closest('[data-ui-action]') : null;
   if (btn) btn.disabled = true;
   const force = o.statut === 'validee';
@@ -404,7 +404,7 @@ async function onRelancerHub(evt) {
     const n = await enqueueJobs([o.id], 'r1');
     if (n) toast('Recherche remise en file — le cron la reprend sous ~2 min.');
     return null;
-  }, { titre: 'Recherche R1 en cours…', seuilLent: 20000 });
+  }, { titre: 'Recherche R1 en cours… tu peux continuer', seuilLent: 20000, bloquant: false });
   if (!annule && r?.ok) {
     logEvent('relance', { force, certain: r.certain ?? null });
     toast(r.skip
@@ -412,6 +412,7 @@ async function onRelancerHub(evt) {
       : `R1 terminée${r.certain ? ' — auteur certain ✓' : ' — doute : analyse versée à la description'} · R2 (Lens) en file`);
   } else if (!annule && r && !r.ok) { // HO-110 : lancerRecherches() se tait, le message dépend de si l'échec est rattrapé
     if (r.raison === 'delai') { await enqueueJobs([o.id], 'r1'); toast('Recherche trop longue — elle repart en file, la fiche se complétera plus tard. Rien à faire.'); }
+    else if (r.raison === 'budget') toast('Recherche trop longue — elle repart en file, la fiche se complétera plus tard. Rien à faire.');
     else if (r.raison === 'session') toast('Session expirée — reconnecte-toi pour continuer.', 'action');
     else toast(`L'IA n'a pas répondu (${humaniser(r.erreur ?? r)}) — rien n'a changé sur la fiche. Réessaie dans quelques minutes.`, 'action', { action: { label: 'Réessayer', onClick: () => onRelancerHub() } }); }
   if (btn) btn.disabled = false;

@@ -120,13 +120,15 @@ export async function enqueueJobs(oids, type = 'r2') {
 //   { ok: false, raison: 'session' }                               | // pas de jeton
 //   { ok: false, raison: 'delai', timeout: true }                  | // plafond dépassé (AbortError)
 //   { ok: false, raison: 'reseau', erreur: string }                | // fetch en échec
-//   { ok: false, raison: 'service', http: number, erreur: string }   // réponse non OK de l'edge
+//   { ok: false, raison: 'service', http: number, erreur: string } | // réponse non OK de l'edge
+//   { ok: false, raison: 'budget', etape: string }                   // l'edge a rendu la main (202, HO-126) — job r1 déjà enfilé par elle
 // >}
-// Plafond d'attente de la R1 live (A9, 2026-08-28). Sans lui, un appel bloqué
-// laissait l'utilisateur sur « Recherche R1 (Kimi)… » indéfiniment — perçu comme
-// « ça n'ouvre jamais » (L-027). Au-delà, on rend la main : l'appelant bascule
-// sur un job `r1` que le cron reprendra.
-const R1_TIMEOUT_MS = 120000;
+// Plafond d'attente de la R1 live (A9, 2026-08-28 ; abaissé HO-127, 2026-08-31).
+// Sans lui, un appel bloqué laissait l'utilisateur sur « Recherche R1 (Kimi)… »
+// indéfiniment — perçu comme « ça n'ouvre jamais » (L-027). Doit rester SOUS le
+// budget que l'edge se donne (110 s, HO-126) : c'est le site qui rend la main en
+// premier, proprement, pas l'edge qui se fait tuer au mur des 150 s.
+const R1_TIMEOUT_MS = 95000;
 
 export async function lancerRecherches(oid, { force = false } = {}) {
   const { data: { session } } = await sb.auth.getSession();
