@@ -125,6 +125,20 @@
 }
 .ui-galerie-action--bl.ui-galerie-action--active{background:var(--blue)}
 
+/* ─── Navigation ‹ › (HO-114) ─── */
+.ui-galerie-nav{
+  position:absolute; top:50%; transform:translateY(-50%);
+  width:36px; height:36px; border-radius:50%; border:none;
+  display:grid; place-items:center;
+  background:var(--surface-coin-clair); color:var(--ink);
+  font-size:1.375rem; line-height:1; cursor:pointer;
+}
+.ui-galerie-nav--prec{ left:8px; }
+.ui-galerie-nav--suiv{ right:8px; }
+.ui-galerie-nav:disabled{ opacity:.35; cursor:default; }
+.ui-galerie-nav:focus-visible{ outline:2px solid var(--blue); outline-offset:2px; }
+.ui-galerie-viewer--ouvrable img{ cursor:zoom-in; }
+
 /* ─── Tags radio ─── */
 .ui-galerie-tags,
 .ui-galerie-comment{

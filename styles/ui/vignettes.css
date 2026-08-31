@@ -22,7 +22,6 @@
   touch-action:none;
 }
 .ui-vign--courante{border-color:var(--blue)}
-.ui-vign--sanstag{opacity:.85}
 
 .ui-vign img,
 .ui-vign-placeholder{
@@ -80,28 +79,13 @@
   font-size:.5625rem;
   font-weight:700;
 }
-.ui-vign-warn{
+.ui-vign-point{
   position:absolute;
-  right:4px; top:4px;
-  width:17px; height:17px;
+  right:5px; top:5px;
+  width:10px; height:10px;
   border-radius:50%;
   background:var(--warn-dot);
-  color:var(--surface);
-  display:grid;
-  place-items:center;
-  font-size:.6875rem;
-  font-weight:700;
-}
-.ui-vign-banner{
-  position:absolute;
-  left:0; right:0;
-  bottom:22px;
-  text-align:center;
-  font-size:.5625rem;
-  font-weight:700;
-  color:var(--amber);
-  background:var(--amber-soft);
-  padding:2px 0;
+  box-shadow:0 0 0 2px var(--surface);   /* lisible sur photo sombre comme claire */
 }
 .ui-vign-tag{
   display:block;

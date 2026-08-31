@@ -17,22 +17,23 @@ await loadViewCss('vignettes', 'ui');
 
 function vignetteHtml(img, i, courante) {
   const selectionnee = i === courante;
-  // Un seul signal « à traiter » (pas de champ alerte séparé) : les deux
-  // vues d'origine pilotaient badge d'avertissement, bannière et texte de
-  // tag atténué avec la MÊME condition (kind/zone absent) — cf. p.kind==null
-  // dans l'ancien objet/photos.js, !p.zone dans l'ancien artiste/images.js.
+  // Un seul signal « à traiter » (un point orange, rien d'autre — retour Yann
+  // 2026-08-31, HO-114) : les deux vues d'origine pilotaient badge
+  // d'avertissement, bannière et opacité atténuée avec la MÊME condition
+  // (kind/zone absent) — cf. p.kind==null dans l'ancien objet/photos.js,
+  // !p.zone dans l'ancien artiste/images.js. Le libellé « sans tag » en ambre
+  // sous la vignette reste : ce n'est pas un signal de plus, c'est le texte.
   const sansTag = !img.tag;
   const libelleAria = img.tag ? `, ${img.tag}` : '';
   return `
-    <div class="ui-vign ${selectionnee ? 'ui-vign--courante' : ''} ${sansTag ? 'ui-vign--sanstag' : ''}"
+    <div class="ui-vign ${selectionnee ? 'ui-vign--courante' : ''}"
       data-idx="${i}" role="listitem" tabindex="0" aria-label="Image ${i + 1}${esc(libelleAria)}">
       ${img.thumbUrl
         ? (img.video ? '<span class="ui-vign-vid">▶</span>' : `<img src="${esc(img.thumbUrl)}" alt="" loading="lazy" decoding="async" draggable="false">`)
         : '<span class="ui-vign-placeholder">📷</span>'}
       ${img.couverture ? '<span class="ui-vign-cover" aria-label="Couverture">★</span>' : ''}
       <span class="ui-vign-num">${i + 1}</span>
-      ${sansTag ? '<span class="ui-vign-warn" aria-label="Action en attente">!</span>' : ''}
-      ${sansTag ? '<span class="ui-vign-banner">à taguer</span>' : ''}
+      ${sansTag ? '<span class="ui-vign-point" aria-label="À traiter"></span>' : ''}
       <span class="ui-vign-tag ${sansTag ? 'ui-vign-tag--warn' : ''}">${esc(img.tag || 'sans tag')}</span>
     </div>`;
 }

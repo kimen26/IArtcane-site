@@ -64,7 +64,14 @@ function rendreCommentaire(img) {
     </div>`;
 }
 
-function rendreCarte(img, n, idx, mode, actions, tags, libelle) {
+function rendreNav(n, idx) {
+  if (n <= 1) return '';
+  return `
+    <button type="button" class="ui-galerie-nav ui-galerie-nav--prec" data-role="prec" aria-label="Image précédente" ${idx === 0 ? 'disabled' : ''}>‹</button>
+    <button type="button" class="ui-galerie-nav ui-galerie-nav--suiv" data-role="suiv" aria-label="Image suivante" ${idx === n - 1 ? 'disabled' : ''}>›</button>`;
+}
+
+function rendreCarte(img, n, idx, mode, actions, tags, libelle, ouvrable) {
   const rot = img.rotation || 0;
   return `
     <div class="ui-galerie-carte">
@@ -73,13 +80,14 @@ function rendreCarte(img, n, idx, mode, actions, tags, libelle) {
         <span class="ui-galerie-tag-label">· ${esc(img.tag || 'sans tag')}</span>
         ${img.etat ? `<span class="ui-galerie-etat">${esc(img.etat)}</span>` : ''}
       </div>
-      <div class="ui-galerie-viewer" oncontextmenu="return false">
+      <div class="ui-galerie-viewer ${ouvrable ? 'ui-galerie-viewer--ouvrable' : ''}" oncontextmenu="return false">
         ${img.url || img.thumbUrl
           ? (img.video
               ? `<video src="${esc(img.url)}" controls preload="metadata"></video>`
               : `<img src="${esc(img.url || img.thumbUrl)}" alt="" style="transform: rotate(${rot}deg)" loading="eager" decoding="async" draggable="false">`)
           : '<div class="ui-galerie-placeholder">📷</div>'}
         ${mode === 'edition' ? rendreActions(actions, img) : ''}
+        ${rendreNav(n, idx)}
       </div>
       ${mode === 'edition' && tags.length ? rendreTags(tags, img) : ''}
       ${mode === 'edition' ? rendreCommentaire(img) : ''}
@@ -98,7 +106,8 @@ function rendreCarte(img, n, idx, mode, actions, tags, libelle) {
  *   peutAjouter    {boolean=}
  *   peutReordonner {boolean=}
  *   actions        {Array=}   sous-ensemble de ['modifier','couverture','supprimer']
- *   sur            {{ choisir, ajouter, reordonner, taguer, modifier, supprimer, couverture, commenter }}
+ *   sur            {{ choisir, ajouter, reordonner, taguer, modifier, supprimer, couverture, commenter, ouvrir }}
+ *     ouvrir(image) — mode 'lecture' seulement : clic sur la grande image (pas vidéo, pas flèches) → la vue ouvre la loupe (`core/lightbox.js`)
  * @returns {Function|null} détache le glissé des vignettes si actif
  */
 export function galerie(el, opts = {}) {
@@ -111,10 +120,11 @@ export function galerie(el, opts = {}) {
   const tags = opts.tags || [];
   const sur = opts.sur || {};
   const libelle = opts.libelle || 'Photo';
+  const ouvrable = mode === 'lecture' && typeof sur.ouvrir === 'function';
 
   el.innerHTML = `
     <div class="ui-galerie">
-      ${img ? rendreCarte(img, n, courante, mode, actions, tags, libelle) : rendreVide()}
+      ${img ? rendreCarte(img, n, courante, mode, actions, tags, libelle, ouvrable) : rendreVide()}
       <div class="ui-galerie-vign" data-role="vignettes"></div>
     </div>`;
 
@@ -127,6 +137,11 @@ export function galerie(el, opts = {}) {
     });
     const ta = el.querySelector('[data-role="commentaire"]');
     ta?.addEventListener('change', () => sur.commenter?.(ta.value));
+    el.querySelector('[data-role="prec"]')?.addEventListener('click', () => sur.choisir?.(courante - 1));
+    el.querySelector('[data-role="suiv"]')?.addEventListener('click', () => sur.choisir?.(courante + 1));
+    if (ouvrable) {
+      el.querySelector('.ui-galerie-viewer img')?.addEventListener('click', () => sur.ouvrir?.(img));
+    }
   }
 
   const vignEl = el.querySelector('[data-role="vignettes"]');
