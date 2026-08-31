@@ -177,6 +177,10 @@
   position: relative;
   flex: 1;
   display: flex;
+  /* La brique `ui/recadrage` empile image PUIS barre d'actions : sans direction
+     explicite, le `row` par défaut posait la barre À CÔTÉ de l'image dès qu'elle
+     est passée en flux normal (HO-129, blocage légitime de l'exécutant). */
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 0;

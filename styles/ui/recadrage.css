@@ -8,7 +8,10 @@
 .ui-recadrage-img {
   display: block;
   max-width: 100%;
-  max-height: calc(100dvh - 132px);
+  /* La barre basse (hauteur réelle ~72 px avec le texte sur 2 lignes en 360 px)
+     est SOUS l'image, jamais par-dessus : sinon elle masque le bas de la photo
+     et la poignée `s` devient inatteignable (retour Alain, 2026-08-31). */
+  max-height: calc(100dvh - 132px - var(--recadrage-bar-h, 72px));
   margin: 0 auto;
 }
 .ui-recadrage-sel {
@@ -42,10 +45,7 @@
 .ui-recadrage-h--sw { left: 0; bottom: 0; cursor: nesw-resize; }
 .ui-recadrage-h--w { left: 0; top: 50%; cursor: ew-resize; }
 .ui-recadrage-bar {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  position: static;          /* était: absolute + bottom:0 + z-index:12 */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -53,7 +53,6 @@
   padding: 14px;
   background: var(--voile-lightbox);
   border-top: 1px solid var(--bordure-claire-fine);
-  z-index: 12;
 }
 .ui-recadrage-hint {
   color: var(--surface);

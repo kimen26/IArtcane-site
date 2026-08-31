@@ -136,7 +136,19 @@ export function galerie(el, opts = {}) {
       btn.addEventListener('click', () => sur.taguer?.(btn.dataset.key));
     });
     const ta = el.querySelector('[data-role="commentaire"]');
-    ta?.addEventListener('change', () => sur.commenter?.(ta.value));
+    if (ta) {
+      // `change` seul ne tire qu'au blur : sur Android, fermer le clavier ou
+      // quitter l'écran perd la saisie (retour Alain — une photo de #0061 porte
+      // `commentaire: ""`, preuve d'une saisie validée vide). On enregistre en
+      // continu (débounce 600 ms), et on garde `change` comme filet de sortie.
+      let minuteur = null;
+      const pousser = () => sur.commenter?.(ta.value);
+      ta.addEventListener('input', () => {
+        clearTimeout(minuteur);
+        minuteur = setTimeout(pousser, 600);
+      });
+      ta.addEventListener('change', () => { clearTimeout(minuteur); pousser(); });
+    }
     el.querySelector('[data-role="prec"]')?.addEventListener('click', () => sur.choisir?.(courante - 1));
     el.querySelector('[data-role="suiv"]')?.addEventListener('click', () => sur.choisir?.(courante + 1));
     if (ouvrable) {
