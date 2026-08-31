@@ -16,12 +16,14 @@ import { $, esc, toast, emptyHtml } from '../../core/dom.js';
 import { enregistrer, withBusy, humaniser } from '../../core/feedback.js';
 import { S, canWrite } from '../../core/state.js';
 import {
-  fmtNum, fmtDate, catCanon, catEmoji, infoSvg, isVideo, STATUTS,
+  fmtNum, fmtDate, catCanon, infoSvg, isVideo, STATUTS,
 } from '../../core/format.js';
 import { sb, signPaths, logEvent, lancerRecherches, enqueueJobs } from '../../core/data.js';
 import { loadViewCss } from '../../core/css.js';
 import { page } from '../../ui/page.js';
-import { O, hooks, CHAMPS_VALIDABLES, estValide, toggleValidation, chargerNLens } from './etat.js';
+import { galerie } from '../../ui/galerie.js';
+import { openViewer } from '../../core/lightbox.js';
+import { O, hooks, CHAMPS_OBLIGATOIRES, estValide, toggleValidation, chargerNLens } from './etat.js';
 import { brancherUploads } from './uploads.js';
 
 await loadViewCss('objet');
@@ -67,8 +69,9 @@ async function loadObjet(id) {
   O.jobs = jobs ?? [];
   O.nLens = nLens ?? 0;
   O.pipe = computePipe(O.events, O.jobs, S.currentObjet);
+  hubIndex = O.photos.findIndex(p => p.couverture);
+  if (hubIndex < 0) hubIndex = 0;
   renderObjet();
-  loadSimilar(o);
 }
 
 // Suppression d'un objet : fichiers storage puis ligne `objets` — les FK
@@ -126,6 +129,12 @@ function fmtDims(o) {
   return parts.length ? parts.join(' × ') + ' cm' : null;
 }
 
+// Index de la photo affichée en grand dans la galerie du hub — variable de
+// module (pas dans O, qui est rechargé/remplacé à chaque objet) ; réinitialisée
+// à la couverture par loadObjet() à chaque chargement, jamais conservée d'un
+// objet à l'autre.
+let hubIndex = 0;
+
 // ─── Navigation interne ────────────────────────────────────────────────────
 async function importerEcran(ecran) {
   if (ecran === 'photos') return import('./photos.js');
@@ -174,7 +183,15 @@ function renderHubEcran(body) {
     },
   });
   corps.innerHTML = rendreHub(o);
-  loadSimilar(o);
+  galerie(corps.querySelector('[data-role="galerie"]'), {
+    images: O.photos.map(mapImageHub), courante: hubIndex, mode: 'lecture', libelle: 'Photo',
+    peutAjouter: canWrite(),
+    sur: {
+      choisir: i => { hubIndex = i; renderObjet(); },
+      ouvrir: img => openViewer({ src: img.url, alt: o.titre || 'objet' }),
+      ajouter: () => naviguer('photos'),
+    },
+  });
 }
 
 // ─── Hub ───────────────────────────────────────────────────────────────────
@@ -187,8 +204,14 @@ function titreSansAuteur(titre, auteur) {
   return t.toLowerCase().endsWith(suf) ? t.slice(0, t.length - suf.length).replace(/[\s—]+$/, '').trim() : titre;
 }
 
+// Copie locale et minimale de mapImage() (photos.js:88-95, interdit à ce
+// chantier et sans export) — juste ce que la galerie en lecture consomme.
+// Candidat à un `services/photos` un jour (signalé au rapport HO-116).
+function mapImageHub(p) {
+  return { id: p.id, url: p.url, thumbUrl: p.thumbUrl, tag: p.tag, couverture: !!p.couverture, video: isVideo(p), rotation: p.rotation || 0 };
+}
+
 function rendreHub(o) {
-  const cover = O.photos.find(p => p.couverture) ?? O.photos[0];
   const nVendus = O.comps.filter(c => !c.exclu && c.source_type !== 'en_vente').length;
   const nVente = O.comps.filter(c => !c.exclu && c.source_type === 'en_vente').length;
 
@@ -199,39 +222,22 @@ function rendreHub(o) {
       // piste non confirmée — l'indicateur (?) le dit avant la validation humaine.
       : `<span class="obj-author">${esc(o.auteur)} <span title="Artiste non identifié : pas de fiche artiste — à confirmer (validation humaine)" style="opacity:.55">(?)</span></span>`)
     : '';
-  const titreAffiche = titreSansAuteur(o.titre, o.auteur);
 
   return `
   <div class="obj-hub">
-    <div class="obj-photo-band" data-action="nav" data-ecran="photos">
-      ${cover?.thumbUrl
-        ? `<img src="${esc(cover.thumbUrl)}" alt="${esc(o.titre || 'objet')}" loading="eager" decoding="async">`
-        : `<div class="obj-photo-band-placeholder">${catEmoji(o.categorie)}</div>`}
-      <div class="obj-photo-band-voile-bottom">
-        <h1 class="obj-title">${esc(titreAffiche || 'Sans titre')}</h1>
-        ${auteurHtml}
-      </div>
-      ${rendreRuban(o)}
-    </div>
+    <div class="obj-hub-galerie" data-role="galerie"></div>
+    <div class="obj-auteur-row">${auteurHtml}${rendreRuban(o)}</div>
 
     <div class="obj-hub-body">
-      <div class="obj-thumb-row" data-action="nav" data-ecran="photos">
-        ${O.photos.map(p => `<img class="obj-thumb-mini${p.id === cover?.id ? ' cover' : ''}" src="${esc(p.thumbUrl)}" alt="" loading="lazy" decoding="async">`).join('')}
-        <span class="obj-thumb-mini obj-thumb-add">+</span>
-      </div>
       <div class="obj-meta-row">
         <span class="obj-meta-comps">${nVendus} vendu${nVendus > 1 ? 's' : ''} · ${nVente} en vente</span>
+        <button type="button" class="obj-meta-lien" data-action="nav" data-ecran="photos">Photos ›</button>
         <span class="obj-meta-statut">${STATUTS[o.statut] ?? esc(o.statut)} · <span class="obj-meta-date">${fmtDate(o.updated_at)}</span></span>
       </div>
 
       ${rendreCarteIdentification(o)}
       ${rendreTiroirAlertes(o)}
       ${rendreCarteDescription(o)}
-
-      <section class="obj-panel" id="similar-panel" style="display:none">
-        <div class="obj-sec-title">Objets qui s'en rapprochent</div>
-        <div class="similar" id="similar-grid"></div>
-      </section>
 
       <button class="obj-del" data-action="del-objet">🗑 Supprimer l'objet</button>
 
@@ -245,10 +251,10 @@ function rendreHub(o) {
 function rendreRuban(o) {
   if (o.prix_bas == null || o.prix_haut == null) return '';
   return `
-    <button class="obj-ruban" data-action="nav" data-ecran="ventes">${fmtNum(o.prix_bas)} – ${fmtNum(o.prix_haut)} €</button>`;
+    <button class="obj-prix" data-action="nav" data-ecran="ventes">${fmtNum(o.prix_bas)} – ${fmtNum(o.prix_haut)} €</button>`;
 }
 function rendreCarteIdentification(o) {
-  const aValider = CHAMPS_VALIDABLES.filter(ch => champRempli(ch, o) && !estValide(ch)).length;
+  const aValider = CHAMPS_OBLIGATOIRES.filter(ch => champRempli(ch, o) && !estValide(ch)).length;
   const dims = fmtDims(o);
   const rangement = [o.zone, o.contenant].filter(Boolean).join(' · ');
   return `
@@ -340,30 +346,6 @@ function rendreCarteDescription(o) {
       <div class="obj-desc">${o.description ? esc(o.description) : '<span class="miss">Pas encore de description</span>'}</div>
     </section>`;
 }
-async function loadSimilar(o) {
-  const panel = $('#similar-panel');
-  if (!panel) return;
-  if (!o.categorie) return;
-  const { data } = await sb.from('objets').select('*')
-    .eq('owner_id', S.tenantId).eq('categorie', o.categorie).neq('id', o.id)
-    .order('created_at', { ascending: false }).limit(3);
-  if (!data?.length) return;
-  const { data: ph } = await sb.from('photos').select('objet_id,storage_path,thumb_path')
-    .eq('owner_id', S.tenantId).in('objet_id', data.map(s => s.id)).order('ordre', { nullsFirst: false }).order('created_at');
-  const first = {};
-  for (const p of ph ?? []) if (!first[p.objet_id]) first[p.objet_id] = p.thumb_path ?? p.storage_path;
-  const urls = await signPaths(Object.values(first));
-  const grid = $('#similar-grid'); if (!grid || String(S.currentObjet?.id) !== String(o.id)) return; // écran changé pendant les 3 await (Photos ouvert, ou autre objet) : rien à peindre — 2026-08-30, fichier en dette, pas une ligne de plus
-  panel.style.display = ''; grid.innerHTML = data.map(s => {
-    const img = urls[first[s.id]];
-    return `<div class="sim-card" data-action="similar" data-oid="${esc(s.id)}" tabindex="0" role="button" aria-label="${esc(s.titre || 'Objet similaire')} — fiche #${esc(s.id)}">
-      <div class="sim-img">${img ? `<img src="${esc(img)}" alt="${esc(s.titre || 'Objet similaire')}" loading="lazy" decoding="async">` : catEmoji(s.categorie)}</div>
-      <div><div class="sim-t">${esc(s.titre || 'Sans titre')}</div>
-      <div class="sim-m">#${esc(s.id)}${s.prix_bas != null ? ` · ${fmtNum(s.prix_bas)}–${fmtNum(s.prix_haut)} €` : ''}</div></div>
-    </div>`;
-  }).join('');
-}
-
 // ─── Actions de la vue Objet (délégation) ───────────────────────────────────
 
 const ACTIONS_MUTANTES = new Set(['del-objet', 'toggle-val']);
@@ -379,9 +361,6 @@ $('#objet-body').addEventListener('click', async e => {
       try { focus = JSON.parse(el.dataset.focus); } catch { focus = { champ: el.dataset.focus }; }
     }
     naviguer(el.dataset.ecran, focus);
-  }
-  else if (act === 'similar') {
-    location.hash = '#/objet/' + encodeURIComponent(el.dataset.oid);
   }
   else if (act === 'toggle-val') {
     await toggleValidation(el.dataset.champ);

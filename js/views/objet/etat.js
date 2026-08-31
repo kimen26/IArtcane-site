@@ -54,6 +54,11 @@ export const hooks = {
 export const CHAMPS_VALIDABLES = ['titre','categorie','auteur','technique','periode','ecole','etat','marques','dimensions','prix','description'];
 // 'dimensions' = triplet hauteur/largeur/profondeur_cm ; 'prix' = prix_bas+prix_haut.
 
+/** Champs OBLIGATOIRES d'une fiche (tranché par Yann, 2026-08-31) : ce que le hub compte
+ *  dans « N à valider ». `prix` est produit par la valorisation, `description`/`periode`/
+ *  `ecole`/`marques` sont utiles mais pas bloquants. */
+export const CHAMPS_OBLIGATOIRES = ['categorie', 'auteur', 'technique', 'titre', 'etat', 'dimensions'];
+
 /** Renvoie true si le champ est validé dans objets.validation_champs. */
 export const estValide = (champ) => Boolean(S.currentObjet?.validation_champs?.[champ]);
 

@@ -16,117 +16,22 @@
   gap:9px;
 }
 
-/* Bandeau photo pleine largeur (en-tête 3c, HO-092 ; bord à bord + cadrage desktop, HO-093) */
-.obj-photo-band{
-  position:relative;
-  height:248px;
-  background:var(--ink);
-  cursor:pointer;
-  clip-path:inset(0 0 -1px 0);
-  overflow:hidden; /* le ruban (right:-46px) ne doit pas créer d'ascenseur horizontal maintenant que le bandeau est bord à bord (recette HO-113) */
-  /* Le bandeau n'est plus le premier élément de l'écran (HO-104 : l'en-tête
-     et le fil d'Ariane le précèdent désormais, posés par `ui/page.js`) — seul
-     le padding LATÉRAL de main (base.css) est encore à annuler pour rester
-     bord à bord ; le haut ne doit plus remonter sous le fil. Marge devenue
-     variable (HO-113) : la marge de `.ui-page-corps` n'est plus celle de
-     `main` (24 px desktop / 14 px mobile) mais `--ecran-x` (6 px partout). */
-  margin:0 calc(-1 * var(--ecran-x, 0px)) 0;
-}
-/* Desktop : le bandeau reste pleine largeur (aligné sur le reste de la page) ;
-   c'est l'IMAGE qu'on borne, pour qu'elle ne soit ni perdue au centre d'un aplat
-   (HO-092) ni transformée en carte portrait désalignée (1re passe HO-093). */
-@media (min-width:641px){
-  .obj-photo-band{height:340px}
-  .obj-photo-band img{max-width:min(560px, 60%); margin-inline:auto}
-}
-.obj-photo-band img{
-  display:block;
-  width:100%;
-  height:100%;
-  object-fit:contain;
-}
-.obj-photo-band-placeholder{
-  display:grid;
-  place-items:center;
-  width:100%;
-  height:100%;
-  font-size:3rem;
-  color:var(--icone-sur-fonce);
-}
-.obj-photo-band-voile-bottom{
-  position:absolute;
-  left:0; right:0; bottom:0;
-  padding:24px 13px 11px;
-  background:linear-gradient(0deg, var(--voile-photo-bas), var(--voile-photo-transparent));
-}
-.obj-photo-band-voile-bottom .obj-title{
-  font-family:var(--serif);
-  font-weight:600;
-  font-size:1.1875rem;
-  line-height:1.2;
-  margin:0;
-  color:#fff;
-}
-.obj-photo-band-voile-bottom .obj-author{
-  font-size:.78125rem;
-  font-weight:600;
-  color:var(--lien-sur-photo);
-  text-decoration:none;
-}
-.obj-photo-band-voile-bottom .obj-author span{
-  opacity:1 !important;
-  /* atténuation ponctuelle du lien auteur sur photo sombre, valeur unique (HO-103) */
-  color:rgba(255,255,255,.55);
-}
-
-/* Ruban d'estimation (motif repris de components.css:130, en plus grand) ;
-   le repli littéral de --ruban reste tel quel (mécanisme JS, HO-103) */
-.obj-ruban{
-  position:absolute;
-  right:-46px; bottom:22px;
-  width:168px;
-  transform:rotate(-45deg);
-  text-align:center;
-  padding:4px 0;
-  font-size:.6875rem;
-  font-weight:700;
-  letter-spacing:.04em;
+/* Galerie de la brique (HO-116) : grande image + flèches + vignettes, ligne
+   auteur/prix sous la galerie — plus de bandeau maison ni de titre en
+   surimpression (le titre vit dans l'en-tête de page depuis HO-104). */
+.obj-hub-galerie{ margin-top:0; }
+.obj-auteur-row{ display:flex; align-items:center; gap:9px; padding:0 2px; font-size:.8125rem; }
+.obj-auteur-row .obj-author{ font-weight:600; color:var(--blue-deep); text-decoration:none; }
+.obj-prix{
+  margin-left:auto;
+  border:none; border-radius:999px;
+  padding:4px 10px;
+  font-size:.75rem; font-weight:700; letter-spacing:.02em;
   color:var(--ruban-texte);
-  /* repli littéral de --ruban, mécanisme JS maison (HO-041), pas une couleur en dur (HO-103) */
-  background:var(--ruban,#35696c);
-  border:none;
-  cursor:pointer;
-  box-shadow:0 1px 4px var(--ombre-ruban), inset 0 1px 0 var(--bordure-claire-fine),
-             inset 0 -1px 0 var(--ombre-ruban-vive);
-}
-
-/* Rangée de vignettes sous la photo */
-.obj-thumb-row{
-  display:flex;
-  align-items:center;
-  gap:5px;
-  padding:10px 12px;
+  background:var(--ruban,#35696c);   /* repli littéral de --ruban, mécanisme JS maison (HO-041/HO-103) */
   cursor:pointer;
 }
-.obj-thumb-mini{
-  width:34px; height:34px;
-  flex:0 0 auto;
-  border-radius:6px;
-  object-fit:cover;
-  /* proche mais distinct de --line-carte (un chiffre d'écart en fin de teinte) :
-     écart d'origine non résolu ici, cf. rapport HO-103 */
-  background:#dfe3ea;
-}
-.obj-thumb-mini.cover{
-  border:1.5px solid var(--blue);
-}
-.obj-thumb-add{
-  display:grid;
-  place-items:center;
-  border:1px dashed var(--ligne-discrete);
-  color:var(--ink-3);
-  font-size:1rem;
-}
+.obj-meta-lien{ border:none; background:none; padding:0; color:var(--blue-deep); font:inherit; cursor:pointer; }
 
 /* Ligne méta discrète */
 .obj-meta-row{
@@ -493,16 +398,6 @@
 .ev-champs{list-style:none;padding:0;margin:4px 0 0;display:flex;flex-direction:column;gap:4px}
 .ev-champs li{padding:4px 8px;background:var(--surface);border-radius:var(--r-sm);border-left:3px solid var(--blue)}
 @media (max-width:640px){.ev-row{grid-template-columns:auto 1fr}.ev-act{grid-column:2}.ev-actor{grid-column:2;justify-self:start}.ev-det{grid-column:1/-1}}
-
-/* Objets similaires */
-.similar{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-@media (max-width:640px){.similar{grid-template-columns:1fr}}
-.sim-card{display:flex;gap:12px;align-items:center;padding:10px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);cursor:pointer}
-.sim-card:hover{border-color:var(--blue)}
-.sim-img{width:48px;height:48px;border-radius:var(--r-sm);display:grid;place-items:center;font-size:1.25rem;color:var(--icone-sur-fonce);flex-shrink:0;background:linear-gradient(135deg,var(--ink-3),var(--blue-deep));overflow:hidden;position:relative}
-.sim-img img{width:100%;height:100%;object-fit:contain;position:absolute;inset:0}
-.sim-t{font-size:.8125rem;font-weight:600;line-height:1.3}
-.sim-m{font-size:.71875rem;color:var(--ink-3);font-family:var(--mono)}
 
 /* Supprimer l'objet */
 .obj-del{
