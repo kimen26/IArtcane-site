@@ -24,6 +24,7 @@ export const O = {
   pipe: null,     // état R1/R2/R3/Valo (computePipe)
   jobs: [],       // jobs en attente/en cours
   ecran: 'hub',   // 'hub' | 'photos' | 'identification' | 'ventes' | 'description' | 'historique'
+  ecranRetour: null, // écran à restaurer au remontage après l'atelier photo — 'photos' ou 'hub'
   focus: null,    // { champ } | { photoId } — consommé par l'écran cible puis remis à null
   nLens: 0,       // nb de passes R2 Lens (evenements action='lens R2', HO-087) — 0 par défaut
 };

@@ -165,7 +165,7 @@ async function onForkChange(e, champ) {
   const raw = e.target.value.replace(/\s/g, '').replace(',', '.');
   const valeur = raw === '' ? null : parseFloat(raw);
   if (valeur != null && !Number.isFinite(valeur)) {
-    toast('Valeur numérique attendue', true);
+    toast('Valeur numérique attendue', 'action');
     hooks.rendre?.();
     return;
   }

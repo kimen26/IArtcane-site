@@ -169,62 +169,19 @@
   padding-top:2px;
 }
 
-/* ─── Atelier « Modifier la photo » (HO-099) — devenu une page routée, plus un
-   overlay `createOverlay` (lightbox.js reste gelé, il sert encore la visionneuse
-   et la fiche artiste). Le canvas redressé et les poignées de recadrage sont
-   repris tels quels de HO-094/HO-095 ; seul le conteneur change : `.obj-edit-canvas`
-   remplace `.lightbox.cut`, dans le corps d'écran standard `.obj-screen-body`. */
-.obj-edit-canvas {
+/* ─── Atelier « Modifier la photo » (HO-099, rendu sur `ui/recadrage` depuis
+   HO-120 — le canvas et les poignées maison ont été retirés, styles dans
+   `styles/ui/recadrage.css`, gelé). Seul reste le placement dans la page :
+   hauteur de la zone dans le corps d'écran standard `.obj-screen-body`. */
+.obj-edit-zone {
   position: relative;
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 0;
-  background: var(--ink);
   border-radius: var(--r-md);
   overflow: hidden;
 }
-.obj-edit-canvas .cut-canvas { display: block; max-width: 100%; max-height: calc(100dvh - 260px); border-radius: var(--r-md); }
-/* Poignées de recadrage : `position:fixed` d'après getBoundingClientRect() du
-   canvas (HO-094) — fonctionne indépendamment du conteneur, ne pas toucher aux
-   dimensions ci-dessous : les 44px viennent d'un retour d'Alain (HO-027). */
-.cut-sel {
-  position: fixed;
-  border: 2px dashed #fff;
-  box-shadow: 0 0 0 9999px var(--voile-bloquant);
-  pointer-events: none;
-  z-index: 10;
-}
-.cut-sel i {
-  position: absolute;
-  width: 44px;
-  height: 44px;
-  background: var(--blue);
-  border: 3px solid #fff;
-  border-radius: 50%;
-  pointer-events: auto;
-  touch-action: none;
-  box-shadow: 0 2px 6px var(--ombre-texte-forte);
-  transform: translate(-50%, -50%);
-  transition: transform .1s, background .1s;
-}
-.cut-sel i:hover { background: var(--blue-deep); transform: translate(-50%, -50%) scale(1.15); }
-.cut-sel i:active { background: var(--blue-deep); transform: translate(-50%, -50%) scale(1.05); }
-.cut-sel .h-nw { left: 0; top: 0; cursor: nwse-resize; }
-.cut-sel .h-n { left: 50%; top: 0; cursor: ns-resize; }
-.cut-sel .h-ne { right: 0; top: 0; cursor: nesw-resize; }
-.cut-sel .h-e { right: 0; top: 50%; cursor: ew-resize; }
-.cut-sel .h-se { right: 0; bottom: 0; cursor: nwse-resize; }
-.cut-sel .h-s { left: 50%; bottom: 0; cursor: ns-resize; }
-.cut-sel .h-sw { left: 0; bottom: 0; cursor: nesw-resize; }
-.cut-sel .h-w { left: 0; top: 50%; cursor: ew-resize; }
-/* Bandeau d'aide au-dessus du canvas (remplace `.cut-hint` flottant dans l'ex-overlay). */
-.obj-edit-hint {
-  padding: 0 2px 9px;
-  color: var(--ink-2);
-  font-size: .8125rem;
-  text-align: center;
-}
-/* La barre d'actions (rotation/enregistrer/annuler) est désormais posée par
+/* La barre d'actions (rotation/annuler) est désormais posée par
    `ui/barre-basse.js` (HO-104), qui garantit déjà 44px mini par bouton. */

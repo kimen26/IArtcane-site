@@ -16,6 +16,13 @@
 // HO-105 : le remplacement destructif (écrase storage_path, régénère les 3
 // dérivées depuis la nouvelle brute, jamais en cascade — D-073/D-075) est
 // déplacé tel quel dans services/photos.js::remplacer().
+// HO-120 : l'atelier maison (canvas + poignées de recadrage) est remplacé par
+// la brique `ui/recadrage` (HO-115, docs/architecture-briques.md §2) — même
+// modèle que artiste/images.js::openCutter et capture/index.js::openLocalCrop.
+// La rotation reste appliquée AVANT recadrage() : le bitmap est redressé sur
+// un canvas caché, converti en blob objectURL, passé en `src` — la brique ne
+// connaît que le rectangle déjà droit. Le retour ramène à l'écran d'origine
+// (O.ecranRetour, etat.js) au lieu du hub systématique.
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, toast } from '../../core/dom.js';
 import { loadViewCss } from '../../core/css.js';
@@ -25,6 +32,8 @@ import { sb, logEvent, signPaths } from '../../core/data.js';
 import { remplacer, cibleObjet } from '../../services/photos.js';
 import { page } from '../../ui/page.js';
 import { catCanon } from '../../core/format.js';
+import { recadrage, decouper } from '../../ui/recadrage.js';
+import { O } from './etat.js';
 
 await loadViewCss('objet-photos');
 
@@ -35,10 +44,16 @@ export async function mount(objetId, photoId) {
   const body = $('#objet-body');
   body.innerHTML = '<div class="skeleton" style="height:320px"></div>';
 
+  // Écran d'origine à restaurer au retour (HO-120) — lu AVANT que cet atelier
+  // ne prenne la main : si O.ecran porte encore l'écran courant du même objet
+  // (Photos ou hub), c'est de là qu'on vient. Ouverture directe de l'URL sans
+  // passer par la fiche → hub, pas d'exception.
+  O.ecranRetour = (String(S.currentObjet?.id) === String(objetId) && O.ecran === 'photos') ? 'photos' : 'hub';
+
   const { data: photo, error } = await sb.from('photos').select('*')
     .eq('owner_id', S.tenantId).eq('objet_id', objetId).eq('id', photoId).maybeSingle();
   if (error || !photo) {
-    toast('Photo introuvable', true);
+    toast('Photo introuvable', 'panne');
     location.hash = `#/objet/${encodeURIComponent(objetId)}`;
     return;
   }
@@ -65,25 +80,25 @@ export async function mount(objetId, photoId) {
   const retour = () => { location.hash = `#/objet/${encodeURIComponent(objetId)}`; };
 
   const bruteUrl = (await signPaths([photo.storage_path]))[photo.storage_path];
-  if (!bruteUrl) { toast('Impossible de charger la brute pour l’édition', true); retour(); return; }
+  if (!bruteUrl) { toast('Impossible de charger la brute pour l’édition', 'panne'); retour(); return; }
   const bmp = await createImageBitmap(await (await fetch(bruteUrl)).blob());
 
   let rotLocale = photo.rotation || 0;
-  let straight, dw, dh;
+  let straightBlob;
 
-  const redresser = () => {
+  // Redresse le bitmap selon rotLocale sur un canvas caché → blob → objectURL,
+  // pour que `recadrage()` (ui/recadrage.js) ne voie qu'un rectangle déjà droit.
+  const redresser = async () => {
     const swap = rotLocale === 90 || rotLocale === 270;
-    dw = swap ? bmp.height : bmp.width; dh = swap ? bmp.width : bmp.height;
-    if (!straight) {
-      straight = document.createElement('canvas');
-      straight.className = 'cut-canvas';
-    }
-    straight.width = dw; straight.height = dh;
-    const sctx = straight.getContext('2d');
-    sctx.translate(dw / 2, dh / 2); sctx.rotate(rotLocale * Math.PI / 180);
-    sctx.drawImage(bmp, -bmp.width / 2, -bmp.height / 2);
+    const dw = swap ? bmp.height : bmp.width, dh = swap ? bmp.width : bmp.height;
+    const c = document.createElement('canvas');
+    c.width = dw; c.height = dh;
+    const cctx = c.getContext('2d');
+    cctx.translate(dw / 2, dh / 2); cctx.rotate(rotLocale * Math.PI / 180);
+    cctx.drawImage(bmp, -bmp.width / 2, -bmp.height / 2);
+    straightBlob = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.95));
   };
-  redresser();
+  await redresser();
 
   const corps = page(body, {
     titre: 'Modifier la photo',
@@ -91,93 +106,47 @@ export async function mount(objetId, photoId) {
     barre: {
       actions: [
         { label: '↻ 90°', type: 'plat', onClick: onRotClick },
-        { label: 'Enregistrer', type: 'primaire', plein: true, onClick: onSaveClick },
         { label: 'Annuler', type: 'plat', onClick: retour },
       ],
     },
   });
   corps.innerHTML = `
     <div class="obj-screen-body">
-      <div class="obj-edit-hint">Recadre avec les poignées, ou pivote — puis enregistre</div>
-      <div class="obj-edit-canvas"></div>
+      <div class="obj-edit-zone"></div>
     </div>`;
-  corps.querySelector('.obj-edit-canvas').append(straight);
+  const zone = corps.querySelector('.obj-edit-zone');
 
-  const img = straight;
-  // barreBasse() rend les actions dans l'ordre : 0 = rotation, 1 = enregistrer, 2 = annuler.
-  const ok = body.querySelector('[data-ui-action="1"]');
-  ok.disabled = true; // rien à enregistrer tant qu'aucune modif (recadrage/rotation)
-  let sel = { x0: 0, y0: 0, x1: 1, y1: 1 };
-  let box = null;
-  let drag = null;
-  const MIN = 0.05;
-  const canvasZone = corps.querySelector('.obj-edit-canvas');
-  const toRel = e => {
-    const r = img.getBoundingClientRect();
-    return { x: Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1), y: Math.min(Math.max((e.clientY - r.top) / r.height, 0), 1) };
+  let urlCourante = null;
+  const monterAtelier = () => {
+    zone.innerHTML = '';
+    if (urlCourante) URL.revokeObjectURL(urlCourante);
+    urlCourante = URL.createObjectURL(straightBlob);
+    recadrage(zone, {
+      src: urlCourante,
+      alt: 'Photo à modifier',
+      sur: { annuler: retour, valider: onValider },
+    });
   };
-  const H = {
-    nw: (s, p) => ({ ...s, x0: Math.min(p.x, s.x1 - MIN), y0: Math.min(p.y, s.y1 - MIN) }),
-    n:  (s, p) => ({ ...s, y0: Math.min(p.y, s.y1 - MIN) }),
-    ne: (s, p) => ({ ...s, x1: Math.max(p.x, s.x0 + MIN), y0: Math.min(p.y, s.y1 - MIN) }),
-    e:  (s, p) => ({ ...s, x1: Math.max(p.x, s.x0 + MIN) }),
-    se: (s, p) => ({ ...s, x1: Math.max(p.x, s.x0 + MIN), y1: Math.max(p.y, s.y0 + MIN) }),
-    s:  (s, p) => ({ ...s, y1: Math.max(p.y, s.y0 + MIN) }),
-    sw: (s, p) => ({ ...s, x0: Math.min(p.x, s.x1 - MIN), y1: Math.max(p.y, s.y0 + MIN) }),
-    w:  (s, p) => ({ ...s, x0: Math.min(p.x, s.x1 - MIN) }),
-  };
-  const draw = () => {
-    if (!box) {
-      box = document.createElement('div');
-      box.className = 'cut-sel';
-      box.innerHTML = Object.keys(H).map(h => `<i data-h="${h}" class="h-${h}"></i>`).join('');
-      canvasZone.append(box);
-    }
-    const r = img.getBoundingClientRect();
-    box.style.left = `${r.left + sel.x0 * r.width}px`;
-    box.style.top = `${r.top + sel.y0 * r.height}px`;
-    box.style.width = `${(sel.x1 - sel.x0) * r.width}px`;
-    box.style.height = `${(sel.y1 - sel.y0) * r.height}px`;
-  };
-  draw();
-  canvasZone.addEventListener('pointerdown', e => {
-    const h = e.target.dataset?.h;
-    if (!h) return;
-    e.preventDefault(); e.stopPropagation();
-    drag = h;
-  });
-  canvasZone.addEventListener('pointermove', e => {
-    if (!drag) return;
-    sel = H[drag](sel, toRel(e));
-    draw();
-    ok.disabled = false;
-  });
-  canvasZone.addEventListener('pointerup', () => { drag = null; });
+  monterAtelier();
 
-  function onRotClick() {
+  async function onRotClick() {
     rotLocale = (rotLocale + 90) % 360;
-    redresser();
-    sel = { x0: 0, y0: 0, x1: 1, y1: 1 };
-    draw();
-    ok.disabled = false;
+    await redresser();
+    monterAtelier();
+    // La brique n'active « Recadrer » que sur un geste de poignée (pointermove,
+    // ui/recadrage.js) — une rotation seule, sans recadrage, doit rester
+    // enregistrable (comportement identique à avant HO-120).
+    zone.querySelector('[data-role="valider"]').disabled = false;
   }
 
-  async function onSaveClick() {
+  async function onValider(sel) {
     if (!confirm("Enregistrer les modifications ?\n\nLa photo d'origine sera remplacée définitivement — cette action est irréversible.")) return;
-    ok.disabled = true; ok.textContent = 'Enregistrement…';
     try {
       await withBusy(async () => {
-        // straight est déjà la brute redressée (même repère que sel) — pas de refetch.
-        const sx = Math.round(sel.x0 * dw), sy = Math.round(sel.y0 * dh);
-        const sw = Math.round((sel.x1 - sel.x0) * dw), sh = Math.round((sel.y1 - sel.y0) * dh);
-        if (sw < 20 || sh < 20) throw new Error('zone trop petite');
-        const c = document.createElement('canvas');
-        c.width = sw; c.height = sh;
-        c.getContext('2d').drawImage(straight, sx, sy, sw, sh, 0, 0, sw, sh);
+        // straightBlob est déjà la brute redressée (même repère que sel) — pas de refetch.
         // Qualité 0.95 (brute d'origine en q=0.85, camera.js) : la brute est
         // écrasée, tout ré-encodage est une génération de perte supplémentaire.
-        const out = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.95));
-        if (!out) throw new Error('encodage impossible');
+        const out = await decouper(straightBlob, sel, { qualite: 0.95 });
         // HO-095 — renverse HO-091 : l'édition est destructive, `storage_path` est
         // réécrit, `crop_path` repasse à NULL et `rotation` à 0 (services/photos.js).
         const r = await remplacer(cibleObjet(objetId), photo, out);
@@ -188,7 +157,6 @@ export async function mount(objetId, photoId) {
       }, { titre: 'Enregistrement — la photo d’origine est remplacée définitivement…' });
     } catch (err) {
       console.warn('edition-photo:', err); toast(`Enregistrement échoué — ${humaniser(err)}. Réessaie.`, 'action');
-      ok.disabled = false; ok.textContent = 'Enregistrer';
     }
   }
 }

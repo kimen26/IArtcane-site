@@ -41,7 +41,8 @@ async function loadObjet(id) {
     return;
   }
   S.currentObjet = o;
-  O.ecran = 'hub';
+  O.ecran = O.ecranRetour ?? 'hub';
+  O.ecranRetour = null;
   O.focus = null;
   // Fil d'Ariane (HO-104) : filDe('objet', …) fournit la forme (S.fil posé par
   // le shell avant mount()) sans connaître la catégorie — cette vue la complète.

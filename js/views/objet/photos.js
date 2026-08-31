@@ -205,7 +205,7 @@ async function onCouverture() {
   const p = photoCourante();
   const o = S.currentObjet;
   if (!p || !o) return;
-  if (!await definirCouverture(cibleObjet(o.id), p)) { toast('Photo de couverture non enregistrée', true); return; }
+  if (!await definirCouverture(cibleObjet(o.id), p)) { toast('Photo de couverture non enregistrée', 'panne'); return; }
   O.photos.forEach(ph => { ph.couverture = ph.id === p.id; });
   toast('✓ Photo de couverture enregistré');
   logEvent('couverture', { photo: p.storage_path });
@@ -216,7 +216,7 @@ async function onTaguer(kind) {
   const p = photoCourante();
   const o = S.currentObjet;
   if (!p || !o || p.kind === kind) return;
-  if (!await taguer(cibleObjet(o.id), p, kind)) { toast('Tag de la photo non enregistré', true); return; }
+  if (!await taguer(cibleObjet(o.id), p, kind)) { toast('Tag de la photo non enregistré', 'panne'); return; }
   p.kind = kind;
   logEvent('tag_photo', { photo: p.storage_path, kind });
   hooks.rendre();
