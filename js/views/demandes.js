@@ -9,7 +9,7 @@ import { sb } from '../core/data.js';
 import { toast, enregistrer, humaniser } from '../core/feedback.js';
 import { fmtDateTime } from '../core/format.js';
 import { loadViewCss } from '../core/css.js';
-import { micButton } from './mic.js';
+import { micButton } from '../ui/mic.js';
 import { page } from '../ui/page.js';
 
 await loadViewCss('demandes');
@@ -230,7 +230,7 @@ function brancher() {
   // premier rendu qui l'affiche (délégation impossible pour un composant DOM).
   const obs = new MutationObserver(() => {
     body.querySelectorAll('.dem-carte-reponse-zone.open').forEach(zone => {
-      if (zone.querySelector('.mic-btn')) return;
+      if (zone.querySelector('.ui-mic')) return;
       const ta = zone.querySelector('textarea');
       const mic = ta && micButton(ta);
       if (mic) zone.append(mic);

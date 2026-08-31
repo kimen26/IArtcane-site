@@ -19,7 +19,7 @@ import { toast, enregistrer, withBusy, humaniser } from '../../core/feedback.js'
 import { createOverlay } from '../../core/lightbox.js';
 import { page } from '../../ui/page.js';
 import { galerie } from '../../ui/galerie.js';
-import { micButton } from '../mic.js';
+import { micButton } from '../../ui/mic.js';
 import { A, hooks } from './etat.js';
 import { insererArtistePhoto } from './uploads.js';
 import { supprimer, taguer, remplacer, reordonner, cibleArtiste } from '../../services/photos.js';

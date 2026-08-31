@@ -18,7 +18,7 @@ import { openCamera } from '../../core/camera.js';
 import { loadViewCss } from '../../core/css.js';
 import { createOverlay } from '../../core/lightbox.js';
 import { galerie } from '../../ui/galerie.js';
-import { micButton } from '../mic.js';
+import { micButton } from '../../ui/mic.js';
 import { CATS_PROMPT } from '../../core/taxonomie.js';
 import { getCurrentIndex, setCurrentIndex, ensureCurrentIndex, suggestedViews, countDoneViews, setCover, reorderCapFiles, KINDS, kindLabel } from './etat.js';
 import { creerFiche, setRenderer } from './creation.js';

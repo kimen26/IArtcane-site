@@ -60,28 +60,13 @@
   width:100%;min-height:120px;
   font:inherit;font-family:var(--sans);color:var(--ink);
   border:1px solid var(--line);border-radius:var(--r-sm);
-  padding:10px 44px 10px 12px;
+  padding:10px 52px 10px 12px;
   resize:vertical;
   background:var(--surface);
 }
 .dem-field textarea:focus{outline:none;border-color:var(--blue)}
 
-/* Bouton micro : motif repris de objet-suivi.css:424-440, sans l'importer. */
-.dem-field .mic-btn{
-  position:absolute;right:8px;bottom:8px;
-  width:30px;height:30px;
-  display:inline-flex;align-items:center;justify-content:center;
-  border:1px solid var(--line);border-radius:50%;
-  background:var(--surface);color:var(--ink-2);
-  font-size:.9375rem;line-height:1;
-  cursor:pointer;
-}
-.dem-field .mic-btn:hover{background:var(--blue-softer);border-color:var(--blue)}
-.dem-field .mic-btn:disabled{opacity:.55;cursor:not-allowed;background:var(--surface);border-color:var(--line)}
-.dem-field .mic-btn.recording{position:absolute;background:var(--red-soft);border-color:var(--red);animation:dem-mic-pulse 1.2s ease-in-out infinite}
-.dem-field .mic-btn.recording::after{content:'';position:absolute;inset:-4px;border-radius:var(--r-md);border:2px solid var(--red);opacity:.5;animation:dem-mic-ring 1.2s ease-out infinite}
-@keyframes dem-mic-pulse{0%,100%{opacity:1}50%{opacity:.75}}
-@keyframes dem-mic-ring{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.25);opacity:0}}
+.dem-field .ui-mic{position:absolute;right:8px;bottom:8px}
 
 .dem-foot{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .dem-compteur{font-size:.75rem;color:var(--ink-3)}

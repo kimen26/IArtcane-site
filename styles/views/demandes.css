@@ -99,14 +99,7 @@
   width:100%; box-sizing:border-box; min-height:70px;
   font:inherit; font-family:var(--sans); color:var(--ink);
   border:1px solid var(--line); border-radius:var(--r-sm);
-  padding:9px 44px 9px 11px; resize:vertical; background:var(--surface);
+  padding:9px 52px 9px 11px; resize:vertical; background:var(--surface);
 }
 .dem-carte-reponse-txt:focus{outline:none; border-color:var(--blue)}
-.dem-carte-reponse-zone .mic-btn{
-  position:absolute; right:8px; bottom:8px; width:28px; height:28px;
-  display:inline-flex; align-items:center; justify-content:center;
-  border:1px solid var(--line); border-radius:50%;
-  background:var(--surface); color:var(--ink-2); font-size:.875rem; line-height:1; cursor:pointer;
-}
-.dem-carte-reponse-zone .mic-btn:hover{background:var(--blue-softer); border-color:var(--blue)}
-.dem-carte-reponse-zone .mic-btn.recording{background:var(--red-soft); border-color:var(--red)}
+.dem-carte-reponse-zone .ui-mic{position:absolute;right:8px;bottom:8px}

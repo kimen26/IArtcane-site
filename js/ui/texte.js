@@ -4,16 +4,10 @@
 // lecture ↔ édition, dictée micro, pied meta/actions. Remplace le motif
 // « carte de texte » écrit trois fois (objet/description.js ×2, journal
 // artiste/index.js).
-//
-// Exception explicitement autorisée au contrat « ui/ pur » (brief HO-108) :
-// `micButton` vit dans `views/mic.js` — elle aurait dû naître dans `ui/`,
-// mais la déplacer est un chantier à part ; la consommer depuis `ui/` est
-// admis ici. `node infra/cartographie.mjs` la signale nommément en §7
-// (violation `ui/` → `views/`, attendue et documentée).
 // ═══════════════════════════════════════════════════════════════════════════
 import { esc } from '../core/dom.js';
 import { loadViewCss } from '../core/css.js';
-import { micButton } from '../views/mic.js';
+import { micButton } from './mic.js';
 
 await loadViewCss('texte', 'ui');
 
@@ -62,7 +56,7 @@ function editionHtml(opts) {
  *   contenu {string=}   texte affiché en lecture / valeur initiale en édition
  *   vide    {string=}   message affiché si `contenu` est vide, en lecture
  *   mode    {'lecture'|'edition'=} 'lecture' par défaut
- *   micro   {boolean=}  greffe micButton(textarea) en édition (views/mic.js —
+ *   micro   {boolean=}  greffe micButton(textarea) en édition (ui/mic.js —
  *                       rend `null` si la Web Speech API est indisponible,
  *                       comportement existant préservé, aucun bouton alors)
  *   lignes  {number=8}  hauteur du textarea en édition

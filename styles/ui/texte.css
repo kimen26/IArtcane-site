@@ -2,8 +2,8 @@
    IArtcane — styles/ui/texte.css : brique `ui/texte.js` (HO-108). Carte de
    texte unique — en-tête, corps (lecture/édition), pied, dictée micro.
    Absorbe `desc-card*` / `.desc-text` / `.desc-textarea` /
-   `.desc-editor-actions` / `.desc-card-foot` (objet-suivi.css) et la base
-   `.mic-btn` (résidu HO-049, jusqu'ici dupliquée dans objet-suivi.css).
+   `.desc-editor-actions` / `.desc-card-foot` (objet-suivi.css). Dictée micro
+   déplacée en brique `ui/mic.js` + `styles/ui/mic.css` (HO-111).
    Tokens uniquement (HO-103) — zéro couleur littérale.
    ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -124,28 +124,6 @@
   background:var(--blue);
   color:var(--surface);
 }
-
-/* ─── Dictée (views/mic.js — base UNIQUE du site, HO-049 résolu ici) ───────── */
-.mic-btn{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  width:44px;
-  height:44px;
-  min-width:44px;
-  border:1px solid var(--line-strong);
-  border-radius:var(--r-md);
-  background:var(--surface);
-  font-size:20px;
-  line-height:1;
-  cursor:pointer;
-}
-.mic-btn:hover{background:var(--blue-softer);border-color:var(--blue)}
-.mic-btn:disabled{opacity:.55;cursor:not-allowed;background:var(--surface);border-color:var(--line)}
-.mic-btn.recording{position:relative;background:var(--red-soft);border-color:var(--red);animation:ui-texte-mic-pulse 1.2s ease-in-out infinite}
-.mic-btn.recording::after{content:'';position:absolute;inset:-4px;border-radius:var(--r-md);border:2px solid var(--red);opacity:.5;animation:ui-texte-mic-ring 1.2s ease-out infinite}
-@keyframes ui-texte-mic-pulse{0%,100%{opacity:1}50%{opacity:.75}}
-@keyframes ui-texte-mic-ring{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.25);opacity:0}}
 
 /* ─── Accessibilité / mobile ──────────────────────────────────────────────── */
 button.ui-texte-btn{min-height:36px}

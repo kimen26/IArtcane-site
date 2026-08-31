@@ -12,7 +12,7 @@ import { sb, logEvent } from '../../core/data.js';
 import { openCamera } from '../../core/camera.js';
 import { page } from '../../ui/page.js';
 import { galerie } from '../../ui/galerie.js';
-import { micButton } from '../mic.js';
+import { micButton } from '../../ui/mic.js';
 import { O, hooks } from './etat.js';
 import { supprimer, taguer, definirCouverture, reordonner, cibleObjet } from '../../services/photos.js';
 

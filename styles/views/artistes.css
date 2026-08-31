@@ -175,9 +175,6 @@
 .art-pending-loading{background:var(--surface-2);animation:pulse 1.2s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
 
-/* Bouton micro injecté par texte()/mic.js dans le composeur */
-.art-composer .mic-btn{flex:0 0 auto;width:28px;height:28px;border-radius:50%}
-
 /* ─── Section objets de la collection (cible de la barre basse) ─────────────── */
 .art-objets{padding-top:6px}
 .art-objets .grid{margin-top:8px}
@@ -228,8 +225,6 @@ body.role-lecteur .art-chez-relever{display:none}
 .art-images-comment-wrap:focus-within{border-color:var(--blue)}
 .art-images-comment-area{flex:1;border:none;background:transparent;resize:none;font-family:var(--sans);font-size:12.5px;line-height:1.5;color:var(--ink);outline:none;padding:0}
 .art-images-comment-area::placeholder{color:var(--ink-3)}
-.art-images-comment-wrap .mic-btn,.art-images-transcription .mic-btn{flex:0 0 auto;width:30px;height:30px;border-radius:50%;border:none;background:var(--surface-2);font-size:13px;cursor:pointer}
-.art-images-comment-wrap .mic-btn:hover,.art-images-transcription .mic-btn:hover{background:var(--blue-soft);color:var(--blue)}
 
 /* Statut de la pile d'images (déplacé dans le corps, HO-104 — les actions
    vivent désormais dans la barre basse uniforme `ui/barre-basse.js`). */

@@ -1,8 +1,10 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// IArtcane — views/mic.js : bouton de dictée (Web Speech API) pour zones de
-// commentaire libre. Réutilisable — fiche artiste (HO-021) et toute zone de
-// commentaire libre.
+// IArtcane — ui/mic.js : brique ui/ pure, HO-111. Bouton de dictée (Web
+// Speech API) pour zones de commentaire libre. Réutilisable — fiche artiste
+// (HO-021) et toute zone de commentaire libre.
 // ═══════════════════════════════════════════════════════════════════════════
+import { loadViewCss } from '../core/css.js';
+await loadViewCss('mic', 'ui');
 
 /**
  * Crée et retourne un bouton 🎙 associé à une <textarea>.
@@ -16,7 +18,7 @@ export function micButton(textarea) {
 
   const btn = document.createElement('button');
   btn.type = 'button';
-  btn.className = 'mic-btn';
+  btn.className = 'ui-mic';
   btn.setAttribute('aria-label', 'Dicter le commentaire');
   btn.title = 'Dicter le commentaire';
   btn.textContent = '🎙';
@@ -40,7 +42,7 @@ export function micButton(textarea) {
   }
 
   btn.addEventListener('click', () => {
-    if (btn.classList.contains('recording')) {
+    if (btn.classList.contains('ui-mic--recording')) {
       rec.stop();
     } else {
       rec.start();
@@ -50,12 +52,12 @@ export function micButton(textarea) {
   rec.addEventListener('start', () => {
     baseText = textarea.value;
     finalText = '';
-    btn.classList.add('recording');
+    btn.classList.add('ui-mic--recording');
     btn.title = 'Arrêter la dictée';
   });
 
   rec.addEventListener('end', () => {
-    btn.classList.remove('recording');
+    btn.classList.remove('ui-mic--recording');
     btn.title = 'Dicter le commentaire';
   });
 
@@ -75,12 +77,12 @@ export function micButton(textarea) {
   rec.addEventListener('error', (event) => {
     if (event.error === 'not-allowed') {
       btn.disabled = true;
-      btn.classList.remove('recording');
+      btn.classList.remove('ui-mic--recording');
       btn.title = 'Microphone non autorisé — activez le micro dans les permissions du navigateur';
     } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
       console.warn('Speech recognition error:', event.error);
     }
-    btn.classList.remove('recording');
+    btn.classList.remove('ui-mic--recording');
   });
 
   return btn;

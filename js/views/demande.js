@@ -10,7 +10,7 @@ import { $, esc } from '../core/dom.js';
 import { toast, enregistrer } from '../core/feedback.js';
 import { S } from '../core/state.js';
 import { sb } from '../core/data.js';
-import { micButton } from './mic.js';
+import { micButton } from '../ui/mic.js';
 
 await loadViewCss('demande');
 

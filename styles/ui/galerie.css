@@ -187,20 +187,6 @@
 }
 .ui-galerie-comment-area:focus{outline:none}
 .ui-galerie-comment-wrap:has(.ui-galerie-comment-area:focus){border-color:var(--blue)}
-.ui-galerie-comment-wrap .mic-btn{
-  flex:0 0 auto;
-  width:30px;
-  height:30px;
-  border-radius:50%;
-  border:none;
-  background:var(--surface-2);
-  font-size:.8125rem;
-  cursor:pointer;
-  display:grid;
-  place-items:center;
-}
-.ui-galerie-comment-wrap .mic-btn.recording{background:var(--red); color:var(--surface)}
-
 /* ─── Bande de vignettes composée ─── */
 .ui-galerie-vign{margin-top:2px}
 

@@ -1,0 +1,20 @@
+/* ═══ ui/mic.js : bouton de dictée, apparence UNIQUE du site (HO-111) ═══
+   Six déclarations concurrentes avant (texte, galerie, artistes, capture,
+   demande, demandes) → une. Les feuilles hôtes ne gardent que le PLACEMENT. */
+.ui-mic{
+  flex:0 0 auto;
+  position:relative;
+  display:inline-flex; align-items:center; justify-content:center;
+  width:40px; height:40px; min-width:40px;
+  border:none; border-radius:50%;
+  background:var(--surface-2); color:var(--ink-2);
+  font-size:1rem; line-height:1; cursor:pointer;
+}
+.ui-mic::after{ content:''; position:absolute; inset:-4px; }   /* cible tactile 48 px sans gonfler le visuel (bonnes-pratiques l. 105) */
+.ui-mic:hover{ background:var(--blue-softer); color:var(--blue); }
+.ui-mic:focus-visible{ outline:2px solid var(--blue); outline-offset:2px; }
+.ui-mic:disabled{ opacity:.55; cursor:not-allowed; }
+.ui-mic--recording{ background:var(--red-soft); color:var(--red); animation:ui-mic-pulse 1.2s ease-in-out infinite; }
+.ui-mic--recording::after{ border-radius:50%; border:2px solid var(--red); opacity:.5; animation:ui-mic-ring 1.2s ease-out infinite; }
+@keyframes ui-mic-pulse{ 0%,100%{opacity:1} 50%{opacity:.75} }
+@keyframes ui-mic-ring{ 0%{transform:scale(1);opacity:.5} 100%{transform:scale(1.25);opacity:0} }
