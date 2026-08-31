@@ -36,11 +36,24 @@ function optionsHtml(options, valeurCourante) {
   }).join('');
 }
 
+function sousChampHtml(s) {
+  return `<label class="ui-champs-sous">
+    <span class="ui-champs-sous-label">${esc(s.label)}</span>
+    ${controleHtml(s)}
+  </label>`;
+}
+
+function groupeHtml(c) {
+  const sous = (c.sous || []).map(sousChampHtml).join('');
+  return `<div class="ui-champs-groupe">${sous}</div>`;
+}
+
 function controleHtml(c) {
   const val = c.valeur ?? '';
   const ph = c.placeholder ? ` placeholder="${esc(c.placeholder)}"` : '';
   const auto = c.autocomplete ? ` autocomplete="${esc(c.autocomplete)}"` : '';
 
+  if (c.type === 'groupe') return groupeHtml(c);
   if (!c.editable) {
     const vide = val === '' || val == null;
     return `<div class="ui-champs-valeur">${vide ? '<span class="ui-champs-manque">—</span>' : esc(String(val))}</div>`;
@@ -68,8 +81,10 @@ function champHtml(c) {
   if (c.type === 'case') classes.push('ui-champs-champ--case');
   const label = c.titre ? `<span class="ui-champs-label">${esc(c.titre)}</span>` : '';
   const aide = c.aide ? `<div class="ui-champs-aide">${esc(c.aide)}</div>` : '';
-  const entete = (label || c.etat) ? `<div class="ui-champs-entete">${label}${pastilleHtml(c.cle, c.etat)}</div>` : '';
-  return `<div class="${classes.join(' ')}" data-champ="${esc(c.cle)}">${entete}${aide}${controleHtml(c)}</div>`;
+  const entete = label ? `<div class="ui-champs-entete">${label}</div>` : '';
+  const rangeeClasses = c.type === 'texte-long' ? 'ui-champs-rangee ui-champs-rangee--haut' : 'ui-champs-rangee';
+  const rangee = `<div class="${rangeeClasses}">${controleHtml(c)}${pastilleHtml(c.cle, c.etat)}</div>`;
+  return `<div class="${classes.join(' ')}" data-champ="${esc(c.cle)}">${entete}${aide}${rangee}</div>`;
 }
 
 // Coloration du bloc : dérivée UNIQUEMENT des `etat` déjà transmis (aucun
@@ -108,7 +123,10 @@ function bind(el, sur = {}) {
  *   titre    {string=}  titre de bloc, optionnel (pas de bandeau si absent)
  *   colonnes {number=}  2 par défaut, 1 en mobile (CSS, ≤640px)
  *   liste    {Array}    [{ cle, titre, valeur, editable, type, options,
- *                          pleineLargeur, etat, aide, placeholder, autocomplete }]
+ *                          pleineLargeur, etat, aide, placeholder, autocomplete,
+ *                          sous }] — `type:'groupe'` rend `sous` (mêmes clés,
+ *                          sans etat propre) sur une rangée, une seule pastille
+ *                          au bout portée par le champ groupe lui-même
  *   sur      {object=}  { changer(cle, valeur), basculerValidation(cle) }
  */
 export function champs(el, opts = {}) {

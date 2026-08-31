@@ -41,6 +41,19 @@
 .ui-champs-label{ font-size:.6875rem; font-weight:600; letter-spacing:.02em; color:var(--ink-2); flex:1; min-width:0; }
 .ui-champs-aide{ font-size:.65625rem; line-height:1.4; color:var(--ink-3); margin-bottom:5px; }
 
+/* ─── Rangée : contrôle + pastille sur une même ligne (HO-139) ─── */
+.ui-champs-rangee{ display:flex; align-items:center; gap:8px; }
+.ui-champs-rangee .ui-champs-input{ flex:1 1 auto; min-width:0; }
+.ui-champs-rangee--haut{ align-items:flex-start; }
+.ui-champs-rangee--haut .ui-champs-pastille{ margin-top:2px; }
+
+/* ─── Groupe de sous-champs (ex. dimensions H/L/P) — une seule pastille pour
+   tout le groupe, portée par la rangée, pas par le dernier sous-champ ─── */
+.ui-champs-groupe{ display:flex; align-items:flex-end; gap:6px; flex:1 1 auto; min-width:0; }
+.ui-champs-sous{ display:flex; flex-direction:column; gap:3px; flex:1 1 0; min-width:0; }
+.ui-champs-sous-label{ font-size:.625rem; font-weight:600; color:var(--ink-3); padding-left:2px; }
+.ui-champs-sous .ui-champs-input{ padding-left:8px; padding-right:6px; }
+
 /* ─── Contrôles de saisie — ≥16px (zoom auto iOS, HO-031) et ≥44px de cible ─── */
 .ui-champs-input{
   width:100%;

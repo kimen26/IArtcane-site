@@ -73,7 +73,7 @@ export function rendre(el) {
       </details>
     </div>`;
 
-  const sur = { changer: onFieldChange, basculerValidation: cle => toggleValidation(cle === 'profondeur_cm' ? 'dimensions' : cle) }; // la pastille P (cm) couvre le triplet dimensions (demande Alain n°14)
+  const sur = { changer: onFieldChange, basculerValidation: toggleValidation };
   champs(corps.querySelector('#obj-id-bloc1'), { titre: 'Indispensable pour valoriser', liste: bloc1Liste(o), sur });
   champs(corps.querySelector('#obj-id-bloc2'), { titre: 'Indispensable pour valider', liste: bloc2Liste(o), sur });
   champs(corps.querySelector('#obj-id-complements'), { liste: complementsListe(o), sur });
@@ -127,9 +127,9 @@ function bloc2Liste(o) {
     { cle: 'titre', titre: LABELS.titre, valeur: o.titre ?? '', editable: true, type: 'texte', placeholder: 'Petit pot cylindrique en faïence…', etat: etatDe('titre'), pleineLargeur: true },
     { cle: 'etat', titre: LABELS.etat, valeur: o.etat ?? '', editable: true, type: 'select', options: ETATS, etat: etatDe('etat'), pleineLargeur: true },
     { cle: 'etat_detail', valeur: o.etat_detail ?? '', editable: true, type: 'texte', placeholder: 'petits éclats sur le talon…', pleineLargeur: true },
-    { cle: 'hauteur_cm', titre: 'H (cm)', valeur: o.hauteur_cm ?? '', editable: true, type: 'nombre', placeholder: 'H cm' },
-    { cle: 'largeur_cm', titre: 'L / Ø (cm)', valeur: o.largeur_cm ?? '', editable: true, type: 'nombre', placeholder: 'L / Ø cm' },
-    { cle: 'profondeur_cm', titre: 'P (cm)', valeur: o.profondeur_cm ?? '', editable: true, type: 'nombre', placeholder: 'P cm', etat: etatDe('dimensions') },
+    { cle: 'dimensions', titre: LABELS.dimensions, type: 'groupe', etat: etatDe('dimensions'), pleineLargeur: true, sous: [
+      { cle: 'hauteur_cm', label: 'H', valeur: o.hauteur_cm ?? '', editable: true, type: 'nombre', placeholder: 'H cm' }, { cle: 'largeur_cm', label: 'L / Ø', valeur: o.largeur_cm ?? '', editable: true, type: 'nombre', placeholder: 'L / Ø cm' },
+      { cle: 'profondeur_cm', label: 'P', valeur: o.profondeur_cm ?? '', editable: true, type: 'nombre', placeholder: 'P cm' }] },
   ];
 }
 
@@ -200,7 +200,7 @@ function augmentAuteur(corps, o) {
 }
 
 function augmentDimensions(corps) {
-  const carte = corps.querySelector('[data-champ="hauteur_cm"]');
+  const carte = corps.querySelector('[data-champ="dimensions"]');
   const entete = carte?.querySelector('.ui-champs-entete');
   if (!entete) return;
   entete.insertAdjacentHTML('beforeend', '<button type="button" class="obj-id-cam-link" data-action="camera-dims">📷 avec règle</button>');
