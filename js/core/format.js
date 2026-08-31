@@ -103,6 +103,15 @@ export const ACT_LABELS = {
   artiste_maj: 'R9 · Fiche artiste', photos_manquantes: 'Photos recommandées',
   artiste_photo_ajoutee: 'Photo artiste ajoutée', artiste_photo_supprimee: 'Photo artiste supprimée',
   comparable_supprime: 'Comparable retiré',
+  // Complété le 2026-09-01 : ces dix actions existent en base depuis longtemps
+  // mais n'avaient aucun libellé — l'historique affichait la clé brute
+  // (« validation_champ »). Invisible tant que le journal était un mur de
+  // lignes ; le regroupement par rafale (HO-137) l'a mis en pleine lumière.
+  // Liste établie sur `select distinct action from evenements`, pas devinée.
+  validation_champ: 'Champ validé', tag_photo: 'Tag de photo', photo_modifiee: 'Photo modifiée',
+  rotation: 'Rotation', ordre_photos: 'Ordre des photos', commentaire_photo: 'Commentaire de photo',
+  note_maison: 'Note de la maison', alerte_refusee: 'Alerte écartée',
+  comparable_retabli: 'Comparable rétabli',
 };
 // Badge acteur : humain distingué visuellement de l'IA (ground truth, invariant 4).
 const HUMAN_ACTORS = new Set(['yann', 'alain']);
