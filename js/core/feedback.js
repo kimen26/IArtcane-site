@@ -204,7 +204,10 @@ export async function withBusy(fn, { titre, annulable = true, seuilLent = 15000,
   el.className = bloquant ? 'busy-overlay' : 'busy-overlay busy-flottant';
   const carte = document.createElement('div');
   carte.className = 'busy-card';
-  carte.setAttribute('role', 'alertdialog');
+  // `alertdialog` dit au lecteur d'écran « boîte modale, tu es piégé dedans » —
+  // vrai en mode bloquant, mensonge en mode flottant où la fiche reste utilisable.
+  // Le bandeau est un simple compte rendu d'état : `status` (HO-127).
+  carte.setAttribute('role', bloquant ? 'alertdialog' : 'status');
   carte.setAttribute('aria-live', 'polite');
 
   const spin = document.createElement('div');
