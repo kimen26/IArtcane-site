@@ -92,7 +92,7 @@ async function deleteObjet() {
   }, { titre: 'Suppression de l\'objet…', annulable: false });
   if (annule || !supprime) return;
   toast(`Objet #${o.id} supprimé`);
-  location.hash = '#/';
+  location.hash = '#/collection';
 }
 // Indicateur d'avancement R1/R2/R3/Valorisation (D-057)
 const R2_ACTIONS = ['lens', 'lens R2', 'grok', 'gpt', 'grok R2', 'gpt R2', 'llm_appoint'];

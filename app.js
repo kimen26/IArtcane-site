@@ -34,12 +34,17 @@ function show(view) {
   $('#page-subhead').classList.toggle('hidden', !isColl);
   $('#header-actions').classList.toggle('hidden', !S.user);
   ['#btn-search-toggle', '#btn-filters'].forEach(sel => $(sel).classList.toggle('hidden', !isColl));
+  // Nom de la maison + nombre d'objets (HO-118) : visible partout, sauf sur la
+  // vue collection en mobile — le nom y est déjà porté par la ligne de titre.
+  const collMobile = isColl && matchMedia('(max-width:640px)').matches;
+  $('#header-maison').classList.toggle('hidden', collMobile || !S.tenantId);
   window.scrollTo({ top: 0 });
 }
 function showLogin() {
   $('#menu-gov').classList.add('hidden');
   $('#header-actions').classList.add('hidden');
   $('#page-subhead').classList.add('hidden');
+  $('#header-maison').classList.add('hidden');
   document.body.classList.remove('role-lecteur');
   // Réarmer le realtime : à la prochaine connexion (autre tenant possible),
   // watchLive() doit recréer le canal avec le bon filtre owner_id.
@@ -172,6 +177,9 @@ async function loadHeader() {
   S.objetsCount = count ?? 0;
   S.artistesCount = nArtistes ?? 0;
   renderMenu(); // le tiroir affiche les comptes (HO-042)
+  $('#header-maison-nom').textContent = S.tenantName;
+  $('#header-maison-n').textContent = `${S.objetsCount} objet${S.objetsCount > 1 ? 's' : ''}`;
+  $('#header-maison').classList.remove('hidden');
 }
 
 // Hooks transverses : les vues rafraîchissent en-tête/menu sans importer le shell.
@@ -262,9 +270,10 @@ function renderMenu() {
     </div>
     <button class="btn primary drawer-cta hide-lecteur" data-hash="#/capture">+ Capturer un objet</button>
     <nav class="drawer-nav">
+      <button class="drawer-item ${currentView?.view === 'accueil' ? 'current' : ''}" data-hash="#/"><span class="drawer-label">Accueil</span></button>
       ${canWrite() ? '<button class="drawer-item" data-hash="#/maison"><span class="drawer-label">Maison</span></button>' : ''}
       <button class="drawer-item" data-hash="#/artistes"><span class="drawer-label">Artistes</span><span class="drawer-n">${S.artistesCount ?? ''}</span></button>
-      <button class="drawer-item current" data-hash="#/"><span class="drawer-label"><b>Collection</b></span><span class="drawer-n">${S.objetsCount ?? ''}</span></button>
+      <button class="drawer-item ${currentView?.view === 'collection' ? 'current' : ''}" data-hash="#/collection"><span class="drawer-label"><b>Collection</b></span><span class="drawer-n">${S.objetsCount ?? ''}</span></button>
       ${rayonsHtml()}
     </nav>
     <div class="drawer-foot">
@@ -320,6 +329,8 @@ $('#btn-demande').addEventListener('click', () => import('./js/views/demande.js'
 // (export `mount`, ou le nom donné via fn) + 1 <section class="view">.
 // `write: true` → écran réservé aux rôles qui écrivent (lecteur redirigé).
 const ROUTES = [
+  { re: /^#\/collection/, tab: 'collection', view: 'collection', load: () => import('./js/views/collection.js') },
+  { re: /^#\/?$/,          tab: 'accueil',    view: 'accueil',    load: () => import('./js/views/accueil.js') },
   { re: /^#\/capture/,            tab: 'capture',    view: 'capture',    write: true, load: () => import('./js/views/capture.js') },
   { re: /^#\/objet\/([^/]+)\/photo\/([^/]+)\/modifier$/, tab: 'collection', view: 'objet', write: true, load: () => import('./js/views/objet/edition-photo.js'), fn: 'mount' },
   { re: /^#\/objet\/([^/]+)$/,    tab: 'collection', view: 'objet',      load: () => import('./js/views/objet/index.js') },
@@ -338,19 +349,11 @@ async function route() {
   // de l'URL d'auth tire route() pendant resolveTenant() → requêtes avec owner_id null (22P02)
   closeMenu();
   const h = location.hash || '#/';
-  const r = ROUTES.find(x => x.re.test(h));
   // Le module est chargé AVANT d'afficher l'écran : chaque vue attend son propre
   // CSS (core/css.js) au chargement du module, donc on n'affiche jamais une vue
-  // nue le temps que la feuille arrive (D-041).
-  if (!r) {
-    const m = await import('./js/views/collection.js');
-    S.fil = filDe('collection', []);
-    show('collection');
-    m.mount();
-    currentView = { view: 'collection', tab: 'collection', hash: '#/', label: 'Collection', params: [] };
-    S.currentView = currentView; // D-072 : la feuille de demande connaît la page courante
-    return;
-  }
+  // nue le temps que la feuille arrive (D-041). Un hash inconnu ouvre l'accueil
+  // (HO-118) : plus de repli sur la collection.
+  const r = ROUTES.find(x => x.re.test(h)) ?? ROUTES.find(x => x.view === 'accueil');
   // Gardes d'écriture : capture et maison interdites au lecteur (RLS 0012, UI masquée)
   if (r.write && !canWrite()) { location.replace('#/'); return; }
   const meta = computeViewMeta(r, h);

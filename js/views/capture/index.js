@@ -191,7 +191,7 @@ async function initCapture() {
 }
 
 function brancher() {
-  $('[data-action="back"]')?.addEventListener('click', () => { location.hash = '#/'; });
+  $('[data-action="back"]')?.addEventListener('click', () => { location.hash = '#/collection'; });
 
   const dropzone = $('#cap-dropzone');
   if (dropzone) {

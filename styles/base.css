@@ -7,7 +7,7 @@ a{color:var(--blue);text-decoration:none}
 button{font-family:inherit;cursor:pointer}
 :focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:4px}
 /* Divs cliquables rendues focusables (role="button") : outline primaire identique */
-.card:focus-visible,.thumb:focus-visible,.sim-card:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.card:focus-visible,.thumb:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 
 /* ─── En-tête ─────────────────────────────────────────────── */
 header{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:1px solid var(--line)}
@@ -20,6 +20,14 @@ header{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:
 .logo-name .logo-glyph{height:.72em;width:auto;align-self:center;margin:0 .04em;display:block}
 /* Cygne celtique — marque ronde accolée au nom, façon ® */
 .logo-name .logo-mark{height:.62em;width:.62em;align-self:flex-start;margin-left:.08em;margin-top:.06em;display:block;border-radius:50%}
+
+/* Nom de la maison + nombre d'objets (HO-118), à droite du logo, sur toutes
+   les pages (masqué sur la vue collection en mobile — show() dans app.js,
+   le nom y est déjà porté par la ligne de titre). */
+.header-maison{margin-left:auto;min-width:0;display:flex;flex-direction:column;align-items:flex-end;line-height:1.15}
+.header-maison-nom{font-family:var(--serif);font-size:.84375rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:42vw}
+.header-maison-n{font-size:.59375rem;letter-spacing:.04em;color:var(--ink-3)}
+@media (max-width:640px){ .header-maison{margin-right:6px} .header-maison-nom{max-width:34vw} }
 
 /* Actions de droite (HO-042) : loupe + entonnoir ronds 32px bordés.
    Ils ne s'affichent que sur la vue collection (le shell bascule .hidden). */

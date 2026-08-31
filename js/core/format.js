@@ -43,6 +43,7 @@ export const STATUTS = {
   nouveau: 'Nouveau', pre_classe: 'Pré-classé', analyse: 'Analysé',
   a_completer: 'À compléter', validee: 'Validée',
 };
+export const CHAMPS_OBLIGATOIRES = ['categorie', 'auteur', 'technique', 'titre', 'etat', 'dimensions'];
 // Confiance comptée 0–4 : 4/4 = validée par un humain (ground truth), sinon 1-3 selon l'IA.
 export const confMarks = o => o.statut === 'validee' ? 4 : ({ haute: 3, moyenne: 2, basse: 1 }[o.confiance] ?? 0);
 export const confHtml = n => `<span class="conf">${[1, 2, 3, 4].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}<span class="conf-label">${n}/4</span></span>`;

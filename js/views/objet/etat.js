@@ -68,8 +68,11 @@ export const CHAMPS_VALIDABLES = ['titre','categorie','auteur','technique','peri
 
 /** Champs OBLIGATOIRES d'une fiche (tranché par Yann, 2026-08-31) : ce que le hub compte
  *  dans « N à valider ». `prix` est produit par la valorisation, `description`/`periode`/
- *  `ecole`/`marques` sont utiles mais pas bloquants. */
-export const CHAMPS_OBLIGATOIRES = ['categorie', 'auteur', 'technique', 'titre', 'etat', 'dimensions'];
+ *  `ecole`/`marques` sont utiles mais pas bloquants.
+ *  Constante montée dans core/format.js par HO-118 (transverse) pour que
+ *  services/journal.js (HO-119) puisse la lire sans importer une vue — ré-exportée
+ *  ici telle quelle, aucun appelant ne change (objet/index.js importe toujours ./etat.js). */
+export { CHAMPS_OBLIGATOIRES } from '../../core/format.js';
 
 /** Renvoie true si le champ est validé dans objets.validation_champs. */
 export const estValide = (champ) => Boolean(S.currentObjet?.validation_champs?.[champ]);

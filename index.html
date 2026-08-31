@@ -19,9 +19,9 @@
      propre module via core/css.js → un chantier de vue ne touche plus ce fichier.
      Cache-buster ?v= : NE PAS éditer à la main — `node infra/bump-version.mjs <version>`
      écrit ici, dans js/core/version.js et dans sw.js d'un seul coup (L-013). -->
-<link rel="stylesheet" href="styles/tokens.css?v=2026-08-31n-ho117">
-<link rel="stylesheet" href="styles/base.css?v=2026-08-31n-ho117">
-<link rel="stylesheet" href="styles/components.css?v=2026-08-31n-ho117">
+<link rel="stylesheet" href="styles/tokens.css?v=2026-08-31o-ho118">
+<link rel="stylesheet" href="styles/base.css?v=2026-08-31o-ho118">
+<link rel="stylesheet" href="styles/components.css?v=2026-08-31o-ho118">
 </head>
 <body>
 
@@ -34,6 +34,10 @@
     </div>
     <div class="logo" id="logo-home" title="Collection">
       <div class="logo-name"><span class="w-i">I</span><img class="logo-glyph" src="assets/logo-glyph.png" alt="ART">cane<img class="logo-mark" src="assets/mark-cygne.svg" alt=""></div>
+    </div>
+    <div class="header-maison hidden" id="header-maison" title="Maison courante">
+      <span class="header-maison-nom" id="header-maison-nom"></span>
+      <span class="header-maison-n" id="header-maison-n"></span>
     </div>
     <div class="header-actions hidden" id="header-actions">
       <button class="btn-round" id="btn-demande" aria-label="Écrire à l'admin" title="Écrire à l'admin">
@@ -97,6 +101,11 @@
         <div id="login-msg"></div>
       </div>
     </div>
+  </section>
+
+  <!-- ═══════════ VUE ACCUEIL (HO-118, provisoire — journal en HO-119) ═══════════ -->
+  <section class="view" id="view-accueil">
+    <div id="accueil-body"></div>
   </section>
 
   <!-- ═══════════ VUE COLLECTION ═══════════ -->
@@ -254,7 +263,7 @@
   </div>
 </div>
 
-<script src="config.js?v=2026-08-31n-ho117"></script>
-<script type="module" src="app.js?v=2026-08-31n-ho117"></script>
+<script src="config.js?v=2026-08-31o-ho118"></script>
+<script type="module" src="app.js?v=2026-08-31o-ho118"></script>
 </body>
 </html>

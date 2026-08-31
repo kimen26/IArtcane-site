@@ -6,6 +6,7 @@
 
 export function viewLabel(view, params = []) {
   switch (view) {
+    case 'accueil':    return 'Accueil';
     case 'collection': return 'Collection';
     case 'capture':    return 'Capturer';
     case 'artistes':   return 'Artistes';
@@ -27,10 +28,11 @@ export function viewLabel(view, params = []) {
 export function viewParent(view, params = []) {
   switch (view) {
     case 'artiste':    return { label: 'Artistes', hash: '#/artistes' };
-    case 'rayon':      return { label: 'Collection', hash: '#/' };
+    case 'rayon':      return { label: 'Collection', hash: '#/collection' };
     case 'objet':      return null; // la vue calcule son parent (rayon de la catégorie)
     case 'collection': return null; // racine : pas de retour
-    default:           return { label: 'Collection', hash: '#/' };
+    case 'accueil':    return null; // racine : pas de retour
+    default:           return { label: 'Accueil', hash: '#/' };
   }
 }
 
@@ -42,19 +44,21 @@ export function viewParent(view, params = []) {
  *  @returns {Array<{label:string, hash?:string}>}
  */
 export function filDe(view, params = []) {
-  const COLLECTION = { label: 'Collection', hash: '#/' };
+  const ACCUEIL    = { label: 'Accueil', hash: '#/' };
+  const COLLECTION = { label: 'Collection', hash: '#/collection' };
   switch (view) {
-    case 'collection': return [{ label: 'Collection' }];
-    case 'rayon':      return [COLLECTION, { label: params[0] || 'Rayon' }];
-    case 'objet':      return [COLLECTION, { label: 'Objet' }, { label: `#${params[0] ?? ''}` }];
-    case 'capture':    return [COLLECTION, { label: 'Capturer' }];
-    case 'artistes':   return [COLLECTION, { label: 'Artistes' }];
-    case 'artiste':    return [COLLECTION, { label: 'Artistes', hash: '#/artistes' }, { label: params[0] || 'Artiste' }];
-    case 'maison':     return [COLLECTION, { label: 'Maison' }];
-    case 'activite':   return [COLLECTION, { label: 'Activité' }];
-    case 'sources':    return [COLLECTION, { label: 'Sources' }];
-    case 'categories': return [COLLECTION, { label: 'Catégories & familles' }];
-    case 'demandes':   return [COLLECTION, { label: 'Demandes' }];
-    default:           return [{ label: 'Collection' }];
+    case 'accueil':    return [{ label: 'Accueil' }];
+    case 'collection': return [ACCUEIL, { label: 'Collection' }];
+    case 'rayon':      return [ACCUEIL, COLLECTION, { label: params[0] || 'Rayon' }];
+    case 'objet':      return [ACCUEIL, COLLECTION, { label: 'Objet' }, { label: `#${params[0] ?? ''}` }];
+    case 'capture':    return [ACCUEIL, { label: 'Capturer' }];
+    case 'artistes':   return [ACCUEIL, { label: 'Artistes' }];
+    case 'artiste':    return [ACCUEIL, { label: 'Artistes', hash: '#/artistes' }, { label: params[0] || 'Artiste' }];
+    case 'maison':     return [ACCUEIL, { label: 'Maison' }];
+    case 'activite':   return [ACCUEIL, { label: 'Activité' }];
+    case 'sources':    return [ACCUEIL, { label: 'Sources' }];
+    case 'categories': return [ACCUEIL, { label: 'Catégories & familles' }];
+    case 'demandes':   return [ACCUEIL, { label: 'Demandes' }];
+    default:           return [{ label: 'Accueil' }];
   }
 }
