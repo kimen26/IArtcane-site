@@ -99,9 +99,14 @@ async function resolveTenant() {
   // Choix persisté si encore valide, sinon la 1re membership (comportement D-015 :
   // un membre/lecteur tombe sur la maison partagée, pas sur sa collection vide),
   // sinon sa propre maison.
+  // La maison DEMO (banc d'essai jetable, D-080) n'est JAMAIS un choix par défaut :
+  // on n'y entre que par le switcher (retour Yann 2026-08-31 — le seed l'inscrit
+  // membre admin, et la règle « 1re membership » l'y faisait tomber sans choix mémorisé).
+  const estDemo = t => /^demo$/i.test(t.name ?? '');
   const pref = localStorage.getItem('iartcane-tenant');
   const courant = S.mesTenants.find(t => t.id === pref)
-    ?? S.mesTenants.find(t => t.role !== 'owner')
+    ?? S.mesTenants.find(t => t.role !== 'owner' && !estDemo(t))
+    ?? S.mesTenants.find(t => !estDemo(t))
     ?? S.mesTenants[0];
   S.tenantId = courant.id;
   S.tenantRole = courant.role;
