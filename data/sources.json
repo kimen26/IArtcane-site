@@ -374,6 +374,7 @@
       "entrees": [
         {
           "nom": "1stDibs / Chairish / Selency / Pamono",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_demande · en_cours · monde",
@@ -389,6 +390,7 @@
         },
         {
           "nom": "58 Facettes",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_demande · mixte · FR",
@@ -409,6 +411,7 @@
         },
         {
           "nom": "Acacia Encheres",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Lorraine (Grand Est)",
@@ -431,6 +434,9 @@
         },
         {
           "nom": "Ader (ader-paris.fr)",
+          "alias": [
+            "aderparisfr"
+          ],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · FR",
@@ -451,6 +457,7 @@
         },
         {
           "nom": "Adjug art Brest-Quimper",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Bretagne",
@@ -466,6 +473,7 @@
         },
         {
           "nom": "Aguttes — Arts d'Asie, Africain, Océanien",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · national (Neuilly-sur-Seine)",
@@ -485,6 +493,7 @@
         },
         {
           "nom": "Akoun",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "non_verifie · vendu · FR",
@@ -537,6 +546,7 @@
         },
         {
           "nom": "Alcala Subastas",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Madrid",
@@ -556,6 +566,7 @@
         },
         {
           "nom": "Alexandre Landre Strasbourg",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Alsace",
@@ -571,6 +582,7 @@
         },
         {
           "nom": "alsace-collections.fr",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_demande · en_cours · Alsace",
@@ -590,6 +602,7 @@
         },
         {
           "nom": "Ansorena",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit avec compte",
           "usage": "prix_adjuge · vendu · Espagne",
@@ -605,6 +618,7 @@
         },
         {
           "nom": "Antiquités Brocante — Les Estimations",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_autre · sans_objet · national",
@@ -624,6 +638,9 @@
         },
         {
           "nom": "Arenberg Auctions (ex The Romantic Agony)",
+          "alias": [
+            "extheromanticagony"
+          ],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Belgique",
@@ -647,6 +664,7 @@
         },
         {
           "nom": "Artcurial",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · FR",
@@ -666,6 +684,7 @@
         },
         {
           "nom": "Artencheres Lyon",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Lyon",
@@ -703,6 +722,7 @@
         },
         {
           "nom": "arthistoricum.net German Sales",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_historique · vendu · DE/AT/CH",
@@ -724,6 +744,7 @@
         },
         {
           "nom": "Artinfo.pl",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit avec compte",
           "usage": "prix_adjuge · mixte · Pologne",
@@ -782,6 +803,7 @@
         },
         {
           "nom": "Artsper / Singulart / Artmajeur / Saatchi Art",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_demande · en_cours · monde",
@@ -797,6 +819,7 @@
         },
         {
           "nom": "Artsy",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · monde",
@@ -816,6 +839,9 @@
         },
         {
           "nom": "Asta Enchères (Bastia)",
+          "alias": [
+            "bastia"
+          ],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · mixte · Corse (Haute-Corse)",
@@ -853,6 +879,7 @@
         },
         {
           "nom": "Auctionet.com",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · mixte · Scandinavie/Europe",
@@ -875,6 +902,7 @@
         },
         {
           "nom": "Balclis",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit partiel",
           "usage": "prix_adjuge · vendu · Catalogne (Barcelone)",
@@ -894,6 +922,7 @@
         },
         {
           "nom": "Baltic Auction House",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit partiel",
           "usage": "prix_adjuge · sans_objet · Lettonie",
@@ -923,6 +952,7 @@
         },
         {
           "nom": "Barnebys",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit partiel",
           "usage": "prix_adjuge · mixte · monde",
@@ -938,6 +968,7 @@
         },
         {
           "nom": "Bidsquare",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · US",
@@ -953,6 +984,7 @@
         },
         {
           "nom": "Briscadieu Bordeaux",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Sud-Ouest",
@@ -968,6 +1000,7 @@
         },
         {
           "nom": "Bukowskis",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Suede",
@@ -987,6 +1020,7 @@
         },
         {
           "nom": "Cambi Casa d Aste",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Italie",
@@ -1006,6 +1040,7 @@
         },
         {
           "nom": "Carlo Bonte",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Flandre (Bruges)",
@@ -1029,6 +1064,7 @@
         },
         {
           "nom": "Carrere et Laborie Ciboure",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Pays basque",
@@ -1044,6 +1080,7 @@
         },
         {
           "nom": "Catawiki",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · en_cours · EU",
@@ -1076,6 +1113,7 @@
         },
         {
           "nom": "Clars Auction Gallery",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Californie (Oakland)",
@@ -1095,6 +1133,9 @@
         },
         {
           "nom": "CNES — Résultats d'enchères (article)",
+          "alias": [
+            "article"
+          ],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · national",
@@ -1130,6 +1171,7 @@
         },
         {
           "nom": "Couton Veyrac Jamault",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Bretagne",
@@ -1145,6 +1187,7 @@
         },
         {
           "nom": "Credit Municipal de Paris - Rechercher un lot",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "estimation_et_prix_adjuge · mixte · Ile-de-France",
@@ -1171,6 +1214,7 @@
         },
         {
           "nom": "Daguerre",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · FR",
@@ -1191,6 +1235,7 @@
         },
         {
           "nom": "David Duggleby",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Angleterre (Yorkshire)",
@@ -1210,6 +1255,7 @@
         },
         {
           "nom": "Delcampe",
+          "alias": [],
           "acces": "API",
           "cout": "Gratuit",
           "usage": "prix_adjuge · en_cours · EU",
@@ -1230,6 +1276,7 @@
         },
         {
           "nom": "Dobiaschofsky Berne",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Suisse",
@@ -1245,6 +1292,7 @@
         },
         {
           "nom": "Dorotheum",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · mixte · Europe centrale",
@@ -1314,6 +1362,7 @@
         },
         {
           "nom": "Drouot.com",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit avec compte",
           "usage": "prix_adjuge · vendu · FR/monde",
@@ -1329,6 +1378,7 @@
         },
         {
           "nom": "Duran Arte y Subastas",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Madrid",
@@ -1348,6 +1398,7 @@
         },
         {
           "nom": "eBay",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_autre · mixte · monde",
@@ -1383,6 +1434,7 @@
         },
         {
           "nom": "Eesti Kunsti Oksjonid / EKO",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · mixte · Estonie",
@@ -1403,6 +1455,7 @@
         },
         {
           "nom": "E-Kunstisalong",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · sans_objet · Estonie",
@@ -1426,6 +1479,7 @@
         },
         {
           "nom": "EST Encheres Metz",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Moselle",
@@ -1441,6 +1495,9 @@
         },
         {
           "nom": "Fabien Robaldo (Indochine)",
+          "alias": [
+            "indochine"
+          ],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "non_verifie · sans_objet · Indochine",
@@ -1461,6 +1518,7 @@
         },
         {
           "nom": "FarsettiArte",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Italie",
@@ -1480,6 +1538,7 @@
         },
         {
           "nom": "Fernando Duran",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Madrid",
@@ -1517,6 +1576,7 @@
         },
         {
           "nom": "Galerie KODL",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · mixte · Tchequie",
@@ -1536,6 +1596,7 @@
         },
         {
           "nom": "Gallica",
+          "alias": [],
           "acces": "API",
           "cout": "Gratuit",
           "usage": "non_verifie · vendu · FR",
@@ -1573,6 +1634,7 @@
         },
         {
           "nom": "Getty Provenance Index",
+          "alias": [],
           "acces": "API",
           "cout": "Gratuit",
           "usage": "prix_historique · vendu · monde",
@@ -1597,6 +1659,7 @@
         },
         {
           "nom": "Gros & Delettrez",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · FR",
@@ -1617,6 +1680,7 @@
         },
         {
           "nom": "Heritage Auctions",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit avec compte",
           "usage": "prix_adjuge · vendu · monde",
@@ -1637,6 +1701,7 @@
         },
         {
           "nom": "Heritage Auctions - departements montres bijoux",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit avec compte",
           "usage": "prix_adjuge · vendu · monde",
@@ -1658,6 +1723,7 @@
         },
         {
           "nom": "HiBid",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · US",
@@ -1673,6 +1739,7 @@
         },
         {
           "nom": "Hodgins Art Auctions",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Alberta (Calgary)",
@@ -1692,6 +1759,7 @@
         },
         {
           "nom": "Hôtel des Ventes de Beaune",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · non_verifie · Bourgogne (Beaune)",
@@ -1711,6 +1779,7 @@
         },
         {
           "nom": "Hotel des Ventes de Saint-Omer",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "estimation_et_prix_adjuge · vendu · Hauts-de-France (Pas-de-Calais)",
@@ -1733,6 +1802,9 @@
         },
         {
           "nom": "Hotel des Ventes des Notaires (Strasbourg-Encheres)",
+          "alias": [
+            "strasbourgencheres"
+          ],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Alsace",
@@ -1752,6 +1824,7 @@
         },
         {
           "nom": "Huutokaupat.com",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · mixte · Finlande",
@@ -1773,6 +1846,7 @@
         },
         {
           "nom": "Il Ponte Casa d'Aste",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · mixte · Lombardie (Milan)",
@@ -1792,6 +1866,7 @@
         },
         {
           "nom": "im Kinsky",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Autriche",
@@ -1811,6 +1886,7 @@
         },
         {
           "nom": "Interencheres",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · FR",
@@ -1826,6 +1902,9 @@
         },
         {
           "nom": "Jean-Claude Commenchal — Résultats de vente (étains)",
+          "alias": [
+            "etains"
+          ],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · national",
@@ -1845,6 +1924,9 @@
         },
         {
           "nom": "Jura Enchères (Dole / Lons-le-Saunier)",
+          "alias": [
+            "dolelonslesaunier"
+          ],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · non_verifie · Franche-Comté (Jura)",
@@ -1864,6 +1946,7 @@
         },
         {
           "nom": "Kiefer Pforzheim",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Bade",
@@ -1886,6 +1969,7 @@
         },
         {
           "nom": "Kieselbach Galeria",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · mixte · Hongrie",
@@ -1905,6 +1989,7 @@
         },
         {
           "nom": "Koller Zurich",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Suisse",
@@ -1920,6 +2005,7 @@
         },
         {
           "nom": "Leboncoin",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_demande · en_cours · FR",
@@ -1935,6 +2021,7 @@
         },
         {
           "nom": "Leclere",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Provence",
@@ -1950,6 +2037,7 @@
         },
         {
           "nom": "LiveAuctioneers",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · monde",
@@ -1991,6 +2079,7 @@
         },
         {
           "nom": "Livebid.cz",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · mixte · Tchequie",
@@ -2036,6 +2125,7 @@
         },
         {
           "nom": "May Associes Roubaix",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Nord",
@@ -2051,6 +2141,7 @@
         },
         {
           "nom": "Menorinka.lt",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Lituanie",
@@ -2072,6 +2163,7 @@
         },
         {
           "nom": "Mercier & Cie Lille",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Nord",
@@ -2087,6 +2179,9 @@
         },
         {
           "nom": "Metayer-Mermoz (Nevers / Paris / Antibes / Moulins)",
+          "alias": [
+            "neversparisantibesmoulins"
+          ],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Bourgogne (Nevers) + Paris/PACA",
@@ -2106,6 +2201,7 @@
         },
         {
           "nom": "Millon",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · FR",
@@ -2121,6 +2217,7 @@
         },
         {
           "nom": "Millon Belgique",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit partiel",
           "usage": "prix_adjuge · non_verifie · Belgique",
@@ -2140,6 +2237,7 @@
         },
         {
           "nom": "Millon créateurs — Guillaume Guillon-Lethière",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · national",
@@ -2159,6 +2257,9 @@
         },
         {
           "nom": "Moskovskii Auktsionnyi Dom (Moscow Auction House)",
+          "alias": [
+            "moscowauctionhouse"
+          ],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_demande · en_cours · Russie",
@@ -2178,6 +2279,7 @@
         },
         {
           "nom": "Mutargy.com",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · mixte · Hongrie",
@@ -2197,6 +2299,7 @@
         },
         {
           "nom": "Nabecor Encheres",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Lorraine",
@@ -2212,6 +2315,7 @@
         },
         {
           "nom": "Nagel Auktionen Stuttgart",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Bade-Wurtemberg",
@@ -2232,6 +2336,7 @@
         },
         {
           "nom": "Neal Auction Company",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit partiel",
           "usage": "prix_adjuge · vendu · Louisiane (New Orleans)",
@@ -2251,6 +2356,9 @@
         },
         {
           "nom": "Nyborgs Auctions (nyborgs.no)",
+          "alias": [
+            "nyborgsno"
+          ],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Norvege",
@@ -2272,6 +2380,9 @@
         },
         {
           "nom": "OneBid (onebid.pl / .cz / .hu / .ro / .lt)",
+          "alias": [
+            "onebidplczhurolt"
+          ],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · mixte · Europe centrale",
@@ -2310,6 +2421,7 @@
         },
         {
           "nom": "Osenat",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · FR",
@@ -2330,6 +2442,7 @@
         },
         {
           "nom": "Pandolfini Casa d Aste",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit avec compte",
           "usage": "prix_adjuge · vendu · Italie",
@@ -2349,6 +2462,7 @@
         },
         {
           "nom": "Piasa",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · FR",
@@ -2364,6 +2478,9 @@
         },
         {
           "nom": "Pierre Berge & Associes (PBA)",
+          "alias": [
+            "pba"
+          ],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · FR",
@@ -2384,6 +2501,7 @@
         },
         {
           "nom": "Proxibid",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · US",
@@ -2399,6 +2517,7 @@
         },
         {
           "nom": "Quimper Encheres",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Bretagne",
@@ -2414,6 +2533,7 @@
         },
         {
           "nom": "Quittenbaum",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Baviere (Munich)",
@@ -2437,6 +2557,7 @@
         },
         {
           "nom": "Rago | Wright",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Etats-Unis",
@@ -2458,6 +2579,7 @@
         },
         {
           "nom": "Rennes Encheres",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Bretagne",
@@ -2478,6 +2600,7 @@
         },
         {
           "nom": "Rogers Jones & Co",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Pays de Galles",
@@ -2499,6 +2622,7 @@
         },
         {
           "nom": "Rossini",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · FR",
@@ -2519,6 +2643,7 @@
         },
         {
           "nom": "Ruellan Vannes",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Bretagne",
@@ -2534,6 +2659,7 @@
         },
         {
           "nom": "Schuler Auktionen Zurich",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Suisse",
@@ -2554,6 +2680,7 @@
         },
         {
           "nom": "Setdart",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit avec compte",
           "usage": "prix_adjuge · vendu · Espagne",
@@ -2569,6 +2696,9 @@
         },
         {
           "nom": "Skanfil (skanfil.no)",
+          "alias": [
+            "skanfilno"
+          ],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Norvege",
@@ -2593,6 +2723,7 @@
         },
         {
           "nom": "Subastas Segre",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Madrid",
@@ -2612,6 +2743,7 @@
         },
         {
           "nom": "Tajan",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · FR",
@@ -2627,6 +2759,7 @@
         },
         {
           "nom": "Thierry de Maigret",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · FR",
@@ -2647,6 +2780,7 @@
         },
         {
           "nom": "Todocoleccion",
+          "alias": [],
           "acces": "NAV-MAN",
           "cout": "Gratuit",
           "usage": "prix_demande · en_cours · Espagne",
@@ -2662,6 +2796,7 @@
         },
         {
           "nom": "Villa Grisebach",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Allemagne",
@@ -2681,6 +2816,9 @@
         },
         {
           "nom": "Vilniaus Aukcionas (Vilnius Auction)",
+          "alias": [
+            "vilniusauction"
+          ],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Lituanie",
@@ -2702,6 +2840,7 @@
         },
         {
           "nom": "Waddington s",
+          "alias": [],
           "acces": "NAV-AUTO",
           "cout": "Gratuit",
           "usage": "prix_adjuge · vendu · Canada",

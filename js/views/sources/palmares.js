@@ -9,7 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, esc } from '../../core/dom.js';
 import { SRC } from './etat.js';
-import { badges, trouverSource, candidatsDeclencheurs, ETAT_BADGE, nomNu } from './index.js';
+import { badges, candidatsDeclencheurs, ETAT_BADGE, nomNu } from './index.js';
 import { filDe } from '../../core/nav.js';
 import { page } from '../../ui/page.js';
 
@@ -33,6 +33,48 @@ const ETAT = {
 };
 
 const JOURS_30 = 30 * 24 * 3600 * 1000;
+
+// ─── Résolution tolérante nom → entrée du catalogue (HO-123, suite HO-121) ──
+// La passe cote écrit dans `sources_consultations.source_nom` des noms courts
+// (« Strasbourg Encheres ») quand le catalogue (généré depuis le noyau par
+// `infra/build-sources-site.py`) porte le nom long avec sa variante entre
+// parenthèses (« Hotel des Ventes des Notaires (Strasbourg-Encheres) », et
+// porte son `alias` déjà normalisé — cf. `alias_nom()` côté Python, même
+// contrat de normalisation reproduit ici). `trouverSource` (index.js) ne
+// matchait que le nom exact et perdait ces consultations.
+//
+// `cle()` : MÊME normalisation que `cle_nom()` de build-sources-site.py —
+// minuscules, sans accents, parenthèses retirées, non-alphanumérique retiré.
+function cle(nom) {
+  return String(nom ?? '')
+    .replace(/\(.*?\)/g, ' ')
+    .toLowerCase()
+    .normalize('NFD').replace(/\p{Mn}/gu, '')
+    .replace(/[^a-z0-9]+/g, '');
+}
+
+// Table clé normalisée (+ alias) → entrée du catalogue, construite une fois
+// par rendu (SRC.data ne change pas pendant la vie de l'écran).
+let indexClesCache = null;
+function indexParCle() {
+  if (indexClesCache) return indexClesCache;
+  const idx = new Map();
+  for (const sec of SRC.data.sections) {
+    for (const e of sec.entrees ?? []) {
+      idx.set(cle(e.nom), e);
+      for (const a of e.alias ?? []) if (!idx.has(a)) idx.set(a, e);
+    }
+  }
+  indexClesCache = idx;
+  return idx;
+}
+
+/** Entrée du catalogue pour un nom brut de consultation, par clé normalisée
+ * (nom exact normalisé, ou l'un des alias). `null` si rien ne matche : la
+ * consultation reste affichée sous son nom brut (jamais perdue). */
+function resoudreSource(nom) {
+  return indexParCle().get(cle(nom)) ?? null;
+}
 
 // ─── Filtrage des consultations brutes selon fenêtre + besoin ─────────────
 function consultationsFiltrees() {
@@ -108,7 +150,7 @@ function classement(parSource) {
   const max = lignes[0][1].utiles;
   const affichees = ETAT.classementDeplie ? lignes : lignes.slice(0, CLASSEMENT_VISIBLE);
   const rows = affichees.map(([nom, a]) => {
-    const e = trouverSource(nom);
+    const e = resoudreSource(nom);
     const pct = max ? Math.round((a.utiles / max) * 100) : 0;
     const peri = perimetreResumeSource(e);
     return `
@@ -145,7 +187,7 @@ function consulteesPourRien(parSource) {
   const jamaisOuvertes = [...toutesConnues].filter(n => !consultees.has(n)).length;
 
   const rows = mauvaises.map(([nom, a]) => {
-    const e = trouverSource(nom);
+    const e = resoudreSource(nom);
     const peri = perimetreResumeSource(e);
     return `
       <div class="pal-rien-ligne">

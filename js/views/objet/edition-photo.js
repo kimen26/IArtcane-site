@@ -126,6 +126,13 @@ export async function mount(objetId, photoId) {
       alt: 'Photo à modifier',
       sur: { annuler: retour, valider: onValider },
     });
+    // HO-123 : la brique pose son propre « Annuler » ET la barre basse de
+    // cette page en pose un second (« ↻ 90° · Annuler ») — deux boutons au
+    // même effet. `ui/recadrage.js` n'expose aucune option pour le masquer
+    // (brique interdite en écriture ici) : on retire le sien du DOM après
+    // montage, on garde celui de la barre basse (cohérent avec les autres
+    // pages de la fiche).
+    zone.querySelector('[data-role="annuler"]')?.remove();
   };
   monterAtelier();
 

@@ -208,11 +208,16 @@ function openMenu() {
   drawerEl().classList.add('open');
   veilEl().classList.add('open');
   $('#menu-btn').setAttribute('aria-expanded', 'true');
+  // HO-123 : verrouille le défilement de la page derrière le tiroir — sans
+  // ça, deux barres de défilement coexistent (celle du tiroir + celle de la
+  // page masquée) sur mobile, tiroir ouvert.
+  document.body.classList.add('drawer-open');
 }
 function closeMenu() {
   drawerEl().classList.remove('open');
   veilEl().classList.remove('open');
   $('#menu-btn').setAttribute('aria-expanded', 'false');
+  document.body.classList.remove('drawer-open');
 }
 // Frise d'avancement : calculée depuis le cache collection s'il est chargé
 // (découpage disjoint : sans photo → à estimer (prix_bas null) → estimées).

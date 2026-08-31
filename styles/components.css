@@ -156,7 +156,13 @@
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow)}
 .panel-pad{padding:20px 22px}
 .page-title{margin-bottom:18px}
-.note{display:flex;gap:10px;padding:13px 16px;background:var(--green-soft);border-radius:var(--r-md);font-size:13px;color:var(--green)}
+/* HO-123 : `display:flex` traitait chaque nœud texte (autour d'un <b>/<code>
+   inline) comme un item flex séparé — réordonnancement visuel sur mobile
+   (relevé sur `categories`, bandeau <code>prompts</code>). `.note` ne porte
+   aucune icône séparée dans le site actuel : `block` restitue un flux de
+   lecture normal sans rien changer aux deux usages existants (categories.js,
+   index.html — `grep -rn 'class="note' site/`). */
+.note{display:block;padding:13px 16px;background:var(--green-soft);border-radius:var(--r-md);font-size:13px;color:var(--green)}
 .badge-soft{display:inline-flex;align-items:center;padding:4px 12px;border-radius:999px;background:var(--blue-softer);border:1px solid var(--line);font-size:.8125rem;font-weight:500;color:var(--ink-2)}
 .link-lot{color:var(--blue);font-size:12.5px;font-weight:500;white-space:nowrap}
 
