@@ -53,11 +53,14 @@ export async function mount(objetId, photoId) {
   // (contrairement aux sous-écrans internes de la fiche) — le segment #<id>
   // peut donc porter un hash réel vers le hub, et la catégorie (inconnue de
   // filDe('objet', …) au moment du routage) est complétée ici.
-  if (S.currentObjet?.categorie) {
+  // Segments repérés par libellé, pas par index (HO-118 a mis « Accueil » en tête).
+  const iCat = S.fil.findIndex(seg => seg.label === 'Objet');
+  if (iCat >= 0 && S.currentObjet?.categorie) {
     const cat = catCanon(S.currentObjet.categorie);
-    S.fil[1] = { label: cat, hash: `#/rayon/${encodeURIComponent(cat)}` };
+    S.fil[iCat] = { label: cat, hash: `#/rayon/${encodeURIComponent(cat)}` };
   }
-  S.fil[2] = { label: `#${objetId}`, hash: `#/objet/${encodeURIComponent(objetId)}` };
+  const iId = S.fil.findIndex(seg => seg.label === `#${objetId}`);
+  S.fil[iId >= 0 ? iId : S.fil.length - 1] = { label: `#${objetId}`, hash: `#/objet/${encodeURIComponent(objetId)}` };
 
   const retour = () => { location.hash = `#/objet/${encodeURIComponent(objetId)}`; };
 

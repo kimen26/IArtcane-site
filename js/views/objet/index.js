@@ -45,10 +45,11 @@ async function loadObjet(id) {
   O.focus = null;
   // Fil d'Ariane (HO-104) : filDe('objet', …) fournit la forme (S.fil posé par
   // le shell avant mount()) sans connaître la catégorie — cette vue la complète.
-  if (S.fil) {
-    S.fil[1] = o.categorie
-      ? { label: catCanon(o.categorie), hash: `#/rayon/${encodeURIComponent(catCanon(o.categorie))}` }
-      : S.fil[1];
+  // Le segment à compléter est celui libellé « Objet » — jamais un index en dur :
+  // HO-118 a inséré « Accueil » en tête et l'index 1 est devenu « Collection ».
+  const iCat = S.fil?.findIndex(seg => seg.label === 'Objet') ?? -1;
+  if (iCat >= 0 && o.categorie) {
+    S.fil[iCat] = { label: catCanon(o.categorie), hash: `#/rayon/${encodeURIComponent(catCanon(o.categorie))}` };
   }
   const [{ data: photos }, { data: comps }, { data: fiches }, { data: events }, { data: artiste }, { data: jobs }, nLens] = await Promise.all([
     sb.from('photos').select('*').eq('owner_id', S.tenantId).eq('objet_id', id).order('ordre', { nullsFirst: false }).order('created_at'),
