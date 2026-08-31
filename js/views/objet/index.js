@@ -167,14 +167,10 @@ function renderObjet() {
 // du bandeau photo — plus rien n'est posé sur la photo (arbitrage Yann 2026-08-29).
 function renderHubEcran(body) {
   const o = S.currentObjet;
-  let posMeta = '';
-  if (S.collection?.length) {
-    const idx = S.collection.findIndex(x => String(x.id) === String(o.id));
-    if (idx >= 0) posMeta = ` · ${idx + 1}/${S.collection.length}`;
-  }
   const corps = page(body, {
     titre: titreSansAuteur(o.titre, o.auteur) || 'Sans titre',
-    meta: `#${o.id}${posMeta}`,
+    // Pas de méta : « #0046 » est déjà le dernier segment du fil, et « 1/21 » n'avait
+    // de sens qu'en venant de la collection (arbitrage Yann 2026-08-31 : sobre, non redondant).
     fil: S.fil,
     barre: {
       actions: [

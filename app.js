@@ -38,6 +38,9 @@ function show(view) {
   // vue collection en mobile — le nom y est déjà porté par la ligne de titre.
   const collMobile = isColl && matchMedia('(max-width:640px)').matches;
   $('#header-maison').classList.toggle('hidden', collMobile || !S.tenantId);
+  // Sur la collection, la ligne de titre dit le NOM DE LA MAISON (« Collection » est
+  // déjà le dernier segment du fil, donc redondant) — tronqué si long (base.css).
+  if (isColl) $('.page-title').textContent = S.tenantName || 'Collection';
   window.scrollTo({ top: 0 });
 }
 function showLogin() {
@@ -103,8 +106,10 @@ async function resolveTenant() {
   // on n'y entre que par le switcher (retour Yann 2026-08-31 — le seed l'inscrit
   // membre admin, et la règle « 1re membership » l'y faisait tomber sans choix mémorisé).
   const estDemo = t => /^demo$/i.test(t.name ?? '');
+  // Même mémorisée, DEMO ne survit pas à un rechargement (arbitrage Yann 2026-08-31 :
+  // « ma maison PONAIRE par défaut ») — on y retourne par le switcher, pas par habitude.
   const pref = localStorage.getItem('iartcane-tenant');
-  const courant = S.mesTenants.find(t => t.id === pref)
+  const courant = S.mesTenants.find(t => t.id === pref && !estDemo(t))
     ?? S.mesTenants.find(t => t.role !== 'owner' && !estDemo(t))
     ?? S.mesTenants.find(t => !estDemo(t))
     ?? S.mesTenants[0];

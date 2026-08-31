@@ -22,7 +22,7 @@ export function _injecterDeps(fauxDeps) { _deps = fauxDeps; }
 
 // ─── Champs « obligatoires » → clé de lecture sur l'objet (HO-119 §calculerReste) ─
 // `dimensions` = un des trois *_cm ; `categorie` = colonne `categorie` (brief).
-const DIM_CHAMPS = ['longueur_cm', 'largeur_cm', 'hauteur_cm'];
+const DIM_CHAMPS = ['hauteur_cm', 'largeur_cm', 'profondeur_cm']; // colonnes réelles (migration 0021) — « longueur_cm » n'a jamais existé (bug HO-119, vu par HO-125)
 function champRempli(o, champ) {
   if (champ === 'dimensions') return DIM_CHAMPS.some(c => o[c] != null && o[c] !== '');
   const v = o[champ];

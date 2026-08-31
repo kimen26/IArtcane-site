@@ -104,7 +104,7 @@ html:has(> body.drawer-open),body.drawer-open{overflow:hidden} /* tiroir ouvert 
    titres de section des autres vues — neutralisé ici, le bandeau reste compact. */
 .page-subhead .page-title{margin-bottom:0}
 .page-title-line{display:flex;align-items:baseline;gap:8px}
-.page-title{font-family:var(--serif);font-size:1.0625rem;color:var(--ink)}
+.page-title{font-family:var(--serif);font-size:1.0625rem;color:var(--ink);min-width:0;max-width:55%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} /* nom de la maison sur la collection : tronqué, jamais sur deux lignes */
 .page-sub{font-size:.6875rem;color:var(--ink-3)}
 .page-search-line{display:flex;gap:8px;align-items:center}
 .page-search-line .search{flex:1;min-width:0;position:relative}
