@@ -386,6 +386,40 @@
   margin-top:5px;
 }
 
+/* Groupe de rafale (HO-137) : même carte que .hist-card, dépliable — motif
+   de .tech-details/.tech-summary ci-dessous, pour rester cohérent. */
+.hist-groupe{
+  background:var(--surface);
+  border-radius:var(--r-md);
+  box-shadow:var(--shadow);
+  overflow:hidden;
+}
+.hist-groupe-summary{
+  padding:11px 12px;
+  cursor:pointer;
+  list-style:none;
+}
+.hist-groupe-summary::-webkit-details-marker{display:none}
+.hist-groupe-compte{
+  font-size:.6875rem;
+  font-weight:700;
+  color:var(--blue);
+}
+.hist-groupe .tech-chev{
+  margin-left:auto;
+}
+.hist-groupe[open] .tech-chev{transform:rotate(90deg)}
+.hist-groupe-panel{
+  display:flex;
+  flex-direction:column;
+  gap:9px;
+  padding:0 12px 12px;
+}
+.hist-groupe-panel .hist-card{
+  box-shadow:none;
+  background:var(--surface-2);
+}
+
 /* Détails techniques */
 .tech-details{
   background:var(--surface-2);

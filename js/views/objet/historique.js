@@ -6,6 +6,7 @@ import { S } from '../../core/state.js';
 import { fmtDateTime, ACT_LABELS, actorBadge, evDetailBits, mdToHtml } from '../../core/format.js';
 import { loadViewCss } from '../../core/css.js';
 import { page } from '../../ui/page.js';
+import { grouperEvenements } from '../../services/historique.js';
 import { O } from './etat.js';
 
 await loadViewCss('objet-suivi');
@@ -48,26 +49,69 @@ function ficheTechnique() {
     <div class="tech-md">${html}</div>`;
 }
 
+// Libellé du compte d'un groupe de rafale : « N champs validés » est plus
+// parlant que « N validations de champ » pour les 2-3 actions qui arrivent
+// réellement en rafale — repli générique pour le reste (pas de table exhaustive
+// des 20 actions).
+function libelleGroupe(action, n) {
+  switch (action) {
+    case 'validation_champ': return `${n} champs validés`;
+    case 'correction': return `${n} corrections`;
+    case 'tag_photo': return `${n} photos taguées`;
+    default: return `${n} × ${ACT_LABELS[action] ?? action}`;
+  }
+}
+
+function carteEvenement(ev) {
+  const bits = evDetailBits(ev.detail ?? {});
+  return `
+    <article class="hist-card">
+      <div class="hist-head">
+        <span class="hist-title">${esc(ACT_LABELS[ev.action] ?? ev.action)}</span>
+        <span class="hist-date">${fmtDateTime(ev.created_at)}</span>
+        ${actorBadge(ev.acteur ?? '')}
+      </div>
+      ${bits.length ? `<div class="hist-body">${bits.map(b => `<div class="hist-bit">${b}</div>`).join('')}</div>` : ''}
+    </article>`;
+}
+
+function carteGroupe(g) {
+  const plage = g.debut === g.fin
+    ? fmtDateTime(g.fin)
+    : `${fmtDateTime(g.debut)} → ${new Date(g.fin).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+  return `
+    <details class="hist-groupe">
+      <summary class="hist-head hist-groupe-summary">
+        <span class="hist-title">${esc(ACT_LABELS[g.action] ?? g.action)}</span>
+        <span class="hist-groupe-compte">${esc(libelleGroupe(g.action, g.n))}</span>
+        <span class="hist-date">${plage}</span>
+        ${actorBadge(g.acteur ?? '')}
+        <span class="tech-chev">›</span>
+      </summary>
+      <div class="hist-groupe-panel">
+        ${g.evts.map(ev => carteEvenement(ev)).join('')}
+      </div>
+    </details>`;
+}
+
 export function rendre(el) {
   const o = S.currentObjet;
   const pipe = O.pipe ?? { r1: { state: 'todo' }, r2: { state: 'todo' }, valo: { state: 'todo' }, r3: { state: 'todo' } };
 
-  const journal = O.events.map(ev => {
-    const bits = evDetailBits(ev.detail ?? {});
-    return `
-      <article class="hist-card">
-        <div class="hist-head">
-          <span class="hist-title">${esc(ACT_LABELS[ev.action] ?? ev.action)}</span>
-          <span class="hist-date">${fmtDateTime(ev.created_at)}</span>
-          ${actorBadge(ev.acteur ?? '')}
-        </div>
-        ${bits.length ? `<div class="hist-body">${bits.map(b => `<div class="hist-bit">${b}</div>`).join('')}</div>` : ''}
-      </article>`;
-  }).join('');
+  const groupes = grouperEvenements(O.events);
+  const journal = groupes.map(g => g.n > 1 ? carteGroupe(g) : carteEvenement(g.evts[0])).join('');
+
+  // Le compteur d'en-tête devient trompeur une fois groupé : afficher le
+  // nombre de groupes, et garder le total en second seulement s'ils diffèrent.
+  const nGroupes = groupes.length;
+  const nTotal = O.events.length;
+  const meta = nGroupes === nTotal
+    ? `${nTotal} étape${nTotal > 1 ? 's' : ''}`
+    : `${nGroupes} étape${nGroupes > 1 ? 's' : ''} · ${nTotal} évènements`;
 
   const corps = page(el, {
     titre: 'Mise à jour',
-    meta: `${O.events.length} étape${O.events.length > 1 ? 's' : ''}`,
+    meta,
     fil: [...S.fil, { label: 'Mise à jour' }],
   });
 
