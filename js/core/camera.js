@@ -17,16 +17,27 @@ import { $, toast } from './dom.js';
 import { S } from './state.js';
 import { logEvent, uploadPhotosFor } from './data.js';
 import { withBusy, humaniser } from './feedback.js';
+import { viser } from './cible-fichier.js';
 
 let camStream = null;
-let camTarget = 'capture'; // 'capture' → addFiles (nouvel objet) · 'objet' → upload direct sur S.currentObjet
+let camTarget = 'capture'; // 'capture' → addFiles (nouvel objet) · 'objet' → upload direct sur camObjetId
+// Objet visé, FIGÉ à l'ouverture de la caméra — jamais relu à chaque cliché :
+// une session caméra dure plusieurs minutes et l'objet courant peut changer
+// entre-temps (même famille de bug que uploads.js, retour Alain 2026-09-01).
+let camObjetId = null;
 let camUploaded = 0;       // nb de clichés uploadés en mode 'objet' (pour le hook onClose)
 let hooks = {};
 
 export async function openCamera(target = 'capture', h = {}) {
   camTarget = target;
+  camObjetId = target === 'objet' ? (S.currentObjet?.id ?? null) : null;
   hooks = h;
-  const fallback = () => (target === 'objet' ? $('#file-add-photo') : $('#file-camera')).click();
+  // Repli sélecteur de fichiers : en mode 'objet', la cible est figée sur
+  // l'input avant ouverture (core/cible-fichier.js).
+  const fallback = () => {
+    if (target !== 'objet') { $('#file-camera').click(); return; }
+    if (!viser($('#file-add-photo'), camObjetId)) toast('Ouvre une fiche avant d’ajouter une photo', true);
+  };
   if (!navigator.mediaDevices?.getUserMedia) { fallback(); return; }
   try {
     // Résolution raisonnable : un flux pleine résolution (3000×3000) gonfle la mémoire
@@ -72,13 +83,15 @@ $('#camera-shot').addEventListener('click', () => {
   c.toBlob(async b => {
     if (!b) { toast('Capture impossible', true); return; }
     const file = new File([b], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
-    if (camTarget === 'objet' && S.currentObjet) {
+    if (camTarget === 'objet' && camObjetId) {
       const { valeur } = await withBusy(
-        () => uploadPhotosFor(S.currentObjet.id, [file]),
+        () => uploadPhotosFor(camObjetId, [file]),
         { titre: 'Envoi de la photo…' },
       );
       const { done, failed } = valeur ?? { done: 0, failed: [] };
-      if (done > 0) { camUploaded += done; logEvent('photo_ajoutee', { n: done, via: 'camera' }); toast('Photo ajoutée à la fiche — tu peux enchaîner ou Terminer'); }
+      // `logEvent` vise explicitement camObjetId : son 3e paramètre vaut sinon
+      // `S.currentObjet?.id`, qui pourrait tracer l'ajout sur une autre fiche.
+      if (done > 0) { camUploaded += done; logEvent('photo_ajoutee', { n: done, via: 'camera' }, camObjetId); toast('Photo ajoutée à la fiche — tu peux enchaîner ou Terminer'); }
       // Même forme que uploads.js (HO-110) : un cliché = 1 photo tentée.
       else if (failed.length) { toast(`${done} photo(s) sur 1 ajoutée(s) — ${humaniser(failed[0].reason)}. Les autres n'ont pas été envoyées : réessaie.`, 'action'); }
     } else {

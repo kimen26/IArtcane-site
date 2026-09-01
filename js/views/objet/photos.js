@@ -10,6 +10,7 @@ import { isVideo } from '../../core/format.js';
 import { loadViewCss } from '../../core/css.js';
 import { sb, logEvent } from '../../core/data.js';
 import { openCamera } from '../../core/camera.js';
+import { viser } from '../../core/cible-fichier.js';
 import { page } from '../../ui/page.js';
 import { galerie } from '../../ui/galerie.js';
 import { micButton } from '../../ui/mic.js';
@@ -21,8 +22,7 @@ await loadViewCss('objet-photos');
 const VUE_LABELS = {
   face: 'face', profil: 'profil', revers: 'revers', signature: 'signature',
   poincon: 'marque / poinçon', detail: 'détail décor', defaut: 'défaut',
-  echelle: 'échelle', infos: 'infos', dos: 'au dos', echelle_regle: 'règle / échelle',
-};
+  echelle: 'échelle', infos: 'infos', dos: 'au dos', echelle_regle: 'règle / échelle' };
 
 let currentIndex = 0;
 
@@ -138,7 +138,7 @@ function rendreRemarque(p) {
     </div>`;
 }
 
-function onAjouter() { $('#file-add-photo').click(); }
+function onAjouter() { viser($('#file-add-photo'), S.currentObjet?.id); }
 function onEnregistrer() { toast('✓ Photos enregistrées'); hooks.naviguer('hub'); }
 
 async function onRelancer(evt) {

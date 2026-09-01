@@ -4,10 +4,8 @@
 // Depuis HO-106 : galerie()/vignettes() (ui/) portent carte + grille, ex-
 // capture/photos.js (supprimé, absorbé). Photos pas encore en base (`File`
 // locaux, S.capFiles) : pas de services/photos.js ici, chaque item porte un
-// `id` local stable (assigné à l'ajout). Modifier remplace ✂/🗑/↻90° (D-073/
-// HO-095) : `sur.modifier` ouvre openLocalCrop (gardé, pas d'équivalent
-// routé, même raisonnement qu'artiste) ; rotaterPhoto disparaît faute de
-// bouton — signalé au rapport.
+// `id` local stable. Modifier remplace ✂/🗑/↻90° (D-073/HO-095) :
+// `sur.modifier` ouvre openLocalCrop ; rotaterPhoto disparaît faute de bouton.
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, $$, esc, toast } from '../../core/dom.js';
 import { withBusy, humaniser } from '../../core/feedback.js';
@@ -15,6 +13,7 @@ import { S } from '../../core/state.js';
 import { plur, isVideo } from '../../core/format.js';
 import { sb } from '../../core/data.js';
 import { openCamera } from '../../core/camera.js';
+import { ecouterUneFois } from '../../core/cible-fichier.js';
 import { loadViewCss } from '../../core/css.js';
 import { createOverlay } from '../../core/lightbox.js';
 import { galerie } from '../../ui/galerie.js';
@@ -201,8 +200,9 @@ function brancher() {
     dropzone.addEventListener('drop', e => { e.preventDefault(); dropzone.classList.remove('over'); addCapFiles(e.dataTransfer.files); });
   }
   $('#cap-btn-cam')?.addEventListener('click', () => openCamera('capture', { addFiles: addCapFiles }));
-  $('#file-camera')?.addEventListener('change', e => { addCapFiles(e.target.files); e.target.value = ''; });
-  $('#file-gallery')?.addEventListener('change', e => { addCapFiles(e.target.files); e.target.value = ''; });
+  // Écoute UNIQUE — `brancher()` rejoue à chaque render() (core/cible-fichier.js).
+  ecouterUneFois($('#file-camera'), addCapFiles);
+  ecouterUneFois($('#file-gallery'), addCapFiles);
 
   // 'input', pas seulement 'change' (comme galerie() l'écoute pour objet/
   // artiste, DB) : capture est local, rien à perdre si "Créer la fiche"

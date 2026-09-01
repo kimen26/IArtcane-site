@@ -9,6 +9,7 @@ import { $, toast } from '../../core/dom.js';
 import { withBusy, humaniser } from '../../core/feedback.js';
 import { S, canWrite } from '../../core/state.js';
 import { ajouter, cibleObjet } from '../../services/photos.js';
+import { cibleVisee } from '../../core/cible-fichier.js';
 
 /**
  * Branche le handler d'ajout de photos par fichier sur l'overlay bloquant
@@ -20,9 +21,10 @@ export function brancherUploads(recharger) {
   $('#file-add-photo').addEventListener('change', async e => {
     if (!canWrite()) { e.target.value = ''; return; }
     const files = [...e.target.files];
-    e.target.value = '';
-    if (!files.length || !S.currentObjet) return;
-    const oid = S.currentObjet.id;
+    // Cible figée au clic par l'appelant, jamais relue ici (core/cible-fichier.js).
+    const oid = cibleVisee(e.target);
+    if (!files.length) return;
+    if (!oid) { toast('Photos non ajoutées — rouvre la fiche et réessaie.', 'action'); return; }
 
     // withBusy jette la valeur de retour de fn quand on a annulé en cours de
     // route (elle rend undefined dans ce cas) — on capture donc le résultat
@@ -49,9 +51,14 @@ export function brancherUploads(recharger) {
     } else if (failed.length > 0) {
       toast(`${done} photo(s) sur ${files.length} ajoutée(s) — ${humaniser(failed[0].reason)}. Les autres n'ont pas été envoyées : réessaie.`, 'action');
     } else if (done > 0) {
-      toast(S.currentObjet.statut !== 'validee'
-        ? `${done} photo${done > 1 ? 's' : ''} ajoutée${done > 1 ? 's' : ''} — « Relancer les recherches » quand tu es prêt`
-        : `${done} photo${done > 1 ? 's' : ''} ajoutée${done > 1 ? 's' : ''}`);
+      // Le conseil « Relancer les recherches » ne vaut que si l'objet visé est
+      // TOUJOURS celui affiché : sinon on ne sait rien de son statut, et on se
+      // contente du fait — sans conseil trompeur sur une fiche qu'on ne voit pas.
+      const memeObjet = String(S.currentObjet?.id ?? '') === String(oid);
+      const combien = `${done} photo${done > 1 ? 's' : ''} ajoutée${done > 1 ? 's' : ''}`;
+      toast(memeObjet && S.currentObjet.statut !== 'validee'
+        ? `${combien} — « Relancer les recherches » quand tu es prêt`
+        : `${combien} sur #${oid}`);
     }
     recharger(oid);
   });
