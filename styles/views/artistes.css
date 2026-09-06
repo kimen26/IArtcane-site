@@ -1,59 +1,76 @@
 /* ─── Vue Artistes (HO-052) — hub fiche artiste 3a + liste ────────────────── */
 
-/* ─── Liste : mini-cartes en 2 colonnes (retour Yann 2026-08-31) ───────────
-   La grille 3 colonnes de components.css cassait tout nom sur 2 lignes en
-   360 px. Ici : 2 colonnes, portrait rond, nom sur UNE ligne (ellipse au-delà),
-   sous-titre unique (métier, ou nombre d'objets). Aucune hauteur fixe sur les
-   zones de texte — la carte grandit au zoom 200 % au lieu de rogner. */
-/* Colonnes pilotées par la largeur DISPONIBLE en `rem` : à police normale il
-   en tient 2 sur un 360 px, et quand Alain grossit sa police (rem plus large),
-   le seuil de 9rem cesse d'être tenu et la liste retombe d'elle-même sur une
-   colonne — le nom y respire au lieu d'être coupé. Une media query n'aurait
-   pas suffi : ses unités suivent la police du NAVIGATEUR, pas celle de la page.
-   `minmax(…,1fr)` avec un minimum explicite, jamais `auto` : une cellule à
-   `min-width:auto` refuse de descendre sous son contenu et un nom long
-   poussait la 2e colonne hors écran (constaté en recette). */
-.art-liste{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(9rem,100%),1fr));gap:9px}
-.art-mini{
-  min-width:0;
-  display:flex;align-items:center;gap:9px;min-height:56px;padding:8px 10px 8px 8px;
-  background:var(--surface);border:1px solid var(--line);border-radius:12px;
-  box-shadow:0 1px 4px var(--ombre-carte-mobile);cursor:pointer;
-  transition:box-shadow .15s,transform .15s,border-color .15s;
+/* ─── Liste : UNE LIGNE PAR ARTISTE + recherche (Yann 2026-09-07) ─────────
+   Les mini-cartes en 2 colonnes qui précédaient tronquaient tout : en 360 px,
+   une demi-largeur ne tient pas un nom complet, et il n'y avait de place que
+   pour un seul sous-titre. Une ligne pleine largeur porte sans rogner ce qu'on
+   veut lire d'un coup d'œil — qui, quel art, quel pays, combien d'objets —
+   et se prête à la recherche, qui n'aurait aucun sens sur une grille. */
+
+.art-recherche{margin:0 0 8px}
+.art-recherche-champ{
+  width:100%;box-sizing:border-box;min-height:44px; /* cible tactile */
+  padding:9px 12px;font-size:1rem; /* 16px : en dessous, iOS zoome au focus */
+  color:var(--ink);background:var(--surface);
+  border:1px solid var(--line);border-radius:10px;
 }
-.art-mini:hover{box-shadow:var(--shadow-hover);transform:translateY(-1px);border-color:var(--line-strong)}
-.art-mini:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
-.art-mini-visuel{
-  flex:0 0 auto;width:38px;height:38px;border-radius:50%;overflow:hidden;
+.art-recherche-champ::placeholder{color:var(--ink-3)}
+.art-recherche-champ:focus-visible{outline:2px solid var(--blue);outline-offset:1px;border-color:var(--line-strong)}
+
+/* Compteur : muet quand rien n'est filtré, il devient « 3 sur 38 » dès qu'on
+   tape. `role=status` le fait annoncer aux lecteurs d'écran sans voler le focus. */
+.art-compte{margin:0 0 6px;font-size:.6875rem;color:var(--ink-3)}
+
+.art-liste{display:flex;flex-direction:column;gap:6px}
+
+.art-ligne{
+  display:flex;align-items:center;gap:10px;min-height:52px;padding:7px 10px;
+  background:var(--surface);border:1px solid var(--line);border-radius:10px;
+  cursor:pointer;transition:box-shadow .15s,border-color .15s;
+}
+.art-ligne:hover{box-shadow:var(--shadow-hover);border-color:var(--line-strong)}
+.art-ligne:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+.art-ligne-visuel{
+  flex:0 0 auto;width:36px;height:36px;border-radius:50%;overflow:hidden;
   background:var(--surface-2);display:grid;place-items:center;
 }
-.art-mini-visuel img{width:100%;height:100%;object-fit:cover;display:block}
-/* Sans portrait : initiales sur aplat discret — jamais un emoji générique
-   répété 49 fois, qui ne distingue aucun artiste d'un autre. La pastille porte
-   l'ACCENT de la maison (tenants.accent) : c'est un des endroits où chaque
-   maison se reconnaît. `color-mix` garde l'aplat très clair quelle que soit la
-   teinte choisie — un accent saturé ne doit pas hurler derrière deux lettres. */
-.art-mini-visuel--vide{background:color-mix(in srgb,var(--accent-maison) 12%,var(--surface))}
-.art-mini-initiales{font-family:var(--serif);font-size:.875rem;line-height:1;color:color-mix(in srgb,var(--accent-maison) 75%,var(--ink))}
-.art-mini-texte{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
-.art-mini-nom{font-size:.8125rem;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.art-mini-sous{font-size:.6875rem;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.art-mini-n{flex:0 0 auto;font-family:var(--mono);font-size:.6875rem;color:var(--ink-3)}
+.art-ligne-visuel img{width:100%;height:100%;object-fit:cover;display:block}
+/* Sans portrait : initiales sur l'ACCENT de la maison — jamais un emoji
+   générique répété 40 fois, qui ne distinguerait aucun artiste d'un autre. */
+.art-ligne-visuel--vide{background:color-mix(in srgb,var(--accent-maison) 12%,var(--surface))}
+.art-ligne-initiales{font-family:var(--serif);font-size:.8125rem;line-height:1;color:color-mix(in srgb,var(--accent-maison) 75%,var(--ink))}
 
-/* Mobile : chaque pixel pris par le chrome est un caractère de nom en moins.
-   Le compteur d'objets disparaît (il est déjà dit par le sous-titre quand il
-   n'y a pas de métier, et par la fiche sinon) et le rond rétrécit — mesuré :
-   ~40 px rendus au nom, la plupart des noms cessent d'être tronqués. */
-@media (max-width:640px){
-  .art-mini{gap:8px;padding:8px}
-  .art-mini-n{display:none}
-  .art-mini-visuel{width:34px;height:34px}
+.art-ligne-corps{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+/* Le drapeau suit le nom sur la même ligne, et ne rétrécit jamais : c'est un
+   repère visuel, il perd tout son sens écrasé. Le nom, lui, cède la place. */
+.art-ligne-haut{display:flex;align-items:center;gap:6px;min-width:0}
+.art-ligne-nom{
+  font-size:.875rem;font-weight:600;color:var(--ink);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.art-ligne-drapeau{
+  flex:0 0 auto;width:1.05rem;height:.7875rem;border-radius:2px;
+  box-shadow:0 0 0 1px var(--line) inset; /* un drapeau très clair (jp) doit rester délimité */
+}
+.art-ligne-meta{
+  font-size:.6875rem;color:var(--ink-3);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.art-ligne-n{
+  flex:0 0 auto;min-width:22px;text-align:center;
+  font-family:var(--mono);font-size:.6875rem;color:var(--ink-3);
 }
 
-/* Desktop : `auto-fit` remplit seul la largeur (4 colonnes vers 1240 px) —
-   aucune media query de colonnes à maintenir, juste un peu plus d'air. */
-@media (min-width:700px){.art-liste{gap:11px}}
+.art-vide{margin:12px 2px;font-size:.8125rem;color:var(--ink-3)}
 
+/* Desktop : la ligne respire, mais reste UNE ligne — l'intérêt du format est
+   justement de ne jamais tronquer, une grille reviendrait au problème d'avant. */
+@media (min-width:700px){
+  .art-liste{gap:7px}
+  .art-ligne{min-height:56px;padding:8px 12px}
+  .art-ligne-visuel{width:40px;height:40px}
+}
 
 /* Corps de la fiche artiste : empilement des 11 blocs. En-tête, fil d'Ariane
    et barre basse sont posés par `ui/page.js` + `ui/barre-basse.js` (HO-104) —
