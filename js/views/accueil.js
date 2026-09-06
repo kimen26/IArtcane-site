@@ -36,13 +36,16 @@ function blocTravail(travail) {
 }
 
 // ─── Bloc 2 : iArcane a trouvé ──────────────────────────────────────────────
+// Combien on en montre est une décision d'AFFICHAGE : le service en calcule
+// jusqu'à TROUVAILLES_MAX (20), la vue en pose 5 et déplie le reste (D-092).
+const TROUVAILLES_VISIBLES = 5;
 const SURTITRE = { artiste: 'Artiste trouvé', vente: 'Vente trouvée' };
 
-function ligneTrouvaille(t) {
+function ligneTrouvaille(t, auDela = false) {
   const vignette = t.thumbUrl
     ? `<img class="acc-trouv-vignette" src="${esc(t.thumbUrl)}" alt="" loading="lazy">`
     : `<span class="acc-trouv-vignette acc-trouv-vignette--vide"></span>`;
-  return `<div class="acc-trouv-ligne">
+  return `<div class="acc-trouv-ligne${auDela ? ' acc-trouv-ligne--sup' : ''}">
     ${vignette}
     <div class="acc-trouv-corps">
       <span class="acc-trouv-surtitre">${esc(SURTITRE[t.type] || '')}</span>
@@ -55,9 +58,19 @@ function ligneTrouvaille(t) {
 
 function blocTrouvailles(trouvailles) {
   if (!trouvailles || !trouvailles.length) return '';
-  return `<section class="acc-bloc acc-carte acc-trouvailles">
+  // Tout est rendu d'emblée ; le repli est visuel (classe `--replie` sur la
+  // section) — ainsi le dépli ne recompose aucun HTML et la délégation posée
+  // au montage continue de servir les lignes révélées.
+  const enTrop = trouvailles.length - TROUVAILLES_VISIBLES;
+  const lignes = trouvailles.map((t, i) => ligneTrouvaille(t, i >= TROUVAILLES_VISIBLES)).join('');
+  const bouton = enTrop > 0
+    ? `<button type="button" class="acc-trouv-plus" data-acc-plus aria-expanded="false"
+        aria-controls="acc-trouv-liste" data-acc-plus-label="${esc(`Voir ${enTrop} de plus`)}">Voir ${esc(String(enTrop))} de plus</button>`
+    : '';
+  return `<section class="acc-bloc acc-carte acc-trouvailles${enTrop > 0 ? ' acc-trouvailles--replie' : ''}">
     <div class="acc-trouv-tete"><span class="acc-trouv-pastille"></span>IARCANE A TROUVÉ</div>
-    ${trouvailles.map(ligneTrouvaille).join('')}
+    <div id="acc-trouv-liste">${lignes}</div>
+    ${bouton}
   </section>`;
 }
 
@@ -150,6 +163,15 @@ function rendreBlocs(journal) {
 
 function bindNavigation(corps) {
   corps.addEventListener('click', (evt) => {
+    // Dépli des trouvailles : délégué (le bouton naît après le chargement).
+    const plus = evt.target?.closest ? evt.target.closest('[data-acc-plus]') : null;
+    if (plus) {
+      const section = plus.closest('.acc-trouvailles');
+      const replie = section?.classList.toggle('acc-trouvailles--replie');
+      plus.setAttribute('aria-expanded', String(!replie));
+      plus.textContent = replie ? plus.dataset.accPlusLabel : 'Voir moins';
+      return;
+    }
     const cibleListe = evt.target?.closest ? evt.target.closest('[data-acc-liste]') : null;
     if (cibleListe) {
       const cle = cibleListe.getAttribute('data-acc-liste');

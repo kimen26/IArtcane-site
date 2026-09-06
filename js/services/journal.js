@@ -84,7 +84,12 @@ export function calculerTravail(evts, depuis) {
   return { depuis, objets: objetsSet.size, nouveauxObjets, photos, commentaires, fichesCompletees };
 }
 
-// ─── calculerTrouvailles() — bloc 2, 2 max, iArcane nommé ──────────────────
+// ─── calculerTrouvailles() — bloc 2, iArcane nommé ─────────────────────────
+// Le service calcule jusqu'à un PLAFOND de chargement ; combien la vue en
+// montre d'emblée (et déplie au « voir plus ») ne le regarde pas — couche
+// services/ = données → données (docs/architecture-briques.md §2, D-092).
+export const TROUVAILLES_MAX = 20;
+
 /**
  * @param {Array} evts  évènements, plus récents d'abord
  * @param {Array} objets  S.collection (objets)
@@ -96,7 +101,7 @@ export function calculerTrouvailles(evts, objets, photoMap) {
   const vues = new Set(); // `${objetId}:${type}` — un seul par objet et par type
   const out = [];
   for (const e of evts || []) {
-    if (out.length >= 2) break;
+    if (out.length >= TROUVAILLES_MAX) break;
     const oid = e.objet_id;
     if (!oid) continue;
     const o = parId.get(String(oid));
@@ -123,7 +128,7 @@ export function calculerTrouvailles(evts, objets, photoMap) {
       });
     }
   }
-  return out.slice(0, 2);
+  return out;
 }
 
 // ─── calculerReste() — bloc 3, 3 lignes max, 0 omise ───────────────────────
