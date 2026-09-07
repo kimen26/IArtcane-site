@@ -46,17 +46,6 @@ export function _injecterDeps(fauxDeps) { _deps = fauxDeps; }
 const COLONNES_COPIEES = ['bio_md', 'dossier', 'commentaire', 'type', 'pays', 'region', 'categories'];
 
 /**
- * Normalise un alias comme le fait déjà la base pour les lignes existantes
- * (minuscules + diacritiques supprimés, ponctuation et espaces conservés) —
- * aucun trigger ne le calcule (vérifié : information_schema.triggers vide
- * sur artistes_alias), donc c'est au client de le faire à l'insertion, sous
- * peine de violer l'unicité (owner_id, alias_norm) sur un accent près.
- */
-function normaliserAlias(texte) {
-  return String(texte).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-}
-
-/**
  * Renomme une fiche artiste : l'ancien nom devient un alias de la cible.
  * Refuse tôt les cas invalides (aucune écriture) : nom vide, identique à
  * l'ancien, ou fiche cible déjà existante (une fusion n'est pas un
@@ -133,9 +122,15 @@ export async function renommer(ancien, nouveauBrut) {
   // Tolère un alias déjà présent (unicité (owner_id, alias_norm)) : ne fait
   // pas échouer tout le renommage pour ça — l'ancien nom référence déjà la
   // bonne fiche dans ce cas.
+  // `alias_norm` n'est PAS posée ici : c'est une colonne GENERATED ALWAYS
+  // (migration 0038), calculée par Postgres. L'écrire fait échouer l'insert —
+  // vérifié par le chemin réel du site le 2026-09-07 : PostgREST répond 400
+  // « cannot insert a non-DEFAULT value into column alias_norm » avec, et 201
+  // sans (la colonne vaut alors bien « roger capron »). Chercher un TRIGGER ne
+  // suffit pas à conclure qu'une colonne est au client : il faut lire
+  // `information_schema.columns.is_generated`.
   const { error: eAliasInsert } = await d.sb.from('artistes_alias').insert({
-    owner_id: ownerId, artiste_nom: nouveau, alias: ancien,
-    alias_norm: normaliserAlias(ancien), origine: 'humain',
+    owner_id: ownerId, artiste_nom: nouveau, alias: ancien, origine: 'humain',
   });
   if (eAliasInsert && eAliasInsert.code !== '23505') {
     return { ok: false, erreur: eAliasInsert.message, etape: 'alias-ancien-nom' };
