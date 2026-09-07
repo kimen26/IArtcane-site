@@ -22,16 +22,16 @@
 // top-level du module) pour ne pas toucher `document` au chargement.
 // ═══════════════════════════════════════════════════════════════════════════
 import { esc } from '../../core/dom.js';
-import { S } from '../../core/state.js';
 import { A, hooks } from './etat.js';
 import { CATS_CANON, SOUS } from '../../core/taxonomie.js';
+import { onEnregistrer } from './identite-enregistrer.js';
 
 let _deps = null;
 async function deps() {
-  if (!_deps) _deps = await Promise.all([import('../../core/data.js'), import('../../core/feedback.js'), import('../../core/css.js')]);
+  if (!_deps) _deps = await Promise.all([import('../../core/css.js')]);
   return _deps;
 }
-/** Test-only : injecte un double de [core/data.js, core/feedback.js, core/css.js] avant tout appel réel. */
+/** Test-only : injecte un double de [core/css.js] avant tout appel réel. */
 export function _injecterDeps(fauxDeps) { _deps = fauxDeps; }
 
 let cssCharge = false;
@@ -43,7 +43,7 @@ let cssCharge = false;
 async function assurerCss() {
   if (cssCharge) return;
   cssCharge = true;
-  const [, , { loadViewCss }] = await deps();
+  const [{ loadViewCss }] = await deps();
   await loadViewCss('flag-icons', '../vendor/flag-icons');
 }
 
@@ -176,8 +176,9 @@ export function validerIdentite(saisie) {
 let enEdition = false;
 let brouillon = null; // { type, pays, region, categories: [...] } pendant l'édition
 
-function initBrouillon(id) {
+function initBrouillon(id, nom) {
   return {
+    nom: nom ?? '',
     type: id.type ?? '',
     pays: id.pays ?? '',
     region: id.region ?? '',
@@ -236,7 +237,7 @@ function libelleCategories(categories) {
 }
 
 function rendreEdition(a) {
-  if (!brouillon) brouillon = initBrouillon(a ?? {});
+  if (!brouillon) brouillon = initBrouillon(a ?? {}, A.nom);
   const b = brouillon;
   const paysOptions = paysListe(CODES_PAYS);
   const drapeauSel = b.pays ? `<span class="fi fi-${esc(b.pays)} art-id-drapeau" role="img" aria-label="drapeau"></span>` : '';
@@ -247,6 +248,10 @@ function rendreEdition(a) {
         <span>Identité</span>
       </div>
       <div class="art-identite2-form">
+        <label class="art-id-champ">
+          <span class="art-id-champ-label">Nom <span class="art-id-oblig">*</span></span>
+          <input class="art-id-input" type="text" data-champ="nom" value="${esc(b.nom)}" autocomplete="off">
+        </label>
         <label class="art-id-champ">
           <span class="art-id-champ-label">Type</span>
           <select class="art-id-input" data-champ="type">
@@ -315,12 +320,13 @@ export function brancherIdentite(corps) {
   if (!enEdition) {
     sec.querySelector('[data-action="identite-editer"]')?.addEventListener('click', () => {
       enEdition = true;
-      brouillon = initBrouillon(A.artiste ?? {});
+      brouillon = initBrouillon(A.artiste ?? {}, A.nom);
       hooks.rendre();
     });
     return;
   }
 
+  sec.querySelector('[data-champ="nom"]')?.addEventListener('change', e => { brouillon.nom = e.target.value; });
   sec.querySelector('[data-champ="type"]')?.addEventListener('change', e => { brouillon.type = e.target.value; });
   sec.querySelector('[data-champ="pays"]')?.addEventListener('change', e => {
     brouillon.pays = e.target.value.toLowerCase();
@@ -354,26 +360,11 @@ export function brancherIdentite(corps) {
     brouillon = null;
     hooks.rendre();
   });
-  sec.querySelector('[data-action="identite-enregistrer"]')?.addEventListener('click', onEnregistrer);
+  sec.querySelector('[data-action="identite-enregistrer"]')?.addEventListener('click', () => onEnregistrer(brouillon, terminerEdition));
 }
 
-async function onEnregistrer() {
-  const [{ sb, logEvent }, { toast, enregistrer }] = await deps();
-  const resultat = validerIdentite(brouillon);
-  if (!resultat.ok) {
-    toast(resultat.erreur, 'panne');
-    return;
-  }
-  const { type, pays, region, categories } = resultat.valeurs;
-  // owner_id ET nom dans le filtre (L-091) : PONAIRE et DEMO peuvent porter
-  // le même nom d'artiste, un `where nom = …` nu écrirait dans les deux.
-  const ok = await enregistrer(() => sb.from('artistes')
-    .update({ type, pays, region, categories })
-    .eq('owner_id', S.tenantId)
-    .eq('nom', A.nom), 'Identité');
-  if (!ok) return;
-  logEvent('artiste_identite', { artiste: A.nom, type, pays, region, n_categories: categories.length });
+/** Sort du mode édition (annulation ou fin d'enregistrement) — passé à identite-enregistrer.js. */
+function terminerEdition() {
   enEdition = false;
   brouillon = null;
-  await hooks.recharger(A.nom);
 }
