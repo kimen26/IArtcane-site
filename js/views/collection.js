@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 import { $, $$, esc, norm, toast, humaniser, emptyHtml } from '../core/dom.js';
 import { S } from '../core/state.js';
-import { catCanon, catEmoji, cardHtml, STATUTS } from '../core/format.js';
+import { catCanon, catEmoji, cardHtml, pluriel, STATUTS } from '../core/format.js';
 import { sb, loadPhotoMap } from '../core/data.js';
 import { loadViewCss } from '../core/css.js';
 import { LISTES, matchListe, libelleListe, chargerContexteListes } from './collection/listes.js';
@@ -377,12 +377,12 @@ $('#volets-toggle')?.addEventListener('click', () => {
   renderGrid();
 });
 
-// Libellé du pied de volet : « Voir les 12 tableaux » — accord simple (minuscule
-// + « s »), repli robuste pour les rayons composés (« argenterie/métal »…).
+// Libellé du pied de volet : « Voir les 12 tableaux » (pluriel réel, demande
+// Alain #27), repli pour les rayons composés (« argenterie/métal »…).
 function libelleRayon(k, n) {
   const bas = k.toLowerCase();
-  if (bas.includes('/') || /[sx]$/.test(bas)) return `Voir les ${n} objets · ${k}`;
-  return `Voir les ${n} ${bas}s`;
+  if (/[ /]/.test(bas)) return n > 1 ? `Voir les ${n} objets · ${k}` : `Voir l'unique objet · ${k}`;
+  return n > 1 ? `Voir les ${n} ${pluriel(bas)}` : `Voir l'unique ${bas}`;
 }
 
 function renderAccordeon(body, items) {

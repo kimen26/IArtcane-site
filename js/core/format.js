@@ -40,6 +40,14 @@ export const fmtDateTime = iso => {
     + ' · ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 };
 export const plur = (n, s, p) => `${n} ${n > 1 ? p : s}`;
+// Pluriel français d'un nom commun : « tableaux » pas « tableaus », « vitraux »
+// pas « vitrails », « bijoux » pas « bijous » (demande Alain #27).
+const PLURIEL_OU_X = ['bijou', 'caillou', 'chou', 'genou', 'hibou', 'joujou', 'pou'];
+export const pluriel = mot =>
+  /[sxz]$/.test(mot) ? mot
+    : PLURIEL_OU_X.includes(mot) || /(eau|au|eu)$/.test(mot) ? `${mot}x`
+      : /(ail|al)$/.test(mot) ? `${mot.replace(/(ail|al)$/, 'aux')}`
+        : `${mot}s`;
 export const infoSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg>';
 
 export const STATUTS = {
