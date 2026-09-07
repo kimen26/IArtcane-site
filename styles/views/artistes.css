@@ -143,6 +143,45 @@
 .art-id-chip{background:var(--surface-2);color:var(--ink-2);border-radius:20px;padding:3px 9px;font-size:10.5px}
 .art-id-chip.active{background:var(--blue-soft);color:var(--blue)}
 
+/* ─── 3b. Identité structurée éditable (type/pays/région/catégories, HO-148) ─
+   Bloc distinct de la Notice ci-dessus (métier/formation/ateliers/musées/
+   décors, éditorial) : colonnes `artistes` posées par la migration 0038,
+   éditées ici — c'est ELLES que la liste #/artistes affiche (drapeau, arts). */
+.art-identite2{background:var(--surface);border-radius:var(--r-md);padding:9px 12px 10px;box-shadow:var(--shadow)}
+.art-identite2-head{display:flex;align-items:center;gap:8px;margin-bottom:2px}
+.art-identite2-head>span:first-child{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.art-identite2-editer{margin-left:auto;border:none;background:none;color:var(--blue);font-size:11px;font-weight:600;cursor:pointer;padding:4px 0}
+.art-identite2-editer:hover{color:var(--blue-deep)}
+.art-id-manque{color:var(--ink-faint);font-style:italic}
+.art-id-drapeau{display:inline-block;vertical-align:-1px;width:1.05rem;height:.7875rem;border-radius:2px;box-shadow:0 0 0 1px var(--line) inset;margin-right:2px}
+
+.art-identite2-form{display:flex;flex-direction:column;gap:10px;padding-top:6px}
+.art-id-champ{display:flex;flex-direction:column;gap:4px}
+.art-id-champ-label{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.art-id-oblig{color:var(--warn-dot,#c0392b)}
+.art-id-input{
+  min-height:40px;padding:7px 9px;font-size:13px;font-family:var(--sans);
+  color:var(--ink);background:var(--surface);border:1px solid var(--line-strong);border-radius:8px;
+}
+.art-id-input:focus-visible{outline:2px solid var(--blue);outline-offset:1px;border-color:var(--blue)}
+.art-id-pays-wrap{display:flex;align-items:center;gap:6px}
+.art-id-pays-wrap .art-id-input{flex:1}
+
+.art-id-champ--categories{gap:6px}
+.art-id-cat-vide{font-size:11.5px;color:var(--ink-3);font-style:italic;padding:4px 0}
+.art-id-cat-liste{display:flex;flex-direction:column;gap:6px}
+.art-id-cat-row{display:flex;align-items:center;gap:6px}
+.art-id-cat-row .art-id-input{flex:1;min-width:0}
+.art-id-cat-retirer{flex:0 0 auto;width:28px;height:28px;border:none;background:var(--surface-2);color:var(--ink-3);border-radius:50%;cursor:pointer;font-size:12px}
+.art-id-cat-retirer:hover{background:var(--warn-line,#f5c6c6);color:var(--warn-dot,#c0392b)}
+.art-id-cat-ajouter{align-self:flex-start;border:1px dashed var(--line-strong);background:#fff;color:var(--ink-3);border-radius:20px;padding:5px 12px;font-size:11px;cursor:pointer}
+.art-id-cat-ajouter:hover{border-color:var(--blue);color:var(--blue)}
+
+.art-identite2-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:2px}
+
+/* Lecteur : masquer l'entrée dans l'édition de l'identité */
+body.role-lecteur .art-identite2-editer{display:none}
+
 /* ─── 4. Signature de référence ───────────────────────────────────────────── */
 .art-signature{background:var(--surface);border-radius:var(--r-md);padding:11px 12px 12px;box-shadow:var(--shadow)}
 .art-signature-head{display:flex;align-items:center;margin-bottom:8px}

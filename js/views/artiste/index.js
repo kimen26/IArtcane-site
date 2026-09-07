@@ -18,6 +18,7 @@ import { A, hooks } from './etat.js';
 import { insererArtistePhoto } from './uploads.js';
 import { rendreFiche } from './blocs.js';
 import { loadArtistesList } from './liste.js';
+import { brancherIdentite } from './identite.js';
 
 await loadViewCss('artistes');
 
@@ -127,6 +128,7 @@ function renderArtiste() {
     });
     corps.innerHTML = rendreFiche();
     brancherJournal(corps);
+    brancherIdentite(corps);
     // Les cartes objet rendues par cardHtml n’ont pas de data-action ; on les
     // rend cliquables ici (même comportement que l’ancien artistes.js).
     $$('.card[data-oid]', corps).forEach(c => {

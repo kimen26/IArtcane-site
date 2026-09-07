@@ -9,6 +9,7 @@ import { esc } from '../../core/dom.js';
 import { cardHtml, fmtDate, fmtNum, mdToHtml } from '../../core/format.js';
 import { A } from './etat.js';
 import { rendreVentes, rendreChezToi, rendreExterne, rendreJournal } from './blocs-maison.js';
+import { rendreIdentiteBloc } from './identite.js';
 
 function dossier() {
   return A.artiste?.dossier ?? {};
@@ -28,7 +29,8 @@ export function rendreFiche() {
     rendreHero(a, d, id),
     rendreNoteCote(),
     rendreCote(d),
-    rendreIdentite(id),
+    rendreIdentiteBloc(a),
+    rendreNotice(id),
     rendreSignature(d),
     rendreParcours(d),
     rendreVentes(),
@@ -164,8 +166,12 @@ function rendreCote(d) {
     </section>`;
 }
 
-// 3. Identité
-function rendreIdentite(id) {
+// 3. Notice (métier, formation, ateliers, musées, décors — éditorial, dossier IA/humain).
+// Rebaptisée depuis « Identité » par HO-148 : ce titre désigne désormais le
+// bloc structuré (type/pays/région/catégories, colonnes artistes) rendu par
+// identite.js juste au-dessus — deux blocs « Identité » adjacents auraient
+// prêté à confusion pour Alain.
+function rendreNotice(id) {
   const keys = [
     { k: 'metier', label: 'Métier' },
     { k: 'formation', label: 'Formation' },
@@ -180,7 +186,7 @@ function rendreIdentite(id) {
   if (!lignes.length) return '';
 
   return `
-    <section class="art-identite" aria-label="Identité">
+    <section class="art-identite" aria-label="Notice">
       ${lignes.map(({ k, label }) => {
         const v = id[k];
         const val = Array.isArray(v)
