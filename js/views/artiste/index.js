@@ -53,7 +53,7 @@ async function loadArtiste(nom) {
   const idsObjets = objets.map(o => o.id);
 
   // Requêtes parallèles
-  const [apRes, compRes, sigRes, notesRes] = await Promise.all([
+  const [apRes, compRes, sigRes, notesRes, coteRes, lotsRes] = await Promise.all([
     sb.from('artistes_photos').select('*').eq('owner_id', S.tenantId).eq('artiste_nom', nom)
       .order('ordre', { nullsFirst: false }).order('created_at'),
     idsObjets.length
@@ -68,6 +68,10 @@ async function loadArtiste(nom) {
       : Promise.resolve({ data: [] }),
     sb.from('artistes_notes').select('*').eq('owner_id', S.tenantId).eq('artiste_nom', nom)
       .order('created_at', { ascending: true }),
+    sb.from('artistes_cote').select('*').eq('owner_id', S.tenantId).eq('artiste_nom', nom).maybeSingle(),
+    sb.from('ventes_artiste').select('id,maison,titre_lot,prix,prix_type,devise,invendu,date_vente,lien,technique,dimensions')
+      .eq('owner_id', S.tenantId).eq('artiste_nom', nom).eq('prix_type', 'marteau')
+      .order('date_vente', { ascending: false, nullsFirst: false }).limit(50),
   ]);
 
   const apRows = apRes.data ?? [];
@@ -96,6 +100,8 @@ async function loadArtiste(nom) {
     objetId: p.objet_id,
   }));
   A.notes = notesRes.data ?? [];
+  A.cote = coteRes.data ?? null;
+  A.lotsMarteau = lotsRes.data ?? [];
 
   renderArtiste();
 }

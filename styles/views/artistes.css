@@ -100,6 +100,28 @@
 .art-hero-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
 .art-hero-chip{background:var(--surface-claire-voilee);color:var(--ink-hero-text);border-radius:20px;padding:3px 9px;font-size:10px;font-weight:600}
 
+/* ─── 1b. Note « € » (cote artiste dérivée du pool, HO-144) ─────────────────
+   La note se lit d'un coup d'œil : les € pleins sont l'échelle atteinte, les
+   € restants (art-note-euros-off) marquent où elle pourrait monter, même
+   taille pour que l'échelle entière soit visible. La ligne meta passe à la
+   ligne en mobile 360 plutôt que de déborder (règle d'or : jamais un chiffre
+   sans les comparables qui le fondent, affichés juste dessous). */
+.art-note{background:var(--surface);border-radius:var(--r-md);padding:11px 12px 12px;box-shadow:var(--shadow)}
+.art-note-head{margin:2px 0 4px}
+.art-note-euros{font-family:var(--serif);font-size:20px;letter-spacing:1px;color:var(--ink)}
+.art-note-euros-off{opacity:.28}
+.art-note-meta{font-size:11px;line-height:1.5;color:var(--ink-3);word-break:break-word}
+.art-note-lots{margin-top:8px;border-top:1px solid var(--line-soft);padding-top:6px}
+.art-note-lots summary{display:flex;align-items:center;gap:5px;padding:4px 0;font-size:10.5px;color:var(--ink-3);cursor:pointer;list-style:none}
+.art-note-lots summary::-webkit-details-marker{display:none}
+.art-note-lot-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--line-soft);flex-wrap:wrap}
+.art-note-lot-main{flex:1;min-width:0}
+.art-note-lot-title{font-size:11px;font-weight:600;line-height:1.35;color:var(--ink)}
+.art-note-lot-meta{font-size:9.5px;color:var(--ink-3)}
+.art-note-lot-price{flex:0 0 auto;font-family:var(--serif);font-size:12px;color:var(--ink)}
+.art-note-lot-link{flex:0 0 auto;font-size:10.5px;color:var(--blue);text-decoration:none}
+.art-note-lot-link:hover{color:var(--blue-deep)}
+
 /* ─── 2. Cote du segment ──────────────────────────────────────────────────── */
 .art-cote{display:flex;gap:8px;align-items:stretch}
 .art-cote-main{flex:3;background:var(--ruban);border-radius:var(--r-md);padding:9px 12px;display:flex;flex-direction:column;gap:2px}

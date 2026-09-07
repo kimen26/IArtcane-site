@@ -26,6 +26,7 @@ export function rendreFiche() {
 
   const blocs = [
     rendreHero(a, d, id),
+    rendreNoteCote(),
     rendreCote(d),
     rendreIdentite(id),
     rendreSignature(d),
@@ -74,6 +75,69 @@ function rendreHero(a, d, id) {
         ${chips.length ? `<div class="art-hero-chips">${chips.map(c => `<span class="art-hero-chip">${esc(c)}</span>`).join('')}</div>` : ''}
       </div>
     </section>`;
+}
+
+// 1b. Note « € » dérivée du pool de ventes (HO-144) — la cote ARTISTE :
+// « un marché existe-t-il, de quel ordre ? ». Calculée par la vue
+// artistes_cote (médiane des lots marteau vendus, 5 lots minimum), jamais
+// saisie. Le bloc éditorial « Cote du segment » (rendreCote ci-dessous) reste
+// en dessous, inchangé — deux niveaux d'estimation distincts.
+function rendreNoteCote() {
+  const c = A.cote;
+  if (!c) return '';
+  const { n_marteau, mediane, prix_min, prix_max, n_invendus, n_total, note } = c;
+
+  let ligneNote = '';
+  if (note) {
+    const pleins = '€'.repeat(note);
+    const vides = '€'.repeat(5 - note);
+    const meta = [
+      `médiane ${fmtNum(Math.round(mediane))} €`,
+      `${n_marteau} lot${n_marteau > 1 ? 's' : ''} au marteau`,
+      `${fmtNum(prix_min)}–${fmtNum(prix_max)} €`,
+    ];
+    if (n_invendus > 0) meta.push(`${n_invendus} invendu${n_invendus > 1 ? 's' : ''}`);
+    ligneNote = `
+      <div class="art-note-head">
+        <span class="art-note-euros" aria-label="note ${note} sur 5">${pleins}<span class="art-note-euros-off">${vides}</span></span>
+      </div>
+      <div class="art-note-meta">${esc(meta.join(' · '))}</div>`;
+  } else if (n_marteau > 0) {
+    const autres = n_total - n_marteau;
+    const complement = autres > 0 ? ` (${autres} autre${autres > 1 ? 's' : ''} en convention non vérifiée, non comptés)` : '';
+    ligneNote = `<div class="art-note-meta">${esc(`${n_marteau} lot${n_marteau > 1 ? 's' : ''} au marteau — 5 requis pour une note${complement}`)}</div>`;
+  } else {
+    return '';
+  }
+
+  const lots = A.lotsMarteau ?? [];
+  const detailsHtml = lots.length ? `
+    <details class="art-note-lots acc">
+      <summary>les ${lots.length} lots qui fondent la note</summary>
+      ${lots.map(ligneLotHtml).join('')}
+    </details>` : '';
+
+  return `
+    <section class="art-note" aria-label="Cote">
+      <div class="art-section-head"><span>Cote</span></div>
+      ${ligneNote}
+      ${detailsHtml}
+    </section>`;
+}
+
+function ligneLotHtml(v) {
+  const titre = (v.titre_lot ?? '').slice(0, 90);
+  const prixTxt = v.invendu ? 'invendu' : (v.prix != null ? `${fmtNum(v.prix)} €` : '—');
+  const meta = [fmtDate(v.date_vente), esc(v.maison ?? '')].filter(Boolean).join(' · ');
+  return `
+    <div class="art-note-lot-row">
+      <div class="art-note-lot-main">
+        <div class="art-note-lot-title">${esc(titre)}</div>
+        <div class="art-note-lot-meta">${meta}</div>
+      </div>
+      <div class="art-note-lot-price">${esc(prixTxt)}</div>
+      ${v.lien ? `<a class="art-note-lot-link" href="${esc(v.lien)}" target="_blank" rel="noopener">voir</a>` : ''}
+    </div>`;
 }
 
 // 2. Cote du segment
