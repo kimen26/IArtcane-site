@@ -13,12 +13,11 @@ import { esc, toast } from '../../core/dom.js';
 import { S } from '../../core/state.js';
 import { sb, logEvent } from '../../core/data.js';
 import { enregistrer, humaniser } from '../../core/feedback.js';
-import { catCanon } from '../../core/format.js';
-import { SOUS, CATS_CANON, CATS_PROMPT } from '../../core/taxonomie.js';
 import { openCamera } from '../../core/camera.js';
 import { page } from '../../ui/page.js';
 import { champs } from '../../ui/champs.js';
 import { O, hooks, toggleValidation, estValide } from './etat.js';
+import { canonPair, categorieOptions, sousOptions, brancherCascade } from './categorie.js';
 
 const LABELS = {
   categorie: 'Catégorie', auteur: 'Auteur / atelier', technique: 'Technique',
@@ -98,25 +97,16 @@ export function rendre(el) {
 
 // ─── Construction des listes de champs (métier : valeurs, etat, options) ───
 
-// Catégorie stockée = forme prompt (CATS_PROMPT, D-059) ; l'UI affiche la forme
-// canonique (CATS_CANON). Rabat n'importe quelle forme (prompt, display, variante
-// LLM) sur la paire { prompt, display } ; hors liste = conservé tel quel.
-function canonPair(c) {
-  if (!c) return { prompt: '', display: '' };
-  const i = CATS_PROMPT.indexOf(c);
-  if (i >= 0) return { prompt: c, display: CATS_CANON[i] };
-  const display = catCanon(c);
-  const j = CATS_CANON.indexOf(display);
-  if (j >= 0) return { prompt: CATS_PROMPT[j], display };
-  return { prompt: c, display: c };
-}
-
 function bloc1Liste(o) {
   const cur = canonPair(o.categorie);
-  const options = CATS_PROMPT.map((p, i) => ({ valeur: p, label: CATS_CANON[i] }));
-  if (cur.prompt && !CATS_PROMPT.includes(cur.prompt)) options.push({ valeur: cur.prompt, label: cur.prompt });
+  const options = categorieOptions(cur.prompt);
   return [
-    { cle: 'categorie', titre: LABELS.categorie, valeur: cur.prompt, editable: true, type: 'select', options, etat: etatDe('categorie'), pleineLargeur: true },
+    // GROUPE, comme les dimensions (HO-139) : injectée après coup, la
+    // sous-catégorie captait la pastille et semblait valider son « — » vide.
+    { cle: 'categorie', titre: LABELS.categorie, type: 'groupe', etat: etatDe('categorie'), pleineLargeur: true, sous: [
+      { cle: 'categorie', label: 'Catégorie', valeur: cur.prompt, editable: true, type: 'select', options },
+      { cle: 'sous_categorie', label: 'Sous-catégorie', valeur: o.sous_categorie ?? '', editable: true, type: 'select', options: sousOptions(cur.display) },
+    ] },
     { cle: 'auteur', titre: LABELS.auteur, valeur: o.auteur ?? '', editable: true, type: 'texte', placeholder: 'Atelier, artiste, signature…', etat: etatDe('auteur'), pleineLargeur: true },
     { cle: 'technique', titre: LABELS.technique, valeur: o.technique ?? '', editable: true, type: 'texte', etat: etatDe('technique') },
   ];
@@ -149,29 +139,10 @@ function complementsListe(o) {
 // que champs() a déjà posé (le contrôle principal garde son écouteur
 // sur.changer, posé par champs() lui-même).
 
-function updateSousCategories(carte, cat) {
-  const sous = SOUS[canonPair(cat).display] ?? [];
-  const sel = carte.querySelector('.obj-id-sous');
-  if (!sel) return;
-  sel.innerHTML = '<option value="">—</option>' + sous.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
-  sel.disabled = sous.length === 0;
-}
-
-function augmentCategorie(corps, o) {
-  const carte = corps.querySelector('[data-champ="categorie"]');
-  const catSel = carte?.querySelector('.ui-champs-input');
-  if (!carte || !catSel) return;
-  const cur = canonPair(o.categorie);
-  const sous = SOUS[cur.display] ?? [];
-  const sousVal = o.sous_categorie ?? '';
-  catSel.insertAdjacentHTML('afterend', `
-    <select class="ui-champs-input obj-id-sous" data-champ="sous_categorie" ${sous.length ? '' : 'disabled'}>
-      <option value="">—</option>
-      ${sous.map(s => `<option value="${esc(s)}" ${s === sousVal ? 'selected' : ''}>${esc(s)}</option>`).join('')}
-    </select>`);
-  const sousSel = carte.querySelector('.obj-id-sous');
-  catSel.addEventListener('change', () => { updateSousCategories(carte, catSel.value); if (S.currentObjet?.sous_categorie != null) onFieldChange('sous_categorie', ''); });
-  sousSel.addEventListener('change', () => onFieldChange('sous_categorie', sousSel.value));
+function augmentCategorie(corps) {
+  brancherCascade(corps, S.currentObjet?.categorie, () => {
+    if (S.currentObjet?.sous_categorie != null) onFieldChange('sous_categorie', '');
+  });
 }
 
 function augmentAuteur(corps, o) {
