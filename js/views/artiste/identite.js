@@ -322,6 +322,25 @@ export function brancherIdentite(corps) {
       enEdition = true;
       brouillon = initBrouillon(A.artiste ?? {}, A.nom);
       hooks.rendre();
+      // Le formulaire (≈450 px) commence sous le portrait et la cote (≈400 px) :
+      // sur un écran de 663 px, l'ouvrir sans rien faire n'en montre que le
+      // premier tiers et laisse croire que le reste est inaccessible (retour
+      // Yann 2026-09-07). On le remonte à l'écran — le bloc est re-rendu par
+      // hooks.rendre(), donc on vise le NOUVEAU nœud, pas `sec` qui vient
+      // d'être remplacé.
+      requestAnimationFrame(() => {
+        const form = document.querySelector('#artiste-body .art-identite2--edition');
+        if (!form) return;
+        // `scrollIntoView({block:'start'})` collerait le bloc au ras du bord :
+        // le libellé du premier champ passerait sous le `header` du site, qui
+        // est `position:sticky` (base.css:13) et n'a pas la même hauteur en
+        // mobile et en desktop. On le mesure plutôt que de figer une constante
+        // qui ne serait juste que sur l'un des deux.
+        const entete = document.querySelector('body > header');
+        const marge = (entete?.getBoundingClientRect().height ?? 0) + 12;
+        window.scrollTo({ top: form.getBoundingClientRect().top + window.scrollY - marge,
+                          behavior: 'smooth' });
+      });
     });
     return;
   }
