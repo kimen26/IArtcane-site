@@ -136,12 +136,19 @@
    le texte (jusqu'à « Ventes 1 000–2 000 € ») ; sur 110 px en diagonale on
    passe donc sur deux lignes courtes (white-space:normal, line-height serré)
    plutôt que tronquer ou élargir le ruban au point de casser la géométrie
-   miroir. min-height (pas height) : le bloc peut grandir sans texte coupé. */
-.card.obj .card-ribbon{position:absolute;right:-30px;bottom:12px;width:110px;min-height:1.4em;transform:rotate(-45deg);text-align:center;padding:3px 2px;font-family:var(--sans);font-size:.5rem;line-height:1.25;font-weight:700;letter-spacing:.02em;white-space:normal;overflow-wrap:break-word;color:var(--ruban-texte);background:var(--ruban,#35696c);box-shadow:0 1px 4px var(--ombre-ruban-carte)}
+   miroir. min-height (pas height) : le bloc peut grandir sans texte coupé.
+   HO-163 : `width` était fixe (110px) alors que la largeur RÉELLE de la carte
+   varie avec le nombre de colonnes (jusqu'à ~97px en 320px/3 colonnes) — sur
+   une carte étroite le ruban tourné à 45° débordait de `.card-img`
+   (`overflow:hidden`), qui tronquait visuellement le mot. `width` passe en
+   `%` de la carte (`clamp` en plancher px pour ne jamais descendre sous une
+   taille lisible) et `font-size` diminue d'un cran : le ruban reste TOUJOURS
+   plus étroit que la carte qui le porte, à toute largeur de grille. */
+.card.obj .card-ribbon{position:absolute;right:-26px;bottom:12px;width:min(78%,110px);min-height:1.3em;transform:rotate(-45deg);text-align:center;padding:3px 2px;font-family:var(--sans);font-size:.4375rem;line-height:1.2;font-weight:700;letter-spacing:.01em;white-space:normal;overflow-wrap:break-word;color:var(--ruban-texte);background:var(--ruban,#35696c);box-shadow:0 1px 4px var(--ombre-ruban-carte)}
 /* Estimation d'Alain (HO-158) : miroir géométrique du ruban ventes, angle bas
    gauche (rotation +45°) — --violet, seconde couleur déjà du socle, distincte
    du --ruban piloté par maison. */
-.card.obj .card-ribbon--alain{right:auto;left:-30px;transform:rotate(45deg);background:var(--violet);color:var(--ruban-texte)}
+.card.obj .card-ribbon--alain{right:auto;left:-26px;transform:rotate(45deg);background:var(--violet);color:var(--ruban-texte)}
 /* Badge ▶ discret quand la 1re « photo » de l'objet est une vidéo (D-013) */
 .card.obj .card-vid{position:absolute;top:6px;right:6px;background:var(--badge-video-bg);color:#fff;font-family:var(--sans);font-size:.5625rem;line-height:1;padding:3px 6px;border-radius:5px}
 /* Texte sous l'image, directement sur le fond de page ; titre non tronqué

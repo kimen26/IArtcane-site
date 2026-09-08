@@ -65,8 +65,8 @@ function ligne(a) {
       ${meta.length ? `<span class="art-ligne-meta">${esc(meta.join(' · '))}</span>` : ''}
     </span>
     <span class="art-ligne-compteurs">
-      ${a._n ? `<span class="art-ligne-n" title="${a._n} objet${a._n > 1 ? 's' : ''}">${a._n} obj.</span>` : ''}
-      ${a._nVentes ? `<span class="art-ligne-nventes" title="${a._nVentes} vente${a._nVentes > 1 ? 's' : ''} aux enchères connues">🔨 ${a._nVentes}</span>` : ''}
+      ${a._n ? `<span class="art-ligne-n" title="${a._n} objet${a._n > 1 ? 's' : ''}">${a._n} objet${a._n > 1 ? 's' : ''}</span>` : ''}
+      ${a._nVentes ? `<span class="art-ligne-nventes" title="${a._nVentes} vente${a._nVentes > 1 ? 's' : ''} aux enchères connues">🔨 ${a._nVentes} vente${a._nVentes > 1 ? 's' : ''}</span>` : ''}
     </span>
   </article>`;
 }
