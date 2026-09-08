@@ -246,6 +246,29 @@
   cursor:pointer;
   min-height:32px;
 }
+
+/* Confirmation portée POOL (HO-161) — jamais un confirm() natif : une
+   ligne de texte + deux boutons dans la carte du comparable. */
+.comp-confirm-pool{
+  margin-top:7px;
+  padding:9px 10px;
+  border-radius:var(--r-sm);
+  background:var(--red-soft);
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.comp-confirm-txt{
+  margin:0;
+  font-size:.65625rem;
+  line-height:1.45;
+  color:var(--ink-2);
+}
+.comp-confirm-actions{
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+}
 .comp-more{
   display:block;
   width:100%;

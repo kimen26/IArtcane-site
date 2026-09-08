@@ -5,22 +5,37 @@ import { esc, toast } from '../../core/dom.js';
 import { S } from '../../core/state.js';
 import { fmtNum, fmtDate } from '../../core/format.js';
 import { sb, logEvent } from '../../core/data.js';
-import { enregistrer } from '../../core/feedback.js';
+import { enregistrer, humaniser } from '../../core/feedback.js';
 import { marquerUtile } from '../../core/consultations.js';
 import { loadViewCss } from '../../core/css.js';
 import { page } from '../../ui/page.js';
 import { O, hooks, pastilleHtml } from './etat.js';
+import { ecarterPourObjet, ecarterDuPool, retablir as retablirPortee } from '../../services/pool.js';
 
 await loadViewCss('objet-suivi');
 
 let filtre = 'toutes';   // 'toutes' | 'vendues' | 'envente'
 let toutVoir = false;
+let confirmationPoolId = null; // id du comparable en attente de confirmation portée pool
 
-const RAISONS_EXCLUSION = [
+// Motifs portant leur portée (doctrine-cotation.md §6) : « objet » (setExclu,
+// inchangé) ou « pool » (retire le lot de TOUTES les fiches — irréversible
+// depuis cet écran, demande une confirmation avant écriture).
+const RAISONS_EXCLUSION_OBJET = [
   { value: 'format trop éloigné', label: 'Format trop éloigné' },
   { value: 'état trop différent', label: 'État trop différent' },
   { value: 'pas la même œuvre/pièce', label: 'Pas la même œuvre/pièce' },
+  { value: 'période différente', label: 'Période différente' },
+  { value: 'prix aberrant', label: 'Prix aberrant (autre catégorie de pièce)' },
 ];
+const RAISONS_EXCLUSION_POOL = [
+  { value: 'pas cet artiste', label: 'Pas cet artiste (homonyme) — retirer du pool' },
+  { value: 'lot multiple', label: 'Lot de plusieurs objets — retirer du pool' },
+];
+const PORTEE_PAR_MOTIF = Object.fromEntries([
+  ...RAISONS_EXCLUSION_OBJET.map(r => [r.value, 'objet']),
+  ...RAISONS_EXCLUSION_POOL.map(r => [r.value, 'pool']),
+]);
 
 /** Tag de provenance de la fourchette des ventes (D-058, amendé HO-158) :
  * `prix_bas/prix_haut` n'est plus saisi à la main — la fourchette vient
@@ -100,6 +115,12 @@ export function rendre(el) {
   corps.addEventListener('click', onClick);
 }
 
+/** Un lot marqué exclu avec un motif de portée pool n'a plus de bouton
+ * rétablir (la ligne `pool_exclusions` est la mémoire du refus). */
+function estExcluPool(c) {
+  return c.exclu && PORTEE_PAR_MOTIF[c.raison_exclusion] === 'pool';
+}
+
 function carteComparable(c, o) {
   const isVente = c.source_type === 'en_vente';
   const badge = isVente
@@ -112,17 +133,30 @@ function carteComparable(c, o) {
       : '<span class="comp-prix">—</span>');
   const date = isVente ? '' : `<span class="comp-date">${fmtDate(c.date_vente)}</span>`;
   const specs = ligneSpecs(c);
+  const excluPool = estExcluPool(c);
   const exclu = c.exclu
-    ? `<span class="comp-exclu">écarté</span>`
+    ? `<span class="comp-exclu">${excluPool ? 'retiré du pool' : 'écarté ici'}</span>`
     : '';
   const action = c.exclu
-    ? `<button class="comp-link" data-action="retablir" data-cid="${esc(c.id)}">rétablir</button>`
+    ? (excluPool ? '' : `<button class="comp-link" data-action="retablir" data-cid="${esc(c.id)}">rétablir</button>`)
     : `<a class="comp-link" href="${esc(c.lien || '#')}" target="_blank" rel="noopener">le lot ↗</a>`;
-  const selectExclure = c.exclu ? '' : `
+  const enConfirmation = confirmationPoolId === c.id;
+  const selectExclure = (c.exclu || enConfirmation) ? '' : `
     <select class="comp-exclure-select" data-action="ecarter" data-cid="${esc(c.id)}" aria-label="Écarter ce comparable">
       <option value="">écarter…</option>
-      ${RAISONS_EXCLUSION.map(r => `<option value="${esc(r.value)}">${esc(r.label)}</option>`).join('')}
+      ${RAISONS_EXCLUSION_OBJET.map(r => `<option value="${esc(r.value)}">${esc(r.label)}</option>`).join('')}
+      <optgroup label="Retirer de toutes les fiches">
+        ${RAISONS_EXCLUSION_POOL.map(r => `<option value="${esc(r.value)}">${esc(r.label)}</option>`).join('')}
+      </optgroup>
     </select>`;
+  const confirmationHtml = enConfirmation ? `
+    <div class="comp-confirm-pool">
+      <p class="comp-confirm-txt">Retirer ce lot de toutes les fiches où il apparaît — geste irréversible depuis cet écran.</p>
+      <div class="comp-confirm-actions">
+        <button class="btn small" type="button" data-action="pool-annuler">Annuler</button>
+        <button class="btn small danger" type="button" data-action="pool-confirmer" data-cid="${esc(c.id)}" data-motif="${esc(c._motifPoolChoisi || '')}">Retirer du pool</button>
+      </div>
+    </div>` : '';
 
   return `
     <article class="comp-card ${c.exclu ? 'exclu' : ''}">
@@ -142,6 +176,7 @@ function carteComparable(c, o) {
           ${action}
         </div>
         ${selectExclure}
+        ${confirmationHtml}
       </div>
     </article>`;
 }
@@ -182,15 +217,35 @@ async function onClick(e) {
     return;
   }
   if (act === 'ecarter') {
-    const raison = el.value;
-    if (!raison) return;
+    const motif = el.value;
+    if (!motif) return;
     const cid = el.dataset.cid;
-    await setExclu(cid, true, raison);
+    if (PORTEE_PAR_MOTIF[motif] === 'pool') {
+      // Portée pool : geste irréversible depuis cet écran — confirmation
+      // inline (jamais de confirm() natif) avant toute écriture.
+      const c = O.comps.find(x => x.id === cid);
+      if (c) c._motifPoolChoisi = motif;
+      confirmationPoolId = cid;
+      hooks.rendre?.();
+      return;
+    }
+    await ecarterObjet(cid, motif);
     return;
   }
   if (act === 'retablir') {
     const cid = el.dataset.cid;
-    await setExclu(cid, false, null);
+    await retablirObjet(cid);
+    return;
+  }
+  if (act === 'pool-annuler') {
+    confirmationPoolId = null;
+    hooks.rendre?.();
+    return;
+  }
+  if (act === 'pool-confirmer') {
+    const cid = el.dataset.cid;
+    const motif = el.dataset.motif;
+    await ecarterPool(cid, motif);
   }
 }
 
@@ -207,19 +262,62 @@ async function recalculer() {
   hooks.rendre?.();
 }
 
-async function setExclu(cid, exclu, raison) {
+// ─── Portée OBJET (setExclu ancien, inchangé côté comportement) ───────────
+async function ecarterObjet(cid, motif) {
   const o = S.currentObjet;
-  const label = exclu ? 'Comparable écarté' : 'Comparable rétabli';
-  const ok = await enregistrer(() => sb.from('comparables')
-    .update({ exclu, raison_exclusion: raison })
-    .eq('owner_id', S.tenantId).eq('objet_id', o.id).eq('id', cid), label);
-  if (!ok) return;
-  const c = O.comps.find(x => x.id === cid);
-  if (c) {
-    c.exclu = exclu;
-    c.raison_exclusion = raison;
+  try {
+    await ecarterPourObjet(o.id, cid, motif);
+  } catch (err) {
+    console.warn('ecarterObjet:', err);
+    toast(`« Comparable écarté » non enregistré — ${humaniser(err)}.`, 'panne');
+    return;
   }
-  logEvent(exclu ? 'comparable_exclu' : 'comparable_retabli', { comparable_id: cid, ...(raison ? { raison } : {}) });
-  if (!exclu) marquerUtile({ objetId: o.id, besoin: 'comparables-prix' });
+  const c = O.comps.find(x => x.id === cid);
+  if (c) { c.exclu = true; c.raison_exclusion = motif; }
+  logEvent('comparable_exclu', { comparable_id: cid, raison: motif });
+  toast('✓ Comparable écarté enregistré');
+  hooks.rendre?.();
+}
+
+async function retablirObjet(cid) {
+  const o = S.currentObjet;
+  try {
+    await retablirPortee(cid);
+  } catch (err) {
+    console.warn('retablirObjet:', err);
+    toast(`« Comparable rétabli » non enregistré — ${humaniser(err)}.`, 'panne');
+    return;
+  }
+  const c = O.comps.find(x => x.id === cid);
+  if (c) { c.exclu = false; c.raison_exclusion = null; }
+  logEvent('comparable_retabli', { comparable_id: cid });
+  toast('✓ Comparable rétabli enregistré');
+  marquerUtile({ objetId: o.id, besoin: 'comparables-prix' });
+  hooks.rendre?.();
+}
+
+// ─── Portée POOL (irréversible depuis cet écran) ───────────────────────────
+async function ecarterPool(cid, motif) {
+  const o = S.currentObjet;
+  const c = O.comps.find(x => x.id === cid);
+  if (!c || !motif) return;
+  confirmationPoolId = null;
+  let resultat;
+  try {
+    resultat = await ecarterDuPool(c, o.auteur, motif);
+  } catch (err) {
+    console.warn('ecarterPool:', err);
+    toast(`« Retrait du pool » non enregistré — ${humaniser(err)}.`, 'panne');
+    hooks.rendre?.();
+    return;
+  }
+  c.exclu = true;
+  c.raison_exclusion = motif;
+  logEvent('comparable_exclu_pool', {
+    comparable_id: cid, raison: motif,
+    comparables_touches: resultat.comparables_touches, retire_du_pool: resultat.retire_du_pool,
+  });
+  const autres = Math.max(0, resultat.comparables_touches - 1);
+  toast(`Retiré du pool — écarté aussi sur ${autres} autre${autres > 1 ? 's' : ''} fiche${autres > 1 ? 's' : ''}`);
   hooks.rendre?.();
 }
