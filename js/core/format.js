@@ -86,13 +86,20 @@ export function cardHtml(o) {
     ? `<img src="${esc(img.url)}" alt="${esc(o.titre || 'Objet de la collection')}" loading="lazy" decoding="async">`
     : `<span class="card-noimg">${catEmoji(o.categorie)}</span>`; // pas de visuel : placeholder emoji ratio 1/1 (+ badge ▶ si vidéo)
   const badgeVid = img?.vid ? '<span class="card-vid" title="Vidéo" aria-label="Vidéo">▶</span>' : '';
-  // Ruban estimation : uniquement si prix_bas renseigné — « min–max € » (tiret
+  // Ruban ventes : uniquement si prix_bas renseigné — « min–max € » (tiret
   // demi-cadratin, espace insécable avant €) ou « min € » si min == max.
-  const ruban = o.prix_bas != null
+  // Angle bas droit (HO-041/103).
+  const rubanVentes = o.prix_bas != null
     ? `<span class="card-ribbon">${fmtNum(o.prix_bas)}${o.prix_haut != null && o.prix_haut !== o.prix_bas ? '–' + fmtNum(o.prix_haut) : ''}&nbsp;€</span>`
     : '';
+  // Ruban estimation d'Alain (HO-158) : miroir géométrique du ruban ventes,
+  // angle bas gauche — les deux ne se recouvrent qu'à la marge d'une carte
+  // très étroite (≥150 px garanti par le brief).
+  const rubanAlain = o.estimation_bas != null
+    ? `<span class="card-ribbon card-ribbon--alain">${fmtNum(o.estimation_bas)}${o.estimation_haut != null && o.estimation_haut !== o.estimation_bas ? '–' + fmtNum(o.estimation_haut) : ''}&nbsp;€</span>`
+    : '';
   return `<article class="card obj" data-oid="${esc(o.id)}" tabindex="0" role="button" aria-label="${esc(o.titre || 'Objet')} — fiche #${esc(o.id)}">
-    <div class="card-img">${visuel}<span class="card-veil"></span><span class="card-id">#${esc(o.id)}</span>${ruban}${badgeVid}</div>
+    <div class="card-img">${visuel}<span class="card-veil"></span><span class="card-id">#${esc(o.id)}</span>${rubanAlain}${rubanVentes}${badgeVid}</div>
     <div class="card-body">
       <div class="card-title">${esc(o.titre || 'Sans titre')}</div>
       <div class="card-artist">${esc(o.auteur?.trim() || 'Non identifié')}</div>

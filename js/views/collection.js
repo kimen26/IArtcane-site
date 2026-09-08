@@ -31,8 +31,9 @@ async function loadCollection() {
   await loadPhotoMap();
   await chargerContexteListes(); // les compteurs « Photos à taguer » ont besoin des `kind`
   // Ligne de titre du bandeau (HO-042) : « N objets · M à estimer » (HO-043)
+  // HO-158 : « sans prix » = sans AUCUNE des deux fourchettes (Alain ou ventes).
   const n = S.collection.length;
-  const m = S.collection.filter(o => o.prix_bas == null).length;
+  const m = S.collection.filter(o => o.prix_bas == null && o.estimation_bas == null).length;
   const el = $('#page-sub-count');
   if (el) el.textContent = `${n} objet${n > 1 ? 's' : ''} · ${m} à estimer`;
   renderLists();
@@ -49,11 +50,10 @@ function matchFiltre(o, f) {
       o.technique, o.zone, o.contenant, o.position, o.marques].filter(Boolean).join(' '));
     if (!f.q.split(/\s+/).filter(Boolean).every(tok => hay.includes(tok))) return false;
   }
-  // Fourchette prix : on garde l'objet si [prix_bas, prix_haut] intersecte
-  // [min, max] ; un objet sans prix sort dès qu'une borne est renseignée.
+  // Fourchette prix (HO-158) : passe si [estimation_bas,haut] OU [prix_bas,haut] intersecte [min,max].
   if (f.prixMin != null || f.prixMax != null) {
-    if (o.prix_bas == null || o.prix_haut == null) return false;
-    if (o.prix_haut < (f.prixMin ?? -Infinity) || o.prix_bas > (f.prixMax ?? Infinity)) return false;
+    const min = f.prixMin ?? -Infinity, max = f.prixMax ?? Infinity, ok = (bas, haut) => bas != null && haut != null && haut >= min && bas <= max;
+    if (!ok(o.estimation_bas, o.estimation_haut) && !ok(o.prix_bas, o.prix_haut)) return false;
   }
   return true;
 }
@@ -578,10 +578,10 @@ $('#btn-csv').addEventListener('click', () => {
   const items = S.collection.filter(objMatches);
   if (!items.length) { toast('Aucun objet ne correspond au filtre — rien à exporter', true); return; }
   const head = ['N°', 'Titre', 'Catégorie', 'Auteur', 'Période', 'École', 'Technique', 'État',
-    'Prix bas (€)', 'Prix haut (€)', 'Confiance', 'Statut', 'Zone', 'Contenant', 'Position', 'Créé le'];
+    'Estimation bas (€)', 'Estimation haut (€)', 'Prix bas (€)', 'Prix haut (€)', 'Confiance', 'Statut', 'Zone', 'Contenant', 'Position', 'Créé le'];
   const lignes = items.map(o => [
     o.id, o.titre, catCanon(o.categorie) ?? o.categorie, o.auteur, o.periode, o.ecole,
-    o.technique, o.etat, o.prix_bas, o.prix_haut, o.confiance, STATUTS[o.statut] ?? o.statut,
+    o.technique, o.etat, o.estimation_bas, o.estimation_haut, o.prix_bas, o.prix_haut, o.confiance, STATUTS[o.statut] ?? o.statut,
     o.zone, o.contenant, o.position, o.created_at,
   ].map(csvCell).join(';'));
   const csv = '﻿' + head.map(csvCell).join(';') + '\r\n' + lignes.join('\r\n');

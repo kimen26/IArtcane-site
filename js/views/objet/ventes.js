@@ -22,15 +22,13 @@ const RAISONS_EXCLUSION = [
   { value: 'pas la même œuvre/pièce', label: 'Pas la même œuvre/pièce' },
 ];
 
-/** Tag de provenance de la fourchette (D-058). */
-function tagFourchette(o) {
-  const verrous = Array.isArray(o.verrous_humains) ? o.verrous_humains : [];
-  if (verrous.includes('prix_bas') || verrous.includes('prix_haut')) {
-    return 'fixée à la main';
-  }
+/** Tag de provenance de la fourchette des ventes (D-058, amendé HO-158) :
+ * `prix_bas/prix_haut` n'est plus saisi à la main — la fourchette vient
+ * toujours du dernier événement `passe_marche` (script Cote ou IA Valo). */
+function tagFourchette() {
   const lastValo = O.events.find(e => e.action === 'passe_marche');
-  const modele = lastValo?.detail?.modele ?? 'IA';
-  return `calculée · ${modele}`;
+  const modele = lastValo?.detail?.modele ?? (lastValo ? 'script Cote' : null);
+  return modele ? `calculée · ${modele}` : 'pas encore calculée';
 }
 
 function countComps(predicate) {
@@ -39,7 +37,7 @@ function countComps(predicate) {
 
 export function rendre(el) {
   const o = S.currentObjet;
-  const provenance = tagFourchette(o);
+  const provenance = tagFourchette();
   const nToutes = O.comps.length;
   const nVendues = countComps(c => c.source_type !== 'en_vente');
   const nEnVente = countComps(c => c.source_type === 'en_vente');
@@ -66,12 +64,12 @@ export function rendre(el) {
         </div>
         <div class="fork-inputs">
           <div class="fork-field">
-            <input type="text" inputmode="decimal" class="fork-num" id="fork-bas" value="${o.prix_bas != null ? fmtNum(o.prix_bas) : ''}" aria-label="Prix bas">
+            <span class="fork-num" id="fork-bas">${o.prix_bas != null ? fmtNum(o.prix_bas) : '—'}</span>
             <span class="fork-eur">€</span>
           </div>
           <span class="fork-dash">–</span>
           <div class="fork-field">
-            <input type="text" inputmode="decimal" class="fork-num" id="fork-haut" value="${o.prix_haut != null ? fmtNum(o.prix_haut) : ''}" aria-label="Prix haut">
+            <span class="fork-num" id="fork-haut">${o.prix_haut != null ? fmtNum(o.prix_haut) : '—'}</span>
             <span class="fork-eur">€</span>
           </div>
         </div>
@@ -79,6 +77,11 @@ export function rendre(el) {
           <span>${nVendues} adjudication${nVendues > 1 ? 's' : ''} · ${nEnVente} en vente · confiance ${esc(o.confiance || '—')}</span>
           <button class="fork-reload" data-action="recalculer">↻ recalculer</button>
         </div>
+        ${o.estimation_bas != null && o.estimation_haut != null ? `
+        <div class="fork-meta">
+          <span>Estimation d'Alain : ${fmtNum(o.estimation_bas)} – ${fmtNum(o.estimation_haut)} €</span>
+          <button type="button" class="fork-reload" data-action="nav" data-ecran="identification">modifier dans Identification</button>
+        </div>` : ''}
         <div class="comp-filters">
           <button class="filter-chip ${filtre === 'toutes' ? 'active' : ''}" data-action="filtrer" data-filtre="toutes">Toutes ${nToutes}</button>
           <button class="filter-chip ${filtre === 'vendues' ? 'active' : ''}" data-action="filtrer" data-filtre="vendues">Vendues ${nVendues}</button>
@@ -94,8 +97,6 @@ export function rendre(el) {
       ${reste > 0 ? `<button class="comp-more" data-action="voir-plus">Voir les ${reste} autre${reste > 1 ? 's' : ''}</button>` : ''}
     </div>`;
 
-  corps.querySelector('#fork-bas')?.addEventListener('change', e => onForkChange(e, 'prix_bas'));
-  corps.querySelector('#fork-haut')?.addEventListener('change', e => onForkChange(e, 'prix_haut'));
   corps.addEventListener('click', onClick);
 }
 
@@ -158,34 +159,6 @@ function ligneSpecs(c) {
   }
   if (c.raison_exclusion) parts.push(c.raison_exclusion);
   return parts.join(' · ') || '—';
-}
-
-async function onForkChange(e, champ) {
-  const o = S.currentObjet;
-  const raw = e.target.value.replace(/\s/g, '').replace(',', '.');
-  const valeur = raw === '' ? null : parseFloat(raw);
-  if (valeur != null && !Number.isFinite(valeur)) {
-    toast('Valeur numérique attendue', 'action');
-    hooks.rendre?.();
-    return;
-  }
-  const avant = o[champ];
-  if (avant === valeur) return;
-
-  const verrous = new Set(Array.isArray(o.verrous_humains) ? o.verrous_humains : []);
-  verrous.add('prix_bas');
-  verrous.add('prix_haut');
-
-  const label = champ === 'prix_bas' ? 'Prix bas' : 'Prix haut';
-  const ok = await enregistrer(() => sb.from('objets')
-    .update({ [champ]: valeur, verrous_humains: [...verrous] })
-    .eq('owner_id', S.tenantId).eq('id', o.id), label);
-  if (!ok) return;
-
-  o[champ] = valeur;
-  o.verrous_humains = [...verrous];
-  logEvent('correction', { champs: { [champ]: { avant, apres: valeur } } });
-  hooks.rendre?.();
 }
 
 async function onClick(e) {

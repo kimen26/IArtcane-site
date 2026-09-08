@@ -129,9 +129,13 @@
 /* N° d'inventaire vertical sur voile de lisibilité, bord gauche de l'image */
 .card.obj .card-veil{position:absolute;left:0;top:0;bottom:0;width:22px;background:linear-gradient(90deg,var(--voile-fort),var(--voile-doux))}
 .card.obj .card-id{position:absolute;left:4px;top:7px;writing-mode:vertical-rl;font-family:var(--sans);font-size:.5rem;font-weight:700;letter-spacing:.14em;color:#fff;text-shadow:0 1px 2px var(--ombre-id-texte),0 0 7px var(--ombre-texte-douce)}
-/* Estimation : ruban diagonal, angle bas droit — --ruban piloté par maison en
+/* Ventes : ruban diagonal, angle bas droit — --ruban piloté par maison en
    HO-041 ; le repli littéral ci-dessous reste tel quel (mécanisme JS, HO-103) */
 .card.obj .card-ribbon{position:absolute;right:-30px;bottom:12px;width:110px;transform:rotate(-45deg);text-align:center;padding:3px 0;font-family:var(--sans);font-size:.5625rem;font-weight:700;letter-spacing:.04em;color:var(--ruban-texte);background:var(--ruban,#35696c);box-shadow:0 1px 4px var(--ombre-ruban-carte)}
+/* Estimation d'Alain (HO-158) : miroir géométrique du ruban ventes, angle bas
+   gauche (rotation +45°) — --violet, seconde couleur déjà du socle, distincte
+   du --ruban piloté par maison. */
+.card.obj .card-ribbon--alain{right:auto;left:-30px;transform:rotate(45deg);background:var(--violet);color:var(--ruban-texte)}
 /* Badge ▶ discret quand la 1re « photo » de l'objet est une vidéo (D-013) */
 .card.obj .card-vid{position:absolute;top:6px;right:6px;background:var(--badge-video-bg);color:#fff;font-family:var(--sans);font-size:.5625rem;line-height:1;padding:3px 6px;border-radius:5px}
 /* Texte sous l'image, directement sur le fond de page ; titre non tronqué

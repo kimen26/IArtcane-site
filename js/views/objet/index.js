@@ -244,10 +244,10 @@ function rendreHub(o) {
   </div>`;
 }
 
-function rendreRuban(o) {
-  if (o.prix_bas == null || o.prix_haut == null) return '';
-  return `
-    <button class="obj-prix" data-action="nav" data-ecran="ventes">${fmtNum(o.prix_bas)} – ${fmtNum(o.prix_haut)} €</button>`;
+function rendreRuban(o) { // deux bandeaux (HO-158) : estimation d'Alain + fourchette des ventes, chacun absent si vide
+  const alain = o.estimation_bas != null && o.estimation_haut != null ? `<button class="obj-prix obj-prix--alain" data-action="nav" data-ecran="identification" data-focus="estimation_bas">Alain ${fmtNum(o.estimation_bas)} – ${fmtNum(o.estimation_haut)} €</button>` : '';
+  const ventes = o.prix_bas != null && o.prix_haut != null ? `<button class="obj-prix obj-prix--ventes" data-action="nav" data-ecran="ventes">Ventes ${fmtNum(o.prix_bas)} – ${fmtNum(o.prix_haut)} €</button>` : '';
+  return alain + ventes;
 }
 function rendreCarteIdentification(o) {
   const aValider = CHAMPS_OBLIGATOIRES.filter(ch => champRempli(ch, o) && !estValide(ch)).length;
@@ -277,6 +277,7 @@ function rendreCarteIdentification(o) {
 function champRempli(champ, o) {
   if (champ === 'dimensions') return o.hauteur_cm != null || o.largeur_cm != null || o.profondeur_cm != null;
   if (champ === 'prix') return o.prix_bas != null && o.prix_haut != null;
+  if (champ === 'estimation') return o.estimation_bas != null && o.estimation_haut != null;
   if (champ === 'categorie') return Boolean(o.categorie);
   return Boolean(o[champ]);
 }

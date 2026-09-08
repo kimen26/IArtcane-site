@@ -1,11 +1,9 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // IArtcane — views/objet/identification.js : écran Identification (2c).
-// Champs de catalogage regroupés par ce qu'ils débloquent, avec pastilles de
-// validation explicite (motif central, HO-046). La mise en page (blocs,
-// grille, pastilles, contrôles de saisie) est déléguée à ui/champs.js
-// (HO-107) ; cet écran ne fait plus que construire les listes de champs et
-// porter le métier qui ne peut pas être générique : cascade catégorie →
-// sous-catégorie, suggestions d'artiste, verrous humains, auteur inconnu.
+// Champs de catalogage regroupés par ce qu'ils débloquent, avec pastilles de validation explicite (motif central, HO-046).
+// La mise en page (blocs, grille, pastilles, contrôles) est déléguée à ui/champs.js (HO-107) ; cet écran ne fait plus
+// que construire les listes de champs et porter le métier non générique : cascade catégorie → sous-catégorie,
+// suggestions d'artiste, verrous humains, auteur inconnu, estimation d'Alain (HO-158).
 // ═══════════════════════════════════════════════════════════════════════════
 import { loadViewCss } from '../../core/css.js';
 await loadViewCss('objet-identification');
@@ -20,20 +18,17 @@ import { O, hooks, toggleValidation, estValide } from './etat.js';
 import { canonPair, categorieOptions, sousOptions, brancherCascade } from './categorie.js';
 
 const LABELS = {
-  categorie: 'Catégorie', auteur: 'Auteur / atelier', technique: 'Technique',
-  titre: 'Titre', etat: 'État', dimensions: 'Dimensions',
-  periode: 'Période', ecole: 'Région / école', marques: 'Marques / poinçons',
-  zone: 'Zone', contenant: 'Contenant', position: 'Position',
+  categorie: 'Catégorie', auteur: 'Auteur / atelier', technique: 'Technique', titre: 'Titre', etat: 'État', dimensions: 'Dimensions',
+  periode: 'Période', ecole: 'Région / école', marques: 'Marques / poinçons', zone: 'Zone', contenant: 'Contenant', position: 'Position',
+  estimation_bas: 'Estimation Alain (bas)', estimation_haut: 'Estimation Alain (haut)',
 };
 
 const ETATS = ['Neuf / comme neuf', 'Bon état', 'Usagé', 'Accidenté / restauré'];
 
 // Champs dont une correction humaine ajoute un verrou + event 'correction'.
-const CHAMPS_VERROUILLABLES = new Set([
-  'titre', 'categorie', 'sous_categorie', 'auteur', 'technique',
-  'periode', 'ecole', 'marques', 'etat', 'etat_detail',
-  'hauteur_cm', 'largeur_cm', 'profondeur_cm',
-]);
+const CHAMPS_VERROUILLABLES = new Set(['titre', 'categorie', 'sous_categorie', 'auteur', 'technique',
+  'periode', 'ecole', 'marques', 'etat', 'etat_detail', 'hauteur_cm', 'largeur_cm', 'profondeur_cm',
+  'estimation_bas', 'estimation_haut']);
 
 const etatDe = champ => (estValide(champ) ? 'valide' : 'a-valider');
 
@@ -109,6 +104,8 @@ function bloc1Liste(o) {
     ] },
     { cle: 'auteur', titre: LABELS.auteur, valeur: o.auteur ?? '', editable: true, type: 'texte', placeholder: 'Atelier, artiste, signature…', etat: etatDe('auteur'), pleineLargeur: true },
     { cle: 'technique', titre: LABELS.technique, valeur: o.technique ?? '', editable: true, type: 'texte', etat: etatDe('technique') },
+    { cle: 'estimation', titre: 'Estimation Alain', type: 'groupe', pleineLargeur: true, sous: [ // groupe comme dimensions : ui/champs.js interdit à ce chantier
+      { cle: 'estimation_bas', label: 'de', valeur: o.estimation_bas ?? '', editable: true, type: 'nombre', placeholder: '€' }, { cle: 'estimation_haut', label: 'à', valeur: o.estimation_haut ?? '', editable: true, type: 'nombre', placeholder: '€' }] },
   ];
 }
 
@@ -133,11 +130,9 @@ function complementsListe(o) {
 }
 
 // ─── Augmentations : la partie non générique de categorie/auteur/dimensions ─
-// champs() rend le champ générique (label, pastille, contrôle principal) ;
-// ces fonctions y ajoutent ce qu'aucune brique générique ne peut représenter
-// (sous-liste dérivée, suggestions, bouton caméra) sans rien retirer de ce
-// que champs() a déjà posé (le contrôle principal garde son écouteur
-// sur.changer, posé par champs() lui-même).
+// champs() rend le champ générique (label, pastille, contrôle) ; ces fonctions y ajoutent ce qu'aucune brique
+// générique ne peut représenter (sous-liste dérivée, suggestions, bouton caméra) sans rien retirer de ce que
+// champs() a déjà posé (le contrôle principal garde son écouteur sur.changer, posé par champs() lui-même).
 
 function augmentCategorie(corps) {
   brancherCascade(corps, S.currentObjet?.categorie, () => {
@@ -252,14 +247,12 @@ async function toggleAuteurInconnu(carte, checked) {
 }
 
 // ─── Persistance (métier — reste dans la vue) ───────────────────────────────
-
+const CHAMPS_NOMBRES = ['hauteur_cm', 'largeur_cm', 'profondeur_cm', 'estimation_bas', 'estimation_haut'];
 function normalizeInitial(champ, valeur) {
   if (valeur == null || valeur === '') return null;
-  if (['hauteur_cm', 'largeur_cm', 'profondeur_cm'].includes(champ)) {
-    const n = parseFloat(String(valeur).replace(',', '.'));
-    return Number.isFinite(n) ? n : null;
-  }
-  return valeur;
+  if (!CHAMPS_NOMBRES.includes(champ)) return valeur;
+  const n = parseFloat(String(valeur).replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
 }
 
 async function onFieldChange(champ, valeurBrute) {
@@ -267,7 +260,7 @@ async function onFieldChange(champ, valeurBrute) {
   if (valeur === '') valeur = null;
 
   const col = champ;
-  if (['hauteur_cm', 'largeur_cm', 'profondeur_cm'].includes(col)) {
+  if (CHAMPS_NOMBRES.includes(col)) {
     valeur = valeur == null ? null : parseFloat(String(valeur).replace(',', '.'));
     if (!Number.isFinite(valeur)) valeur = null;
   }
@@ -275,6 +268,13 @@ async function onFieldChange(champ, valeurBrute) {
   const o = S.currentObjet;
   const avant = normalizeInitial(col, o[col]);
   if (valeur === avant) return;
+
+  // Estimation Alain (HO-158) : bas ≤ haut, sinon toast et aucune écriture.
+  if (col === 'estimation_bas' || col === 'estimation_haut') {
+    const bas = col === 'estimation_bas' ? valeur : normalizeInitial('estimation_bas', o.estimation_bas);
+    const haut = col === 'estimation_haut' ? valeur : normalizeInitial('estimation_haut', o.estimation_haut);
+    if (bas != null && haut != null && bas > haut) { toast('L\'estimation basse doit être ≤ à la haute', 'action'); return; }
+  }
 
   const updates = { [col]: valeur };
   const corrections = { [col]: { avant, apres: valeur } };
