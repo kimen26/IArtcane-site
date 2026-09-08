@@ -16,7 +16,7 @@ import { page } from '../../ui/page.js';
 import { texte } from '../../ui/texte.js';
 import { A, hooks } from './etat.js';
 import { insererArtistePhoto } from './uploads.js';
-import { rendreFiche } from './blocs.js';
+import { rendreFiche, definirFiltrePool } from './blocs.js';
 import { loadArtistesList } from './liste.js';
 import { brancherIdentite } from './identite.js';
 
@@ -70,19 +70,23 @@ async function loadArtiste(nom) {
     sb.from('artistes_notes').select('*').eq('owner_id', S.tenantId).eq('artiste_nom', nom)
       .order('created_at', { ascending: true }),
     sb.from('artistes_cote').select('*').eq('owner_id', S.tenantId).eq('artiste_nom', nom).maybeSingle(),
-    sb.from('ventes_artiste').select('id,maison,titre_lot,prix,prix_type,devise,invendu,date_vente,lien,technique,dimensions')
-      .eq('owner_id', S.tenantId).eq('artiste_nom', nom).eq('prix_type', 'marteau')
-      .order('date_vente', { ascending: false, nullsFirst: false }).limit(50),
+    sb.from('ventes_artiste')
+      .select('id,maison,titre_lot,prix,prix_type,devise,invendu,date_vente,lien,technique,dimensions,image_path,nature,etat_lot', { count: 'exact' })
+      .eq('owner_id', S.tenantId).eq('artiste_nom', nom)
+      .order('date_vente', { ascending: false, nullsFirst: false })
+      .limit(300), // garde-fou (brief HO-162) : aucun pool ne dépasse 300 aujourd'hui (max 168, Märklin)
   ]);
 
   const apRows = apRes.data ?? [];
   const compRows = compRes.data ?? [];
   const sigRows = sigRes.data ?? [];
+  const poolRows = lotsRes.data ?? [];
 
   const allPaths = [
     ...apRows.flatMap(p => [p.storage_path, p.thumb_path].filter(Boolean)),
     ...compRows.map(c => c.image_path).filter(Boolean),
     ...sigRows.flatMap(p => [p.storage_path, p.thumb_path].filter(Boolean)),
+    ...poolRows.map(v => v.image_path).filter(Boolean),
   ];
   const urlByPath = allPaths.length ? await signPaths(allPaths) : {};
 
@@ -102,7 +106,11 @@ async function loadArtiste(nom) {
   }));
   A.notes = notesRes.data ?? [];
   A.cote = coteRes.data ?? null;
-  A.lotsMarteau = lotsRes.data ?? [];
+  // A.lotsMarteau : sous-ensemble marteau + non invendu du pool, inchangé dans son sens (HO-144).
+  A.lotsMarteau = poolRows.filter(v => v.prix_type === 'marteau' && !v.invendu);
+  // A.pool : tout le pool (HO-162), chaque lot enrichi de imageSrc (URL signée).
+  A.pool = poolRows.map(v => ({ ...v, imageSrc: v.image_path ? urlByPath[v.image_path] : null }));
+  A.poolTotal = lotsRes.count ?? poolRows.length;
 
   renderArtiste();
 }
@@ -236,6 +244,10 @@ $('#artiste-body').addEventListener('click', async e => {
   } else if (act === 'quick-photo') {
     filePickerTarget = 'quick';
     $('#file-artiste-photo').click();
+  } else if (act === 'filtrer-pool') {
+    e.stopPropagation();
+    definirFiltrePool(el.dataset.filtrePool);
+    hooks.rendre?.();
   }
 
   // Clic sur une carte objet de la collection (cardHtml n'ajoute pas data-action).

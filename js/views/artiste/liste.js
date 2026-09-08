@@ -20,7 +20,7 @@ import { sb, signPaths, ensureCollection } from '../../core/data.js';
 import { toast, humaniser } from '../../core/feedback.js';
 import { page } from '../../ui/page.js';
 import { loadViewCss } from '../../core/css.js';
-import { libelleArts, indexRecherche, filtrer } from './liste-calc.js';
+import { libelleArts, indexRecherche, filtrer, compterVentes } from './liste-calc.js';
 
 // Les drapeaux sont vendorés sous `site/vendor/`, pas sous `site/styles/` :
 // c'est du code tiers qu'on ne modifie pas, il ne se mélange pas à nos feuilles.
@@ -64,17 +64,25 @@ function ligne(a) {
       </span>
       ${meta.length ? `<span class="art-ligne-meta">${esc(meta.join(' · '))}</span>` : ''}
     </span>
-    ${a._n ? `<span class="art-ligne-n" title="${a._n} objet${a._n > 1 ? 's' : ''}">${a._n}</span>` : ''}
+    <span class="art-ligne-compteurs">
+      ${a._n ? `<span class="art-ligne-n" title="${a._n} objet${a._n > 1 ? 's' : ''}">${a._n} obj.</span>` : ''}
+      ${a._nVentes ? `<span class="art-ligne-nventes" title="${a._nVentes} vente${a._nVentes > 1 ? 's' : ''} aux enchères connues">🔨 ${a._nVentes}</span>` : ''}
+    </span>
   </article>`;
 }
 
 export async function loadArtistesList() {
   const el = $('#artistes-body');
   el.innerHTML = '<div class="skeleton" style="height:220px"></div>';
-  const [{ data, error }] = await Promise.all([
+  // Compteur de ventes : PostgREST n'a pas d'agrégation GROUP BY sans vue ni
+  // RPC dédiée (sondé HO-162, aucune n'existe sur ce projet) — repli sur une
+  // colonne seule (975 valeurs courtes) comptée en JS par compterVentes().
+  const [{ data, error }, { data: ventesRows }] = await Promise.all([
     sb.from('artistes').select('*').eq('owner_id', S.tenantId).order('nom'),
+    sb.from('ventes_artiste').select('artiste_nom').eq('owner_id', S.tenantId),
     ensureCollection(),
   ]);
+  const nVentesParNom = compterVentes(ventesRows);
   const corps = page(el, { titre: 'Artistes', fil: S.fil });
   if (error) { console.warn('artiste:', error); toast(`Fiche artiste non chargée — ${humaniser(error)}.`, 'panne'); corps.innerHTML = ''; return; }
   if (!data?.length) {
@@ -106,6 +114,7 @@ export async function loadArtistesList() {
     return {
       ...a,
       _n: nbObjets(a.nom),
+      _nVentes: nVentesParNom.get(a.nom) ?? 0,
       _url: p ? urlByPath[p.thumb_path ?? p.storage_path] : null,
       _cherche: indexRecherche(a, aliasParNom[a.nom] ?? []),
     };

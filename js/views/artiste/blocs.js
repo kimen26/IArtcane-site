@@ -15,6 +15,17 @@ function dossier() {
   return A.artiste?.dossier ?? {};
 }
 
+// État local au bloc « Ses ventes aux enchères » (HO-162) — filtre par puce,
+// pas de rechargement réseau. Module-local comme le reste de la vue (pas de
+// framework réactif) : la puce déclenche hooks.rendre?.() (index.js), qui
+// réinvoque rendreFiche() et relit cette variable.
+let filtrePool = 'toutes'; // 'toutes' | 'vendues' | 'invendues'
+
+/** Change le filtre du pool de ventes — appelé par index.js sur clic d'une puce. */
+export function definirFiltrePool(v) {
+  filtrePool = v;
+}
+
 function identite() {
   return dossier().identite ?? {};
 }
@@ -33,6 +44,7 @@ export function rendreFiche() {
     rendreNotice(id),
     rendreSignature(d),
     rendreParcours(d),
+    rendreVentesPool(),
     rendreVentes(),
     rendreAlertes(d),
     rendreChezToi(),
@@ -139,6 +151,79 @@ function ligneLotHtml(v) {
       </div>
       <div class="art-note-lot-price">${esc(prixTxt)}</div>
       ${v.lien ? `<a class="art-note-lot-link" href="${esc(v.lien)}" target="_blank" rel="noopener">voir</a>` : ''}
+    </div>`;
+}
+
+// 6b. Ses ventes aux enchères (HO-162) — TOUT le pool ventes_artiste, avec
+// image, titre, maison, date, prix + type, technique/dimensions, lien. Placé
+// avant « Ventes vérifiées » (blocs-maison.js, comparables rattachés aux
+// objets de la maison — sujet différent, ne pas confondre). Repliage 8
+// premières cartes visibles (même motif que blocs-maison.js:47), puces de
+// filtre sans rechargement (état module-local `filtrePool`).
+const TYPE_PRIX_LABEL = { marteau: 'au marteau', frais_compris: 'frais compris', non_verifie: 'type non vérifié' };
+
+function rendreVentesPool() {
+  const pool = A.pool ?? [];
+  if (!pool.length) return '';
+
+  const nTotal = pool.length;
+  const nVendues = pool.filter(v => !v.invendu).length;
+  const nInvendus = nTotal - nVendues;
+  const nMarteau = pool.filter(v => v.prix_type === 'marteau' && !v.invendu).length;
+
+  const vus = filtrePool === 'vendues' ? pool.filter(v => !v.invendu)
+    : filtrePool === 'invendues' ? pool.filter(v => v.invendu)
+    : pool;
+
+  const affichees = vus.slice(0, 8);
+  const cachees = vus.slice(8);
+
+  const chip = (val, label, n) =>
+    `<button type="button" class="filter-chip ${filtrePool === val ? 'active' : ''}" data-action="filtrer-pool" data-filtre-pool="${val}">${esc(label)} ${n}</button>`;
+
+  const metaTotal = A.poolTotal > nTotal ? `${nTotal} des ${A.poolTotal} ventes` : `${nTotal} vente${nTotal > 1 ? 's' : ''}`;
+
+  return `
+    <section class="art-pool" aria-label="Ses ventes aux enchères">
+      <div class="art-section-head">
+        <span>Ses ventes aux enchères</span>
+        <span class="art-section-meta">${esc(metaTotal)} · ${nMarteau} avec prix marteau · ${nInvendus} invendu${nInvendus > 1 ? 's' : ''}</span>
+      </div>
+      <div class="art-pool-filtres">
+        ${chip('toutes', 'Toutes', nTotal)}
+        ${chip('vendues', 'Vendues', nVendues)}
+        ${chip('invendues', 'Invendues', nInvendus)}
+      </div>
+      ${vus.length ? `
+        <div class="art-pool-liste">${affichees.map(lotPoolHtml).join('')}</div>
+        ${cachees.length ? `<details class="art-pool-more acc"><summary>voir les ${vus.length} ventes</summary>${cachees.map(lotPoolHtml).join('')}</details>` : ''}
+      ` : '<div class="art-empty">Aucune vente pour ce filtre.</div>'}
+    </section>`;
+}
+
+function lotPoolHtml(v) {
+  const img = v.imageSrc
+    ? `<img src="${esc(v.imageSrc)}" alt="" loading="lazy" decoding="async">`
+    : `<span class="art-pool-thumb-placeholder">🔨</span>`;
+  const meta = [esc(v.maison ?? ''), v.date_vente ? fmtDate(v.date_vente) : ''].filter(Boolean).join(' · ');
+  const typeLabel = TYPE_PRIX_LABEL[v.prix_type] ?? '';
+  const prixHtml = v.invendu
+    ? '<span class="art-pool-invendu">invendu</span>'
+    : (v.prix != null
+        ? `<span class="art-pool-prix-val">${fmtNum(v.prix)} ${esc(v.devise || '€')}</span>${typeLabel ? `<span class="art-pool-prix-type">${esc(typeLabel)}</span>` : ''}`
+        : '—');
+  const detail = [v.technique, v.dimensions].filter(Boolean).map(esc).join(' · ');
+
+  return `
+    <div class="art-pool-card">
+      <div class="art-pool-thumb">${img}</div>
+      <div class="art-pool-body">
+        <div class="art-pool-titre">${esc(v.titre_lot || 'Lot sans titre')}</div>
+        <div class="art-pool-meta">${meta}</div>
+        ${detail ? `<div class="art-pool-detail">${detail}</div>` : ''}
+        <div class="art-pool-prix">${prixHtml}</div>
+      </div>
+      ${v.lien ? `<a class="art-pool-lien" href="${esc(v.lien)}" target="_blank" rel="noopener">le lot ↗</a>` : ''}
     </div>`;
 }
 

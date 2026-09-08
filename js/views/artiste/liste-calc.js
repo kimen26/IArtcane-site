@@ -66,3 +66,22 @@ export function filtrer(artistes, saisie) {
   if (!q) return artistes;
   return (artistes ?? []).filter(a => String(a?._cherche ?? '').includes(q));
 }
+
+/**
+ * Compte les ventes par artiste depuis des lignes `{ artiste_nom }` (une
+ * colonne, HO-162) — jamais confondu avec `_n`, le nombre d'objets de la
+ * collection : deux compteurs, deux sources. Une valeur nulle/vide est
+ * ignorée (un lot mal rattaché ne doit pas gonfler le compte d'un artiste
+ * fantôme sous une clé vide).
+ * @param {Array<{artiste_nom?:string|null}>} rows
+ * @returns {Map<string, number>}
+ */
+export function compterVentes(rows) {
+  const m = new Map();
+  for (const r of rows ?? []) {
+    const nom = r?.artiste_nom;
+    if (!nom) continue;
+    m.set(nom, (m.get(nom) ?? 0) + 1);
+  }
+  return m;
+}
