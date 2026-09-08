@@ -86,17 +86,21 @@ export function cardHtml(o) {
     ? `<img src="${esc(img.url)}" alt="${esc(o.titre || 'Objet de la collection')}" loading="lazy" decoding="async">`
     : `<span class="card-noimg">${catEmoji(o.categorie)}</span>`; // pas de visuel : placeholder emoji ratio 1/1 (+ badge ▶ si vidéo)
   const badgeVid = img?.vid ? '<span class="card-vid" title="Vidéo" aria-label="Vidéo">▶</span>' : '';
-  // Ruban ventes : uniquement si prix_bas renseigné — « min–max € » (tiret
-  // demi-cadratin, espace insécable avant €) ou « min € » si min == max.
-  // Angle bas droit (HO-041/103).
+  // Ruban ventes : uniquement si prix_bas renseigné — « Ventes min–max € »
+  // (tiret demi-cadratin, espace insécable avant €). Le mot porte le sens :
+  // la couleur seule ne doit jamais distinguer Alain de Ventes (HO-159,
+  // rules/mobile-parents.md). Angle bas droit (HO-041/103).
   const rubanVentes = o.prix_bas != null
-    ? `<span class="card-ribbon">${fmtNum(o.prix_bas)}${o.prix_haut != null && o.prix_haut !== o.prix_bas ? '–' + fmtNum(o.prix_haut) : ''}&nbsp;€</span>`
+    ? `<span class="card-ribbon">Ventes<br>${fmtNum(o.prix_bas)}${o.prix_haut != null && o.prix_haut !== o.prix_bas ? '–' + fmtNum(o.prix_haut) : ''}&nbsp;€</span>`
     : '';
-  // Ruban estimation d'Alain (HO-158) : miroir géométrique du ruban ventes,
-  // angle bas gauche — les deux ne se recouvrent qu'à la marge d'une carte
-  // très étroite (≥150 px garanti par le brief).
+  // Ruban estimation d'Alain (HO-158, libellé HO-159) : miroir géométrique du
+  // ruban ventes, angle bas gauche — les deux ne se recouvrent qu'à la marge
+  // d'une carte très étroite (≥150 px garanti par le brief). Saut de ligne
+  // explicite (<br>) entre le mot et le montant : plus fiable qu'un wrap
+  // auto qui, avec l'espace insécable devant €, ne coupait pas où il fallait
+  // et faisait déborder « Ventes » hors du ruban (constaté à la capture).
   const rubanAlain = o.estimation_bas != null
-    ? `<span class="card-ribbon card-ribbon--alain">${fmtNum(o.estimation_bas)}${o.estimation_haut != null && o.estimation_haut !== o.estimation_bas ? '–' + fmtNum(o.estimation_haut) : ''}&nbsp;€</span>`
+    ? `<span class="card-ribbon card-ribbon--alain">Alain<br>${fmtNum(o.estimation_bas)}${o.estimation_haut != null && o.estimation_haut !== o.estimation_bas ? '–' + fmtNum(o.estimation_haut) : ''}&nbsp;€</span>`
     : '';
   return `<article class="card obj" data-oid="${esc(o.id)}" tabindex="0" role="button" aria-label="${esc(o.titre || 'Objet')} — fiche #${esc(o.id)}">
     <div class="card-img">${visuel}<span class="card-veil"></span><span class="card-id">#${esc(o.id)}</span>${rubanAlain}${rubanVentes}${badgeVid}</div>

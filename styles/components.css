@@ -131,7 +131,13 @@
 .card.obj .card-id{position:absolute;left:4px;top:7px;writing-mode:vertical-rl;font-family:var(--sans);font-size:.5rem;font-weight:700;letter-spacing:.14em;color:#fff;text-shadow:0 1px 2px var(--ombre-id-texte),0 0 7px var(--ombre-texte-douce)}
 /* Ventes : ruban diagonal, angle bas droit — --ruban piloté par maison en
    HO-041 ; le repli littéral ci-dessous reste tel quel (mécanisme JS, HO-103) */
-.card.obj .card-ribbon{position:absolute;right:-30px;bottom:12px;width:110px;transform:rotate(-45deg);text-align:center;padding:3px 0;font-family:var(--sans);font-size:.5625rem;font-weight:700;letter-spacing:.04em;color:var(--ruban-texte);background:var(--ruban,#35696c);box-shadow:0 1px 4px var(--ombre-ruban-carte)}
+/* HO-159 : le ruban porte désormais « Alain »/« Ventes » en toutes lettres
+   (pas seulement une couleur, rules/mobile-parents.md). Le libellé alourdit
+   le texte (jusqu'à « Ventes 1 000–2 000 € ») ; sur 110 px en diagonale on
+   passe donc sur deux lignes courtes (white-space:normal, line-height serré)
+   plutôt que tronquer ou élargir le ruban au point de casser la géométrie
+   miroir. min-height (pas height) : le bloc peut grandir sans texte coupé. */
+.card.obj .card-ribbon{position:absolute;right:-30px;bottom:12px;width:110px;min-height:1.4em;transform:rotate(-45deg);text-align:center;padding:3px 2px;font-family:var(--sans);font-size:.5rem;line-height:1.25;font-weight:700;letter-spacing:.02em;white-space:normal;overflow-wrap:break-word;color:var(--ruban-texte);background:var(--ruban,#35696c);box-shadow:0 1px 4px var(--ombre-ruban-carte)}
 /* Estimation d'Alain (HO-158) : miroir géométrique du ruban ventes, angle bas
    gauche (rotation +45°) — --violet, seconde couleur déjà du socle, distincte
    du --ruban piloté par maison. */
